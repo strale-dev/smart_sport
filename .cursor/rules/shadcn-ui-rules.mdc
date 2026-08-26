@@ -1,0 +1,19 @@
+---
+alwaysApply: true
+---
+
+# UI rules for this project
+
+- When adding components use MCP to check what’s available and to pull the latest.
+- Always check for the shadcn preset and use preset from components.json
+- Always use shadcn/ui components and patterns for UI when possible.
+- Prefer existing components from "@/components/ui/*" before creating custom UI.
+- Follow ui.shadcn.com component structure, composition, and naming.
+- Do not invent custom button, input, dialog, select, table, or form primitives if shadcn/ui already provides them.
+- Keep styling in Tailwind CSS.
+- Reuse shadcn variants instead of writing ad-hoc styles.
+- For forms, prefer shadcn form patterns and accessible labels/errors.
+- Before adding a new UI primitive, check whether shadcn/ui already has that component.
+
+
+
