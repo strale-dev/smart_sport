@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" fill="none" aria-hidden="true">
+  <text
+    x="0"
+    y="30"
+    fill="#F5F7FA"
+    font-family="Space Grotesk, system-ui, sans-serif"
+    font-size="28"
+    font-weight="600"
+    letter-spacing="-0.02em"
+  >
+    Kivora
+  </text>
+  <circle cx="148" cy="10" r="5" fill="#00E5A0" />
+</svg>
