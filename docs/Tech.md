@@ -93,31 +93,31 @@ Vercel Route Handler (worker for fixture)
 
 ## 2. Tech stack summary
 
-| Layer                        | Choice                                              | Notes                                         |
-| ---------------------------- | --------------------------------------------------- | --------------------------------------------- |
-| Framework                    | Next.js 16 (App Router, RSC)                        | Already installed                             |
-| Language                     | TypeScript (strict)                                 | Already installed                             |
-| UI primitives                | shadcn/ui + Base UI (`@base-ui/react`)              | Already installed; preset `base-vega`         |
-| Styling                      | Tailwind CSS v4                                     | Already installed                             |
-| Icons                        | `lucide-react`                                      | Already installed                             |
-| Animation                    | Framer Motion + `tw-animate-css`                    | Framer to add                                 |
-| Charts                       | `recharts`                                          | To add                                        |
-| Forms                        | `react-hook-form` + `zod`                           | To add                                        |
-| Data fetching (client)       | TanStack Query (React Query v5)                     | To add                                        |
-| Server actions / API         | Next.js Route Handlers + Server Actions             | Native                                        |
-| Auth + DB + Realtime         | Supabase (Postgres + Auth + Realtime + Storage)     | `@supabase/ssr` + `@supabase/supabase-js` installed |
-| DB migrations                | Native Supabase migrations (`supabase/migrations`)  | Supabase CLI to add                           |
-| Types from DB                | `supabase gen types typescript`                     | Via CLI                                       |
-| Cache / dedup / locks        | Upstash Redis (`@upstash/redis` + `@upstash/ratelimit`) | To add                                        |
-| Cron / scheduled             | Vercel Cron                                         | Configured via `vercel.json`                  |
-| LLM                          | OpenAI SDK (`openai`)                               | To add                                        |
-| LLM structured output        | Zod + OpenAI Structured Outputs                     | To add                                        |
-| Email                        | Resend + React Email                                | `resend` installed; React Email to add        |
-| Payments                     | LemonSqueezy (webhooks + checkout)                  | To add                                        |
-| Analytics                    | PostHog (Cloud, EU region)                          | `posthog-js` + `posthog-node` to add          |
-| Errors                       | Sentry (Developer plan)                             | `@sentry/nextjs` to add                       |
-| Hosting                      | Vercel                                              | Free/Pro plan                                 |
-| Repo & CI                    | GitHub + GitHub Actions                             | Repo exists                                   |
+| Layer                  | Choice                                                  | Notes                                               |
+| ---------------------- | ------------------------------------------------------- | --------------------------------------------------- |
+| Framework              | Next.js 16 (App Router, RSC)                            | Already installed                                   |
+| Language               | TypeScript (strict)                                     | Already installed                                   |
+| UI primitives          | shadcn/ui + Base UI (`@base-ui/react`)                  | Already installed; preset `base-vega`               |
+| Styling                | Tailwind CSS v4                                         | Already installed                                   |
+| Icons                  | `lucide-react`                                          | Already installed                                   |
+| Animation              | Framer Motion + `tw-animate-css`                        | Framer to add                                       |
+| Charts                 | `recharts`                                              | To add                                              |
+| Forms                  | `react-hook-form` + `zod`                               | To add                                              |
+| Data fetching (client) | TanStack Query (React Query v5)                         | To add                                              |
+| Server actions / API   | Next.js Route Handlers + Server Actions                 | Native                                              |
+| Auth + DB + Realtime   | Supabase (Postgres + Auth + Realtime + Storage)         | `@supabase/ssr` + `@supabase/supabase-js` installed |
+| DB migrations          | Native Supabase migrations (`supabase/migrations`)      | Supabase CLI to add                                 |
+| Types from DB          | `supabase gen types typescript`                         | Via CLI                                             |
+| Cache / dedup / locks  | Upstash Redis (`@upstash/redis` + `@upstash/ratelimit`) | To add                                              |
+| Cron / scheduled       | Vercel Cron                                             | Configured via `vercel.json`                        |
+| LLM                    | OpenAI SDK (`openai`)                                   | To add                                              |
+| LLM structured output  | Zod + OpenAI Structured Outputs                         | To add                                              |
+| Email                  | Resend + React Email                                    | `resend` installed; React Email to add              |
+| Payments               | LemonSqueezy (webhooks + checkout)                      | To add                                              |
+| Analytics              | PostHog (Cloud, EU region)                              | `posthog-js` + `posthog-node` to add                |
+| Errors                 | Sentry (Developer plan)                                 | `@sentry/nextjs` to add                             |
+| Hosting                | Vercel                                                  | Free/Pro plan                                       |
+| Repo & CI              | GitHub + GitHub Actions                                 | Repo exists                                         |
 
 ---
 
@@ -448,17 +448,17 @@ UI (Server / Client Component)
              └── data access (Supabase client, Redis, provider adapter)
 ```
 
-| Service               | Responsibility                                                                     |
-| --------------------- | ---------------------------------------------------------------------------------- |
-| `footballService`     | Fixtures, teams, players, leagues, standings, lineups, events (facade)             |
-| `analyticsService`    | Compute form, H2H, comparisons                                                     |
-| `predictionService`   | Score match with model; persist prediction snapshots                               |
-| `aiContextService`    | Trim & summarize structured features for LLM context                               |
-| `aiService`           | Call OpenAI, validate structured output, cache result                              |
-| `followService`       | Follow/unfollow/favorite operations                                                |
-| `entitlementService`  | Check user quota + tier; increment counters                                        |
-| `notificationService` | Enqueue in-app notifications; broadcast via Realtime                               |
-| `userService`         | Profile, preferences, deletion                                                     |
+| Service               | Responsibility                                                         |
+| --------------------- | ---------------------------------------------------------------------- |
+| `footballService`     | Fixtures, teams, players, leagues, standings, lineups, events (facade) |
+| `analyticsService`    | Compute form, H2H, comparisons                                         |
+| `predictionService`   | Score match with model; persist prediction snapshots                   |
+| `aiContextService`    | Trim & summarize structured features for LLM context                   |
+| `aiService`           | Call OpenAI, validate structured output, cache result                  |
+| `followService`       | Follow/unfollow/favorite operations                                    |
+| `entitlementService`  | Check user quota + tier; increment counters                            |
+| `notificationService` | Enqueue in-app notifications; broadcast via Realtime                   |
+| `userService`         | Profile, preferences, deletion                                         |
 
 Each service exports **typed functions**, not classes. All accept context (`{ supabase, redis, userId }`) via an injected container to keep them testable.
 
@@ -547,8 +547,8 @@ Every read goes through a single helper:
 async function cached<T>(
   key: string,
   ttlSeconds: number,
-  fn: () => Promise<T>,
-): Promise<T>
+  fn: () => Promise<T>
+): Promise<T>;
 ```
 
 Which:
@@ -629,9 +629,11 @@ useEffect(() => {
       queryClient.invalidateQueries({ queryKey: ["fixture", fixtureId] });
     })
     .on("presence", { event: "sync" }, () => {})
-    .track({ user_id: userId });          // announce presence
+    .track({ user_id: userId }); // announce presence
   channel.subscribe();
-  return () => { supabase.removeChannel(channel); };
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }, [fixtureId]);
 ```
 
@@ -704,11 +706,16 @@ export const AIInsightSchema = z.object({
   expectedGoalsRange: z.tuple([z.number(), z.number()]),
   weakerTeamScoringChance: z.number().min(0).max(1).optional(),
   confidence: z.enum(["LOW", "MEDIUM", "HIGH"]),
-  keyFactors: z.array(z.object({
-    label: z.string(),
-    weight: z.number(),
-    evidence: z.string(),
-  })).min(2).max(5),
+  keyFactors: z
+    .array(
+      z.object({
+        label: z.string(),
+        weight: z.number(),
+        evidence: z.string(),
+      })
+    )
+    .min(2)
+    .max(5),
   scenarios: z.object({
     likely: z.string(),
     best: z.string(),
@@ -861,16 +868,16 @@ Mapping the brand palette (§14.2 in PRD) to CSS variables (OKLCH conversions):
 
 ```css
 :root {
-  --background:    oklch(0.155 0.02 240);   /* #0A0B0F */
-  --card:          oklch(0.19 0.02 240);    /* #12141B */
-  --border:        oklch(0.28 0.02 240);    /* #1F2330 */
-  --primary:       oklch(0.86 0.15 170);    /* #00E5A0 */
-  --secondary:     oklch(0.66 0.16 260);    /* #4C7BF3 */
-  --destructive:   oklch(0.64 0.24 25);     /* #EF4444 */
-  --success:       oklch(0.72 0.17 160);    /* #10B981 */
-  --warning:       oklch(0.75 0.16 75);     /* #F59E0B */
-  --live:          oklch(0.65 0.24 25);     /* #FF3B30 pulse */
-  --foreground:    oklch(0.97 0 0);         /* #F5F7FA */
+  --background: oklch(0.155 0.02 240); /* #0A0B0F */
+  --card: oklch(0.19 0.02 240); /* #12141B */
+  --border: oklch(0.28 0.02 240); /* #1F2330 */
+  --primary: oklch(0.86 0.15 170); /* #00E5A0 */
+  --secondary: oklch(0.66 0.16 260); /* #4C7BF3 */
+  --destructive: oklch(0.64 0.24 25); /* #EF4444 */
+  --success: oklch(0.72 0.17 160); /* #10B981 */
+  --warning: oklch(0.75 0.16 75); /* #F59E0B */
+  --live: oklch(0.65 0.24 25); /* #FF3B30 pulse */
+  --foreground: oklch(0.97 0 0); /* #F5F7FA */
   --muted-foreground: oklch(0.66 0.03 250); /* #8B94A8 */
 }
 ```
@@ -951,10 +958,10 @@ Expected MVP set: `button`, `input`, `label`, `form`, `select`, `dialog`, `sheet
 ```json
 {
   "crons": [
-    { "path": "/api/cron/sync-fixtures",   "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/sync-standings",  "schedule": "0 */6 * * *" },
-    { "path": "/api/cron/sync-lineups",    "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/cleanup-ai-usage","schedule": "5 0 * * *" }
+    { "path": "/api/cron/sync-fixtures", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/sync-standings", "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/sync-lineups", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/cleanup-ai-usage", "schedule": "5 0 * * *" }
   ]
 }
 ```

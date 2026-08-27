@@ -3,7 +3,7 @@
 > Companion to [PRD.md](./PRD.md) and [Tech.md](./Tech.md).
 > **Database:** Supabase Postgres (16+).
 > **Version:** 1.0
-> **Last updated:** 2026-08-26
+> **Last updated:** 2026-08-26 (post-deploy sync)
 
 ---
 
@@ -47,18 +47,25 @@ Following [Supabase Postgres best practices](../.agents/skills/supabase-postgres
 - **RLS enabled on every table with user data.**
 - **Foreign key columns are always indexed** (Postgres does not do this automatically).
 - **`(select auth.uid())`** used in RLS policies for query planner efficiency.
+- **Extensions live in the `extensions` schema** (never `public`); reference types/operators as `extensions.citext`, `extensions.gin_trgm_ops`, etc.
 
 ---
 
 ## 2. Extensions
 
+Install into the dedicated `extensions` schema (never `public`) — Supabase best practice; avoids namespace pollution and security-advisor warnings.
+
 ```sql
-create extension if not exists "pgcrypto";       -- gen_random_uuid()
-create extension if not exists "pg_trgm";        -- trigram indexes for text search (team/player search)
-create extension if not exists "citext";         -- case-insensitive email
-create extension if not exists "unaccent";       -- diacritic-insensitive search
-create extension if not exists "pg_stat_statements";
+create schema if not exists extensions;
+
+create extension if not exists "pgcrypto"           with schema extensions;  -- gen_random_uuid()
+create extension if not exists "pg_trgm"            with schema extensions;  -- trigram search
+create extension if not exists "citext"             with schema extensions;  -- case-insensitive email
+create extension if not exists "unaccent"           with schema extensions;  -- diacritic-insensitive search
+create extension if not exists "pg_stat_statements" with schema extensions;
 ```
+
+When referencing extension types or operators in `public` tables/functions, use the schema-qualified form (e.g. `extensions.citext`, `extensions.gin_trgm_ops`).
 
 Not included in MVP (deferred):
 
@@ -268,7 +275,7 @@ create table public.teams (
 
 create index teams_country_id_idx on public.teams (country_id);
 create index teams_venue_id_idx on public.teams (venue_id);
-create index teams_name_trgm_idx on public.teams using gin (name gin_trgm_ops);
+create index teams_name_trgm_idx on public.teams using gin (name extensions.gin_trgm_ops);
 create index teams_elo_idx on public.teams (elo_rating desc);
 ```
 
@@ -300,7 +307,7 @@ create table public.players (
 );
 
 create index players_country_id_idx on public.players (country_id);
-create index players_full_name_trgm_idx on public.players using gin (full_name gin_trgm_ops);
+create index players_full_name_trgm_idx on public.players using gin (full_name extensions.gin_trgm_ops);
 create index players_position_idx on public.players (position);
 ```
 
@@ -404,8 +411,11 @@ create index fixtures_home_team_id_idx on public.fixtures (home_team_id);
 create index fixtures_away_team_id_idx on public.fixtures (away_team_id);
 create index fixtures_venue_id_idx on public.fixtures (venue_id);
 
--- Composite for "matches on date X, ordered by kickoff"
-create index fixtures_date_kickoff_idx on public.fixtures ((kickoff_at::date), kickoff_at);
+-- Composite for "matches on date X (UTC), ordered by kickoff".
+-- `kickoff_at::date` on timestamptz is NOT immutable (depends on session TimeZone),
+-- so we pin the cast to UTC via `at time zone 'UTC'`.
+create index fixtures_date_kickoff_idx
+  on public.fixtures (((kickoff_at at time zone 'UTC')::date), kickoff_at);
 ```
 
 ### 6.2 `fixture_events`
@@ -433,6 +443,7 @@ create table public.fixture_events (
 create index fixture_events_fixture_id_idx on public.fixture_events (fixture_id, minute, extra_minute);
 create index fixture_events_team_id_idx on public.fixture_events (team_id);
 create index fixture_events_player_id_idx on public.fixture_events (player_id);
+create index fixture_events_assist_player_id_idx on public.fixture_events (assist_player_id);
 create index fixture_events_type_idx on public.fixture_events (type);
 ```
 
@@ -588,6 +599,7 @@ create table public.standings (
 );
 
 create index standings_league_season_idx on public.standings (league_id, season_id, rank);
+create index standings_season_id_idx on public.standings (season_id);
 create index standings_team_id_idx on public.standings (team_id);
 ```
 
@@ -643,6 +655,8 @@ create table public.h2h_summaries (
 );
 
 create index h2h_pair_idx on public.h2h_summaries (team_a_id, team_b_id, scope);
+create index h2h_summaries_team_b_id_idx on public.h2h_summaries (team_b_id);
+create index h2h_summaries_league_id_idx on public.h2h_summaries (league_id);
 ```
 
 > Because `team_a_id < team_b_id` is enforced, always canonicalize the pair before insert/query.
@@ -742,6 +756,9 @@ create table public.ai_insights (
 create index ai_insights_fixture_idx on public.ai_insights (fixture_id, created_at desc);
 create index ai_insights_type_idx on public.ai_insights (type);
 create index ai_insights_context_hash_idx on public.ai_insights (context_hash);
+create index ai_insights_league_id_idx on public.ai_insights (league_id);
+create index ai_insights_team_id_idx on public.ai_insights (team_id);
+create index ai_insights_prediction_id_idx on public.ai_insights (prediction_id);
 create unique index ai_insights_fixture_type_hash_idx
   on public.ai_insights (fixture_id, type, context_hash)
   where fixture_id is not null;
@@ -782,7 +799,7 @@ Supabase manages `auth.users`. All app-level user data lives in `public.profiles
 create table public.profiles (
   id                uuid primary key references auth.users(id) on delete cascade,
   display_name      text,
-  email             citext not null,               -- mirrored from auth.users for query convenience
+  email             extensions.citext not null,    -- mirrored from auth.users for query convenience
   avatar_url        text,
   timezone          text not null default 'UTC',
   language          text not null default 'en',
@@ -886,6 +903,8 @@ create table public.notifications (
 create index notifications_user_idx on public.notifications (user_id, created_at desc);
 create index notifications_unread_idx on public.notifications (user_id, created_at desc) where read_at is null;
 create index notifications_fixture_idx on public.notifications (fixture_id) where fixture_id is not null;
+create index notifications_team_id_idx on public.notifications (team_id);
+create index notifications_player_id_idx on public.notifications (player_id);
 ```
 
 ---
@@ -938,6 +957,7 @@ create table public.entitlements (
 );
 
 create index entitlements_tier_idx on public.entitlements (tier);
+create index entitlements_subscription_id_idx on public.entitlements (subscription_id);
 ```
 
 Notes:
@@ -954,7 +974,7 @@ For pre-launch email capture.
 ```sql
 create table public.waitlist (
   id            uuid primary key default gen_random_uuid(),
-  email         citext not null unique,
+  email         extensions.citext not null unique,
   source        text,                              -- 'landing_hero' | 'landing_footer' | ...
   utm_source    text,
   utm_medium    text,
@@ -1171,18 +1191,18 @@ create policy "avatars self delete"
 
 High-impact indexes (already listed under each table). Explicit callouts:
 
-| Query pattern                                             | Index                                                                 |
-| --------------------------------------------------------- | --------------------------------------------------------------------- |
-| Matches on a given date, ordered by kickoff               | `fixtures_date_kickoff_idx`                                           |
-| Currently live matches                                    | `fixtures_is_live_idx` (partial)                                      |
-| Latest pre-match prediction per fixture                   | `predictions_prematch_latest_idx` (partial, DESC)                     |
-| Latest AI insight per fixture per type                    | `ai_insights_fixture_idx` + unique `ai_insights_fixture_type_hash_idx`|
-| User's follows / favorites                                | `follows_user_*` + `favorites_user_idx`                               |
-| League standings                                          | `standings_league_season_idx`                                         |
-| Player fuzzy search                                       | `players_full_name_trgm_idx` (GIN pg_trgm)                            |
-| Team fuzzy search                                         | `teams_name_trgm_idx` (GIN pg_trgm)                                   |
-| Unread notifications                                      | `notifications_unread_idx` (partial)                                  |
-| Current club per player                                   | `pth_current_team_idx` (unique partial where `left_on is null`)       |
+| Query pattern                                     | Index                                                                  |
+| ------------------------------------------------- | ---------------------------------------------------------------------- |
+| Matches on a given date (UTC), ordered by kickoff | `fixtures_date_kickoff_idx` (UTC-pinned cast)                          |
+| Currently live matches                            | `fixtures_is_live_idx` (partial)                                       |
+| Latest pre-match prediction per fixture           | `predictions_prematch_latest_idx` (partial, DESC)                      |
+| Latest AI insight per fixture per type            | `ai_insights_fixture_idx` + unique `ai_insights_fixture_type_hash_idx` |
+| User's follows / favorites                        | `follows_user_*` + `favorites_user_idx`                                |
+| League standings                                  | `standings_league_season_idx`                                          |
+| Player fuzzy search                               | `players_full_name_trgm_idx` (GIN pg_trgm)                             |
+| Team fuzzy search                                 | `teams_name_trgm_idx` (GIN pg_trgm)                                    |
+| Unread notifications                              | `notifications_unread_idx` (partial)                                   |
+| Current club per player                           | `pth_current_team_idx` (unique partial where `left_on is null`)        |
 
 All foreign key columns are indexed — this is enforced during migration review (Postgres does not create these automatically).
 
@@ -1228,18 +1248,20 @@ create trigger tg_ai_usage_updated_at               before update on public.ai_u
 
 ### 16.2 Auto-create `profiles` + `entitlements` + `user_preferences` on signup
 
+Function is created in migration `0007_users.sql`; the trigger on `auth.users` is attached in `0009_billing.sql` (after `entitlements` exists).
+
 ```sql
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
-set search_path = ''
+set search_path = extensions   -- citext cast; all public.* refs fully qualified
 as $$
 begin
   insert into public.profiles (id, email, display_name)
   values (
     new.id,
-    coalesce(new.email::citext, ''),
+    coalesce(new.email::extensions.citext, ''::extensions.citext),
     coalesce(new.raw_user_meta_data->>'name', split_part(coalesce(new.email, ''), '@', 1))
   );
 
@@ -1249,39 +1271,72 @@ begin
   return new;
 end $$;
 
+-- Attached in 0009_billing.sql:
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 ```
 
-### 16.3 Elo update after full-time (post-MVP polish)
+### 16.3 Lock down `handle_new_user` EXECUTE
+
+`SECURITY DEFINER` functions in `public` are exposed via PostgREST (`/rest/v1/rpc/...`). This function must only run from the auth trigger — revoke client access:
+
+```sql
+revoke all on function public.handle_new_user() from public;
+revoke all on function public.handle_new_user() from anon;
+revoke all on function public.handle_new_user() from authenticated;
+grant execute on function public.handle_new_user() to service_role;
+grant execute on function public.handle_new_user() to postgres;
+```
+
+Applied in migration `0016_lockdown_handle_new_user.sql`.
+
+### 16.4 Elo update after full-time (post-MVP polish)
 
 Deferred to Phase 3 — Elo update job runs as a nightly cron reading fixtures that transitioned to `FT` since last run.
 
-### 16.4 Prediction sanity check
+### 16.5 Prediction sanity check
 
 Enforced by table `CHECK` (already inline above) — the three win probabilities sum to 1 within 0.01.
 
-### 16.5 Search functions
+### 16.6 Search functions
 
-Materialized as SQL functions (not exposed to clients directly; queried by server via service role or via a `security definer` RPC if we want anon access):
+Materialized as SQL functions (not exposed to clients directly; queried by server via service role or via a `security definer` RPC if we want anon access).
+
+`search_path` is set to `extensions` so pg_trgm's `similarity()` and `%` operator resolve; all `public.*` references are fully qualified.
 
 ```sql
 create or replace function public.search_teams(q text, max_results integer default 10)
-returns table (id uuid, name text, logo_url text, country_name text, similarity real)
+returns table (id uuid, name text, logo_url text, country_name text, sim real)
 language sql
 stable
 security invoker
-set search_path = ''
+set search_path = extensions
 as $$
-  select t.id, t.name, t.logo_url, t.country_name, similarity(t.name, q) as sim
+  select t.id, t.name, t.logo_url, c.name as country_name, similarity(t.name, q) as sim
   from public.teams t
   left join public.countries c on c.id = t.country_id
   where t.name % q
   order by sim desc, t.elo_rating desc
   limit max_results;
 $$;
+
+create or replace function public.search_players(q text, max_results integer default 10)
+returns table (id uuid, full_name text, photo_url text, "position" public.player_position, sim real)
+language sql
+stable
+security invoker
+set search_path = extensions
+as $$
+  select p.id, p.full_name, p.photo_url, p.position, similarity(p.full_name, q) as sim
+  from public.players p
+  where p.full_name % q
+  order by sim desc
+  limit max_results;
+$$;
 ```
+
+> `teams` has no `country_name` column — country label comes from the joined `countries` row. `"position"` is quoted in the player search return signature because it is a partially-reserved identifier inside `returns table(...)`.
 
 ---
 
@@ -1289,23 +1344,25 @@ $$;
 
 Split into small, ordered files under `supabase/migrations/`. Suggested numbering:
 
-| # | Filename                                              | Contents                                                                        |
-| - | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
-| 1 | `0001_extensions_and_enums.sql`                       | `pgcrypto`, `pg_trgm`, `citext`, `unaccent`, all enums                          |
-| 2 | `0002_football_reference.sql`                         | countries, leagues, seasons, venues                                             |
-| 3 | `0003_teams_players.sql`                              | teams, players, player_team_history, player_seasons                             |
-| 4 | `0004_fixtures.sql`                                   | fixtures, fixture_events, fixture_statistics, lineups, lineup_players, standings|
-| 5 | `0005_analytics.sql`                                  | player_match_performances, form_snapshots, h2h_summaries                        |
-| 6 | `0006_predictions_and_ai.sql`                         | model_versions, predictions, ai_insights, ai_usage                              |
-| 7 | `0007_users.sql`                                      | profiles, user_preferences, handle_new_user trigger                             |
-| 8 | `0008_follows_favorites_notifications.sql`            | follows, favorites, notifications                                               |
-| 9 | `0009_billing.sql`                                    | subscriptions, entitlements                                                     |
-|10 | `0010_waitlist.sql`                                   | waitlist                                                                        |
-|11 | `0011_updated_at_triggers.sql`                        | `tg_set_updated_at()` + attach to all mutable tables                            |
-|12 | `0012_rls_reference.sql`                              | public-read policies for football tables                                        |
-|13 | `0013_rls_user_owned.sql`                             | user-owned policies (profiles/preferences/follows/favorites/notifications/...) |
-|14 | `0014_storage_avatars.sql`                            | avatars bucket + storage policies                                               |
-|15 | `0015_search_functions.sql`                           | search_teams, search_players, etc.                                              |
+| #   | Filename                                   | Contents                                                                         |
+| --- | ------------------------------------------ | -------------------------------------------------------------------------------- |
+| 1   | `0001_extensions_and_enums.sql`            | `pgcrypto`, `pg_trgm`, `citext`, `unaccent`, all enums                           |
+| 2   | `0002_football_reference.sql`              | countries, leagues, seasons, venues                                              |
+| 3   | `0003_teams_players.sql`                   | teams, players, player_team_history, player_seasons                              |
+| 4   | `0004_fixtures.sql`                        | fixtures, fixture_events, fixture_statistics, lineups, lineup_players, standings |
+| 5   | `0005_analytics.sql`                       | player_match_performances, form_snapshots, h2h_summaries                         |
+| 6   | `0006_predictions_and_ai.sql`              | model_versions, predictions, ai_insights, ai_usage                               |
+| 7   | `0007_users.sql`                           | profiles, user_preferences, `handle_new_user()` function                         |
+| 8   | `0008_follows_favorites_notifications.sql` | follows, favorites, notifications                                                |
+| 9   | `0009_billing.sql`                         | subscriptions, entitlements, attach `on_auth_user_created` trigger               |
+| 10  | `0010_waitlist.sql`                        | waitlist                                                                         |
+| 11  | `0011_updated_at_triggers.sql`             | `tg_set_updated_at()` + attach to all mutable tables                             |
+| 12  | `0012_rls_reference.sql`                   | public-read policies for football tables                                         |
+| 13  | `0013_rls_user_owned.sql`                  | user-owned policies (profiles/preferences/follows/favorites/notifications/...)   |
+| 14  | `0014_storage_avatars.sql`                 | avatars bucket + storage policies                                                |
+| 15  | `0015_search_functions.sql`                | `search_teams`, `search_players`                                                 |
+| 16  | `0016_lockdown_handle_new_user.sql`        | revoke EXECUTE on `handle_new_user()` from anon/authenticated                    |
+| 17  | `0017_missing_fk_indexes.sql`              | covering indexes for FK columns missed in per-table sections                     |
 
 Every migration is idempotent where possible (`create ... if not exists`, `add column if not exists`).
 

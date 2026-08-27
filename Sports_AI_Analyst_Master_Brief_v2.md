@@ -1,996 +1,959 @@
-# **SPORTS AI ANALYST** 
+# **SPORTS AI ANALYST**
 
-## **MASTER PRODUCT + TECHNICAL DEVELOPMENT BRIEF** 
+## **MASTER PRODUCT + TECHNICAL DEVELOPMENT BRIEF**
 
-_Greenfield / From Zero / Cursor-Ready Specification_ 
+_Greenfield / From Zero / Cursor-Ready Specification_
 
-#### **Core promise: “I have a football analyst beside me.”** 
+#### **Core promise: “I have a football analyst beside me.”**
 
-This document defines the intended depth of the product, not just the list of pages. 
+This document defines the intended depth of the product, not just the list of pages.
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-### **0. DOCUMENT PURPOSE** 
+### **0. DOCUMENT PURPOSE**
 
-This brief describes Sports AI Analyst as a completely new product. It is written so an AI coding agent in Cursor can understand the product vision, the required depth of the data model, the expected behavior of the AI engine, the page-level UX, and the implementation sequence without relying on any previous project state. 
+This brief describes Sports AI Analyst as a completely new product. It is written so an AI coding agent in Cursor can understand the product vision, the required depth of the data model, the expected behavior of the AI engine, the page-level UX, and the implementation sequence without relying on any previous project state.
 
-The most important requirement is that the application must distinguish between data retrieval, statistical computation, prediction, AI interpretation, and presentation. The AI must be capable of operating both pre-match and in real time during live matches. 
+The most important requirement is that the application must distinguish between data retrieval, statistical computation, prediction, AI interpretation, and presentation. The AI must be capable of operating both pre-match and in real time during live matches.
 
-This document is intentionally detailed. “Build the feature” means build the complete data flow, edge states, UI states, validation, caching, and UX expected by the specification - not a visual placeholder. 
+This document is intentionally detailed. “Build the feature” means build the complete data flow, edge states, UI states, validation, caching, and UX expected by the specification - not a visual placeholder.
 
-### **1. PRODUCT VISION** 
+### **1. PRODUCT VISION**
 
-Sports AI Analyst is a premium football intelligence SaaS product that combines real football data, statistical analysis, predictive modeling, and AI-generated explanations. The product should feel like a serious analytics platform, not a score widget with an AI text box. 
+Sports AI Analyst is a premium football intelligence SaaS product that combines real football data, statistical analysis, predictive modeling, and AI-generated explanations. The product should feel like a serious analytics platform, not a score widget with an AI text box.
 
-|**Layer**|**Purpose**|**User value**|
-|---|---|---|
-|Real football data|Fixtures, teams, players, events, statistics,<br>lineups,standings|Trustworthy foundation|
-|Analytics|Form, H2H, team strength, player<br>performance,trends|Understand the match|
-|Prediction engine|1/X/2 andgoal-relatedprobabilities|Structured forecast|
-|AI engine|Explain what the numbers mean|Human-readable intelligence|
-|Live intelligence|Recalculate duringthe match|Understand who has momentum and why|
-|Personalization|Follow teams/players,favorites,history|Return value|
-|Premium|Advanced AI and deeper analytics|Monetizableproduct|
+| **Layer**          | **Purpose**                                                        | **User value**                      |
+| ------------------ | ------------------------------------------------------------------ | ----------------------------------- |
+| Real football data | Fixtures, teams, players, events, statistics,<br>lineups,standings | Trustworthy foundation              |
+| Analytics          | Form, H2H, team strength, player<br>performance,trends             | Understand the match                |
+| Prediction engine  | 1/X/2 andgoal-relatedprobabilities                                 | Structured forecast                 |
+| AI engine          | Explain what the numbers mean                                      | Human-readable intelligence         |
+| Live intelligence  | Recalculate duringthe match                                        | Understand who has momentum and why |
+| Personalization    | Follow teams/players,favorites,history                             | Return value                        |
+| Premium            | Advanced AI and deeper analytics                                   | Monetizableproduct                  |
 
+### **2. CORE USER PROMISE**
 
+The application should answer four questions for a user on any match page:
 
-### **2. CORE USER PROMISE** 
+**1.** What is happening? - verified match data, score, events and statistics.
 
-The application should answer four questions for a user on any match page: 
+**2.** Who has the advantage? - model-based probabilities and current match state.
 
-**1.** What is happening? - verified match data, score, events and statistics. 
+**3.** Why? - key statistical factors and AI explanation.
 
-**2.** Who has the advantage? - model-based probabilities and current match state. 
+**4.** What could happen next? - scenario-based live or pre-match projections, clearly labeled as predictions.
 
-**3.** Why? - key statistical factors and AI explanation. 
+### **3. PRODUCT PRINCIPLES**
 
-**4.** What could happen next? - scenario-based live or pre-match projections, clearly labeled as predictions. 
+- Data before narrative: every AI claim must be grounded in available data.
 
-### **3. PRODUCT PRINCIPLES** 
+- Prediction before prose: the statistical engine produces the structured forecast; the LLM explains it.
 
-- Data before narrative: every AI claim must be grounded in available data. 
+- No fake data: no hardcoded form, H2H, lineups, player biographies or statistics in production.
 
-- Prediction before prose: the statistical engine produces the structured forecast; the LLM explains it. 
+- Live means live: if a match is in progress, the AI layer must have a path to refresh its context and update its conclusions.
 
-- No fake data: no hardcoded form, H2H, lineups, player biographies or statistics in production. 
+- Uncertainty is a feature: confidence and data quality should be visible.
 
-- Live means live: if a match is in progress, the AI layer must have a path to refresh its context and update its conclusions. 
+- Premium simplicity: the interface can be deep, but the primary read must remain easy to scan.
 
-- Uncertainty is a feature: confidence and data quality should be visible. 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-- Premium simplicity: the interface can be deep, but the primary read must remain easy to scan. 
+- Every important screen has loading, empty, error, stale-data and success states.
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+### **4. TARGET USERS**
 
-- Every important screen has loading, empty, error, stale-data and success states. 
+- Football fans who want deeper match understanding than a conventional score app.
 
-### **4. TARGET USERS** 
+- Users interested in predictive analytics and probability-based match views.
 
-- Football fans who want deeper match understanding than a conventional score app. 
+- Users who follow specific teams or players and want a personalized intelligence feed.
 
-- Users interested in predictive analytics and probability-based match views. 
+- Advanced users who want statistics, trends and player-level information.
 
-- Users who follow specific teams or players and want a personalized intelligence feed. 
+- Future audiences may include fantasy users, analysts and scouting-oriented users.
 
-- Advanced users who want statistics, trends and player-level information. 
+### **5. INITIAL PRODUCT SCOPE**
 
-- Future audiences may include fantasy users, analysts and scouting-oriented users. 
+Launch with football only. The internal architecture should be sport-extensible, but the first product should prioritize excellent football data coverage and a deep match experience.
 
-### **5. INITIAL PRODUCT SCOPE** 
+- Dashboard
 
-Launch with football only. The internal architecture should be sport-extensible, but the first product should prioritize excellent football data coverage and a deep match experience. 
+- Live Center
 
-- Dashboard 
+- Match Details
 
-- Live Center 
+- Teams/Clubs
 
-- Match Details 
+- Players
 
-- Teams/Clubs 
+- Leagues
 
-- Players 
+- Predictions
 
-- Leagues 
+- Favorites / Follow system
 
-- Predictions 
+- Statistics
 
-- Favorites / Follow system 
+- Authentication
 
-- Statistics 
+- Premium entitlements
 
-- Authentication 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-- Premium entitlements 
+### **6. AI ENGINE - NON-NEGOTIABLE ARCHITECTURE**
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+The AI engine is a core system, not an isolated UI card. It must work in two modes: PRE-MATCH and LIVE. The UI should expose different AI outputs depending on match status.
 
-### **6. AI ENGINE - NON-NEGOTIABLE ARCHITECTURE** 
+##### **6.1 Shared pipeline**
 
-The AI engine is a core system, not an isolated UI card. It must work in two modes: PRE-MATCH and LIVE. The UI should expose different AI outputs depending on match status. 
+Use the following conceptual pipeline:
 
-##### **6.1 Shared pipeline** 
+###### **Football provider → normalization → validation → cache/database → feature engineering → prediction engine → AI context builder → LLM → structured insight → UI**
 
-Use the following conceptual pipeline: 
+##### **6.2 Separation of responsibilities**
 
-###### **Football provider → normalization → validation → cache/database → feature engineering → prediction engine → AI context builder → LLM → structured insight → UI** 
+| **Subsystem**      | **Responsibility**                                | **Must not do**                         |
+| ------------------ | ------------------------------------------------- | --------------------------------------- |
+| Data layer         | Fetch and normalizeprovider data                  | Generate facts                          |
+| Analytics layer    | Compute form, H2H summaries, ratings,<br>trends   | Invent missing values                   |
+| Prediction engine  | Produce numericalprobabilities/scenarios          | Write narrative                         |
+| AI context builder | Select and summarize trusted inputs               | Callprovider directlyfrom UI            |
+| LLM                | Explain structured inputs and generate<br>insight | Invent stats or overwrite model outputs |
+| UI                 | Present state clearly                             | Perform business logic                  |
 
-##### **6.2 Separation of responsibilities** 
+##### **6.3 AI output must be structured**
 
-|**Subsystem**|**Responsibility**|**Must not do**|
-|---|---|---|
-|Data layer|Fetch and normalizeprovider data|Generate facts|
-|Analytics layer|Compute form, H2H summaries, ratings,<br>trends|Invent missing values|
-|Prediction engine|Produce numericalprobabilities/scenarios|Write narrative|
-|AI context builder|Select and summarize trusted inputs|Callprovider directlyfrom UI|
-|LLM|Explain structured inputs and generate<br>insight|Invent stats or overwrite model outputs|
-|UI|Present state clearly|Perform business logic|
+Do not depend on free-form text as the primary internal contract. The AI response should be validated against a typed schema and contain machine-readable fields.
 
+| **Field**                   | **Example**                                 |
+| --------------------------- | ------------------------------------------- |
+| summary                     | One concise sentence describingcurrent edge |
+| advantage                   | HOME / DRAW / AWAY / EVEN                   |
+| winOutcome                  | 1 / X / 2                                   |
+| winProbabilities            | home 0.54,draw 0.25,away0.21                |
+| expectedGoalsRange          | e.g. 1-3 totalgoals                         |
+| weakerTeamScoringChance<br> | e.g. 0.42                                   |
+| confdence                   | LOW / MEDIUM / HIGH                         |
+| keyFactors                  | arrayof evidence-based factors              |
+| scenarios                   | best case / likelycase / upset case         |
+| commentary                  | human-readable analysis                     |
+| dataTimestamp               | timestampused for analysis                  |
+| dataQuality                 | complete /partial / stale                   |
 
+### **7. PRE-MATCH AI ENGINE**
 
-##### **6.3 AI output must be structured** 
+For matches that have not started, the AI context builder should use as much verified historical and contextual information as available. The engine should not simply ask an LLM “who will win?”.
 
-Do not depend on free-form text as the primary internal contract. The AI response should be validated against a typed schema and contain machine-readable fields. 
+##### **7.1 Pre-match inputs**
 
-|**Field**|**Example**|
-|---|---|
-|summary|One concise sentence describingcurrent edge|
-|advantage|HOME / DRAW / AWAY / EVEN|
-|winOutcome|1 / X / 2|
-|winProbabilities|home 0.54,draw 0.25,away0.21|
-|expectedGoalsRange|e.g. 1-3 totalgoals|
-|weakerTeamScoringChance<br>|e.g. 0.42|
-|confdence|LOW / MEDIUM / HIGH|
-|keyFactors|arrayof evidence-based factors|
-|scenarios|best case / likelycase / upset case|
-|commentary|human-readable analysis|
-|dataTimestamp|timestampused for analysis|
-|dataQuality|complete /partial / stale|
+- Head-to-head history: last N meetings, home/away context, competition context.
 
+- Recent form: last 5 and last 10 matches, with separate home/away splits where possible.
 
+- Goals: scored, conceded, average goals, clean sheets, failed-to-score rate.
 
-### **7. PRE-MATCH AI ENGINE** 
+- Advanced team metrics: xG/xGA or equivalent when provided.
 
-For matches that have not started, the AI context builder should use as much verified historical and contextual information as available. The engine should not simply ask an LLM “who will win?”. 
+- League position and points-per-match.
 
-##### **7.1 Pre-match inputs** 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-- Head-to-head history: last N meetings, home/away context, competition context. 
+- Home advantage and away performance.
 
-- Recent form: last 5 and last 10 matches, with separate home/away splits where possible. 
+- Rest days between matches where available.
 
-- Goals: scored, conceded, average goals, clean sheets, failed-to-score rate. 
+- Confirmed or predicted lineups.
 
-- Advanced team metrics: xG/xGA or equivalent when provided. 
+- Player availability: injuries and suspensions when available.
 
-- League position and points-per-match. 
+- Key player form and recent contributions.
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+- Competition and match importance.
 
-- Home advantage and away performance. 
+- Market-style data only if a reliable provider is explicitly selected and legally appropriate.
 
-- Rest days between matches where available. 
+##### **7.2 Pre-match output categories**
 
-- Confirmed or predicted lineups. 
+The pre-match AI section must be divided into clear categories. The user should never have to read one huge AI paragraph.
 
-- Player availability: injuries and suspensions when available. 
+| **Category**            | **Required output**                                                               |
+| ----------------------- | --------------------------------------------------------------------------------- |
+| 1 - Match Winner        | Probabilityfor Home / Draw / Awayand the model favorite                           |
+| 2 - Goals               | Expected total-goals range and over/under style interpretation<br>where supported |
+| 3 - Both Teams to Score | Estimated chance that both sides score                                            |
+| 4 - Underdog Threat     | Whether the weaker-rated side has a meaningful scoring/upset<br>path              |
+| 5 - KeyFactors          | Topevidence-backed factors<br>                                                    |
+| 6 - Player Impact       | Players most likelyto infuence the match                                          |
+| 7 - Risk                | Reasons the model could be wrong                                                  |
+| 8 - AI Summary          | Short human explanation of the completepicture                                    |
 
-- Key player form and recent contributions. 
+##### **7.3 Example pre-match output**
 
-- Competition and match importance. 
+1/X/2: Home 54% | Draw 25% | Away 21% Goal expectation: 2-3 total goals Underdog scoring chance: 42%
 
-- Market-style data only if a reliable provider is explicitly selected and legally appropriate. 
+Key reason: home form + defensive edge, but away side has transition threat Risk: missing starting striker and incomplete lineup information
 
-##### **7.2 Pre-match output categories** 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-The pre-match AI section must be divided into clear categories. The user should never have to read one huge AI paragraph. 
+### **8. LIVE AI ENGINE - REAL-TIME INTELLIGENCE**
 
-|**Category**|**Required output**|
-|---|---|
-|1 - Match Winner|Probabilityfor Home / Draw / Awayand the model favorite|
-|2 - Goals|Expected total-goals range and over/under style interpretation<br>where supported|
-|3 - Both Teams to Score|Estimated chance that both sides score|
-|4 - Underdog Threat|Whether the weaker-rated side has a meaningful scoring/upset<br>path|
-|5 - KeyFactors|Topevidence-backed factors<br>|
-|6 - Player Impact|Players most likelyto infuence the match|
-|7 - Risk|Reasons the model could be wrong|
-|8 - AI Summary|Short human explanation of the completepicture|
+A live match must be treated as a changing state. The AI engine should not simply reuse the pre-match analysis. It must ingest live statistics/events and produce an updated view of the match.
 
+##### **8.1 Live refresh loop**
 
+The live engine should operate on a configurable refresh cycle appropriate to provider limits. The exact interval should be selected after API cost and rate-limit analysis, but the architecture must support repeated updates without rebuilding the entire page.
 
-##### **7.3 Example pre-match output** 
+###### **Live provider → fresh event/stat snapshot → state diff → live feature calculation → probability update → AI context refresh → structured live insight → UI update**
 
-1/X/2: Home 54% | Draw 25% | Away 21% Goal expectation: 2-3 total goals Underdog scoring chance: 42% 
+##### **8.2 Live inputs**
 
-Key reason: home form + defensive edge, but away side has transition threat Risk: missing starting striker and incomplete lineup information 
+- Current score and minute.
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+- Goals and timestamps.
 
-### **8. LIVE AI ENGINE - REAL-TIME INTELLIGENCE** 
+- Red cards and yellow cards.
 
-A live match must be treated as a changing state. The AI engine should not simply reuse the pre-match analysis. It must ingest live statistics/events and produce an updated view of the match. 
+- Shots and shots on target.
 
-##### **8.1 Live refresh loop** 
+- Possession.
 
-The live engine should operate on a configurable refresh cycle appropriate to provider limits. The exact interval should be selected after API cost and rate-limit analysis, but the architecture must support repeated updates without rebuilding the entire page. 
+- Corners.
 
-###### **Live provider → fresh event/stat snapshot → state diff → live feature calculation → probability update → AI context refresh → structured live insight → UI update** 
+- Attacking pressure / dangerous attacks if provider exposes them.
 
-##### **8.2 Live inputs** 
+- xG or equivalent live model if available.
 
-- Current score and minute. 
+- Substitutions.
 
-- Goals and timestamps. 
+- VAR / penalty events where available.
 
-- Red cards and yellow cards. 
+- Current player availability after substitutions/cards.
 
-- Shots and shots on target. 
+- Pre-match probabilities as the baseline.
 
-- Possession. 
+- Changes since the previous update, not just the current absolute snapshot.
 
-- Corners. 
+##### **8.3 Live AI categories**
 
-- Attacking pressure / dangerous attacks if provider exposes them. 
+| **Category**               | **What the engine should answer**                             |
+| -------------------------- | ------------------------------------------------------------- |
+| Who is more likelyto win?  | Current 1/X/2probabilitiesgiven score,time and live state.    |
+| What happens byfull time?  | Expected remaining goals / totalgoals range.                  |
+| Can the weaker team score? | Probabilityorqualitative level of scoringthreat.              |
+| Momentum                   | Which side currentlyhas the stronger match state and why.     |
+| Turning point              | Most important event or statistical change since last update. |
+| Risk / volatility          | Whether the match is stable or highlyunpredictable.           |
+| Next scenario              | Mostplausible short-termpath,clearlylabeled as a forecast.    |
+| Commentary                 | Human-readable analyst-style explanation.                     |
 
-- xG or equivalent live model if available. 
+##### **8.4 Live win-probability rules**
 
-- Substitutions. 
+The engine should start from pre-match priors and progressively update them using current state. Example factors include scoreline, time remaining, red cards, shots, xG, possession, and other provider-supported indicators. The live engine must avoid abrupt probability swings unless a real event justifies them.
 
-- VAR / penalty events where available. 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-- Current player availability after substitutions/cards. 
+##### **8.5 Remaining-goals forecast**
 
-- Pre-match probabilities as the baseline. 
+The product should explicitly support a “goals until full time” concept. The output should distinguish between expected goals remaining and expected final total goals. Example: “Expected remaining goals: 0.8. Most likely final total: 2-3.”
 
-- Changes since the previous update, not just the current absolute snapshot. 
+##### **8.6 Underdog scoring analysis**
 
-##### **8.3 Live AI categories** 
+For the weaker team, provide a dedicated indicator such as “Scoring threat: Low / Moderate / High” plus a probability when data quality allows it. Explain the evidence, for example repeated shots on target, high attacking pressure, or a one-goal deficit with significant time remaining.
 
-|**Category**|**What the engine should answer**|
-|---|---|
-|Who is more likelyto win?|Current 1/X/2probabilitiesgiven score,time and live state.|
-|What happens byfull time?|Expected remaining goals / totalgoals range.|
-|Can the weaker team score?|Probabilityorqualitative level of scoringthreat.|
-|Momentum|Which side currentlyhas the stronger match state and why.|
-|Turning point|Most important event or statistical change since last update.|
-|Risk / volatility|Whether the match is stable or highlyunpredictable.|
-|Next scenario|Mostplausible short-termpath,clearlylabeled as a forecast.|
-|Commentary|Human-readable analyst-style explanation.|
+##### **8.7 Live commentary cadence**
 
+- Do not generate a new LLM response for every trivial UI refresh.
 
+- Generate or update commentary when meaningful state changes occur.
 
-##### **8.4 Live win-probability rules** 
+- Examples: goal, red card, major probability shift, large xG change, significant substitution, or a defined statistical threshold crossing.
 
-The engine should start from pre-match priors and progressively update them using current state. Example factors include scoreline, time remaining, red cards, shots, xG, possession, and other provider-supported indicators. The live engine must avoid abrupt probability swings unless a real event justifies them. 
+- Use cached analysis between meaningful events to control cost.
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+### **9. AI TRUST, HALLUCINATION CONTROL AND DATA QUALITY**
 
-##### **8.5 Remaining-goals forecast** 
+- Never allow the LLM to invent a statistic that is absent from the supplied context.
 
-The product should explicitly support a “goals until full time” concept. The output should distinguish between expected goals remaining and expected final total goals. Example: “Expected remaining goals: 0.8. Most likely final total: 2-3.” 
+- Never claim a player scored, assisted, started or was injured unless supported by provider data.
 
-##### **8.6 Underdog scoring analysis** 
+- When data is partial, explicitly label the analysis as partial.
 
-For the weaker team, provide a dedicated indicator such as “Scoring threat: Low / Moderate / High” plus a probability when data quality allows it. Explain the evidence, for example repeated shots on target, high attacking pressure, or a one-goal deficit with significant time remaining. 
+- When data is stale, expose the timestamp and downgrade confidence.
 
-##### **8.7 Live commentary cadence** 
+- AI output should never be presented as certainty.
 
-- Do not generate a new LLM response for every trivial UI refresh. 
+- Use a validation layer to reject malformed or unsupported output.
 
-- Generate or update commentary when meaningful state changes occur. 
+### **10. MATCH PAGE - PRIMARY PRODUCT EXPERIENCE**
 
-- Examples: goal, red card, major probability shift, large xG change, significant substitution, or a defined statistical threshold crossing. 
+The Match Details page is the most important screen in the product. It must combine factual information, visual analytics and AI intelligence into one coherent flow.
 
-- Use cached analysis between meaningful events to control cost. 
+##### **10.1 Match page structure**
 
-### **9. AI TRUST, HALLUCINATION CONTROL AND DATA QUALITY** 
+- Match header: competition, status, teams, score, time, venue.
 
-- Never allow the LLM to invent a statistic that is absent from the supplied context. 
+- AI intelligence hero: current prediction and one-sentence analyst summary.
 
-- Never claim a player scored, assisted, started or was injured unless supported by provider data. 
+- AI category cards: 1/X/2, goals, underdog scoring, momentum and risk.
 
-- When data is partial, explicitly label the analysis as partial. 
+- Key factors.
 
-- When data is stale, expose the timestamp and downgrade confidence. 
+- Advanced team comparison.
 
-- AI output should never be presented as certainty. 
+- Live or pre-match statistics.
 
-- Use a validation layer to reject malformed or unsupported output. 
+- Recent form.
 
-### **10. MATCH PAGE - PRIMARY PRODUCT EXPERIENCE** 
+- Head-to-head.
 
-The Match Details page is the most important screen in the product. It must combine factual information, visual analytics and AI intelligence into one coherent flow. 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-##### **10.1 Match page structure** 
+- Lineups / squad availability.
 
-- Match header: competition, status, teams, score, time, venue. 
+- Timeline / live events.
 
-- AI intelligence hero: current prediction and one-sentence analyst summary. 
+- Players to watch.
 
-- AI category cards: 1/X/2, goals, underdog scoring, momentum and risk. 
+- Additional analytics / markets where supported.
 
-- Key factors. 
+- Favorite / follow actions.
 
-- Advanced team comparison. 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-- Live or pre-match statistics. 
+### **11. PLAYER PROFILE - REQUIRED DEPTH**
 
-- Recent form. 
+Every player page should feel like a real football intelligence profile, not a name and a few numbers. The exact data available depends on the provider, but the interface must be designed to gracefully support rich data.
 
-- Head-to-head. 
+##### **11.1 Player header**
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+The player header should display, when available:
 
-- Lineups / squad availability. 
+- Player photo.
 
-- Timeline / live events. 
+- Full name.
 
-- Players to watch. 
+- Nationality.
 
-- Additional analytics / markets where supported. 
+- Date of birth and age.
 
-- Favorite / follow actions. 
+- Height.
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+- Primary foot.
 
-### **11. PLAYER PROFILE - REQUIRED DEPTH** 
+- Primary position.
 
-Every player page should feel like a real football intelligence profile, not a name and a few numbers. The exact data available depends on the provider, but the interface must be designed to gracefully support rich data. 
+- Squad number.
 
-##### **11.1 Player header** 
+- Current club.
 
-The player header should display, when available: 
+- Market value.
 
-- Player photo. 
+- Follow player control.
 
-- Full name. 
+##### **11.2 Player overview card**
 
-- Nationality. 
+| **Field**      | **Requirement**<br>                                                                      |
+| -------------- | ---------------------------------------------------------------------------------------- |
+| Nationality    | Countryname + fagwhere appropriate                                                       |
+| Date of birth  | Exact date, plus derived age                                                             |
+| Height         | Metric display,with unit                                                                 |
+| Primaryfoot    | Left / Right / Both                                                                      |
+| Position       | Primary position + secondary positions if available                                      |
+| Squad number   | Current shirt number                                                                     |
+| Market value   | Current value + currency;source and timestampwhere relevant                              |
+| Average rating | Competition/season scope must be explicit                                                |
+| Former teams   | Chronological club history                                                               |
+| Short bio      | Concise factual biography from a licensed/allowed source;<br>source attribution required |
 
-- Date of birth and age. 
+##### **11.3 Attribute overview**
 
-- Height. 
+The Attribute Overview should provide a visual summary of the player’s strengths. Use position-aware categories. Do not force goalkeeper metrics onto attackers or vice versa.
 
-- Primary foot. 
+| **Positiongroup** | **Example attributes**<br>                                               |
+| ----------------- | ------------------------------------------------------------------------ |
+| Goalkeeper        | Shot stopping,handling,refexes,aerial,distribution, positioning          |
+| Defender<br>      | Defending,tackling,interceptions,aerial, positioning, passing            |
+| Midfelder         | Passing,ballprogression,vision,ball recovery,creativity, pressing<br>    |
+| Winger            | Dribbling, pace,chance creation,crossing,fnishing,1v1 threat             |
+| Forward           | Finishing, shot quality, movement, aerial threat, link play,<br>pressing |
 
-- Primary position. 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-- Squad number. 
+Each attribute should have a defined source, scale and update frequency. The UI should explain whether a value is provider-rated, model-generated or derived.
 
-- Current club. 
+##### **11.4 Player match history tab**
 
-- Market value. 
+A dedicated tab should show previous matches with at minimum: date, competition, opponent, home/away, minutes, rating when available, goals, assists, and key events. Each row should explicitly show if the player scored or assisted.
 
-- Follow player control. 
+##### **11.5 Match contribution badges**
 
-##### **11.2 Player overview card** 
+- Goal badge with goal minute where available.
 
-|**Field**|**Requirement**<br>|
-|---|---|
-|Nationality|Countryname + fagwhere appropriate|
-|Date of birth|Exact date, plus derived age|
-|Height|Metric display,with unit|
-|Primaryfoot|Left / Right / Both|
-|Position|Primary position + secondary positions if available|
-|Squad number|Current shirt number|
-|Market value|Current value + currency;source and timestampwhere relevant|
-|Average rating|Competition/season scope must be explicit|
-|Former teams|Chronological club history|
-|Short bio|Concise factual biography from a licensed/allowed source;<br>source attribution required|
+- Assist badge with assist minute where available.
 
+- Clean-sheet badge for applicable positions.
 
+- Yellow/red card badge.
 
-##### **11.3 Attribute overview** 
+- Man-of-the-match or top-rated badge if provider supports it.
 
-The Attribute Overview should provide a visual summary of the player’s strengths. Use position-aware categories. Do not force goalkeeper metrics onto attackers or vice versa. 
+##### **11.6 Player follow system**
 
-|**Positiongroup**|**Example attributes**<br>|
-|---|---|
-|Goalkeeper|Shot stopping,handling,refexes,aerial,distribution, positioning|
-|Defender<br>|Defending,tackling,interceptions,aerial, positioning, passing|
-|Midfelder|Passing,ballprogression,vision,ball recovery,creativity, pressing<br>|
-|Winger|Dribbling, pace,chance creation,crossing,fnishing,1v1 threat|
-|Forward|Finishing, shot quality, movement, aerial threat, link play,<br>pressing|
+Each player profile must provide an obvious Follow control. Following a player should eventually support personalized notifications and feeds such as match appearance, goals, assists, cards and lineup confirmation.
 
+##### **11.7 Player tabs**
 
+| **Tab**    | **Contents**                                             |
+| ---------- | -------------------------------------------------------- |
+| Overview   | Identity,current club,attributes,rating,value,bio        |
+| Matches    | Previous matches and contributions                       |
+| Statistics | Season,competition and career statistics where supported |
+| Career     | Previous clubs,competitions,major milestones<br>         |
+| AI Insight | AI summaryof current form andplaying profle              |
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-Each attribute should have a defined source, scale and update frequency. The UI should explain whether a value is provider-rated, model-generated or derived. 
+### **12. CLUB / TEAM PROFILE - SOFASCORE-STYLE DEPTH**
 
-##### **11.4 Player match history tab** 
+Club pages should be structured as a multi-tab intelligence hub. The target is the depth of a major football data product, while maintaining the distinctive Sports AI Analyst design language.
 
-A dedicated tab should show previous matches with at minimum: date, competition, opponent, home/away, minutes, rating when available, goals, assists, and key events. Each row should explicitly show if the player scored or assisted. 
+##### **12.1 Club header**
 
-##### **11.5 Match contribution badges** 
+- Club logo.
 
-- Goal badge with goal minute where available. 
+- Club name.
 
-- Assist badge with assist minute where available. 
+- Country.
 
-- Clean-sheet badge for applicable positions. 
+- League.
 
-- Yellow/red card badge. 
+- Home venue.
 
-- Man-of-the-match or top-rated badge if provider supports it. 
+- Founded year where available.
 
-##### **11.6 Player follow system** 
+- Current standing summary.
 
-Each player profile must provide an obvious Follow control. Following a player should eventually support personalized notifications and feeds such as match appearance, goals, assists, cards and lineup confirmation. 
+- Follow club button.
 
-##### **11.7 Player tabs** 
+##### **12.2 Club tabs**
 
-|**Tab**|**Contents**|
-|---|---|
-|Overview|Identity,current club,attributes,rating,value,bio|
-|Matches|Previous matches and contributions|
-|Statistics|Season,competition and career statistics where supported|
-|Career|Previous clubs,competitions,major milestones<br>|
-|AI Insight|AI summaryof current form andplaying profle|
+| **Tab**         | **Required content**                                                           |
+| --------------- | ------------------------------------------------------------------------------ |
+| Details         | Club identity,venue,country,season summary,current form                        |
+| Matches         | Upcoming and previous matches with result, competition and<br>date             |
+| Standings       | Current league table with club highlighted<br>                                 |
+| Squad           | Goalkeepers,defenders,midfelders,forwards; player cards                        |
+| Top Players     | Top-rated, top scorers, top assists and other provider-supported<br>categories |
+| Statistics      | Team attacking,defensive,discipline and advanced metrics                       |
+| Form            | Last 5/10 matches,home/awaysplits,trend visualizations                         |
+| H2H / Opponents | Useful head-to-head summaries against upcomingopponents                        |
+| AI Insight      | AI-generated summary of team identity, form and current<br>trajectory          |
 
+##### **12.3 Club matches tab behavior**
 
+The Matches tab should support filters by date and competition. Every match should be clickable. Match rows should carry status, score, opponent, competition and a concise result indicator.
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+##### **12.4 Squad tab**
 
-### **12. CLUB / TEAM PROFILE - SOFASCORE-STYLE DEPTH** 
+Player cards should contain photo, name, position, shirt number, rating/summary where available, and a direct link to the player profile. The squad should support grouping and search/filtering.
 
-Club pages should be structured as a multi-tab intelligence hub. The target is the depth of a major football data product, while maintaining the distinctive Sports AI Analyst design language. 
+##### **12.5 Top players**
 
-##### **12.1 Club header** 
+Do not reduce this to a static ranking. Provide multiple lenses such as average rating, goals, assists, appearances, minutes, and role-specific impact when data supports it.
 
-- Club logo. 
+##### **12.6 Club statistics**
 
-- Club name. 
+| **Category** | **Examples**                                       |
+| ------------ | -------------------------------------------------- |
+| Attacking    | Goals,shots,shots on target,xG, goalsper match<br> |
+| Possession   | Averagepossession,feld tilt or equivalent          |
+| Passing      | Pass accuracy, progressivepassingwhere available   |
+| Defending    | Tackles,interceptions,clean sheets, goals conceded |
+| Discipline   | Yellow cards,red cards,fouls                       |
 
-- Country. 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-- League. 
+Last 5/10, home form, away form, scoring trend
 
-- Home venue. 
+Form
 
-- Founded year where available. 
+### **13. LEAGUE PAGE**
 
-- Current standing summary. 
+League pages should use the same product depth as club pages, but center the experience around competition context.
 
-- Follow club button. 
+- League overview.
 
-##### **12.2 Club tabs** 
+- Standings.
 
-|**Tab**|**Required content**|
-|---|---|
-|Details|Club identity,venue,country,season summary,current form|
-|Matches|Upcoming and previous matches with result, competition and<br>date|
-|Standings|Current league table with club highlighted<br>|
-|Squad|Goalkeepers,defenders,midfelders,forwards; player cards|
-|Top Players|Top-rated, top scorers, top assists and other provider-supported<br>categories|
-|Statistics|Team attacking,defensive,discipline and advanced metrics|
-|Form|Last 5/10 matches,home/awaysplits,trend visualizations|
-|H2H / Opponents|Useful head-to-head summaries against upcomingopponents|
-|AI Insight|AI-generated summary of team identity, form and current<br>trajectory|
+- Fixtures and results.
 
+- Top scorers / assists where available.
 
+- Team comparison.
 
-##### **12.3 Club matches tab behavior** 
+- League statistics.
 
-The Matches tab should support filters by date and competition. Every match should be clickable. Match rows should carry status, score, opponent, competition and a concise result indicator. 
+- Upcoming key matches.
 
-##### **12.4 Squad tab** 
+- AI league insight.
 
-Player cards should contain photo, name, position, shirt number, rating/summary where available, and a direct link to the player profile. The squad should support grouping and search/filtering. 
+### **14. DASHBOARD**
 
-##### **12.5 Top players** 
+The Dashboard is a personalized entry point, not a dumping ground for match lists.
 
-Do not reduce this to a static ranking. Provide multiple lenses such as average rating, goals, assists, appearances, minutes, and role-specific impact when data supports it. 
+- Featured match selected by a transparent priority algorithm.
 
-##### **12.6 Club statistics** 
+- Live matches section.
 
-|**Category**|**Examples**|
-|---|---|
-|Attacking|Goals,shots,shots on target,xG, goalsper match<br>|
-|Possession|Averagepossession,feld tilt or equivalent|
-|Passing|Pass accuracy, progressivepassingwhere available|
-|Defending|Tackles,interceptions,clean sheets, goals conceded|
-|Discipline|Yellow cards,red cards,fouls|
+- Important matches today.
 
+- Upcoming high-interest matches.
 
+- Followed teams and players.
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+- AI insights / notable changes.
 
-Last 5/10, home form, away form, scoring trend 
+- Quick access to Predictions.
 
-Form 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-### **13. LEAGUE PAGE** 
+### **15. LIVE CENTER**
 
-League pages should use the same product depth as club pages, but center the experience around competition context. 
+The Live Center should provide a compact but information-dense view of all live matches, with special emphasis on matches where the model detects meaningful momentum or probability changes.
 
-- League overview. 
+- Live match list with score and minute.
 
-- Standings. 
+- Fast access to detailed live match pages.
 
-- Fixtures and results. 
+- Live AI marker for matches with fresh analysis.
 
-- Top scorers / assists where available. 
+- Filter by league/status.
 
-- Team comparison. 
+- Sorted by importance and activity, not arbitrary API order.
 
-- League statistics. 
+### **16. PREDICTIONS CENTER**
 
-- Upcoming key matches. 
+The Predictions area should not simply duplicate the match page. It should be an aggregated view of model forecasts across matches.
 
-- AI league insight. 
+- 1/X/2 overview.
 
-### **14. DASHBOARD** 
+- High-confidence candidates.
 
-The Dashboard is a personalized entry point, not a dumping ground for match lists. 
+- Goal forecasts.
 
-- Featured match selected by a transparent priority algorithm. 
+- Underdog scoring opportunities.
 
-- Live matches section. 
+- Prediction changes for live matches.
 
-- Important matches today. 
+- Historical model performance once enough data exists.
 
-- Upcoming high-interest matches. 
+### **17. FOLLOW / FAVORITE SYSTEM**
 
-- Followed teams and players. 
+Separate “favorite” convenience from persistent “follow” personalization. Favorites can represent bookmarks; follows imply ongoing updates.
 
-- AI insights / notable changes. 
+| **Object** | **Action** | **Futurepersonalization**                            |
+| ---------- | ---------- | ---------------------------------------------------- |
+| Match      | Favorite   | Reminder/status changes                              |
+| Team       | Follow     | Upcomingmatches,scores,AI insights                   |
+| Player     | Follow     | Appearances, goals, assists, cards, lineup<br>events |
+| League     | Follow     | Keymatches and competition updates                   |
 
-- Quick access to Predictions. 
+### **18. AUTHENTICATION + USER PROFILE**
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+- Registration/login.
 
-### **15. LIVE CENTER** 
+- Profile settings.
 
-The Live Center should provide a compact but information-dense view of all live matches, with special emphasis on matches where the model detects meaningful momentum or probability changes. 
+- Followed teams/players.
 
-- Live match list with score and minute. 
+- Favorite matches.
 
-- Fast access to detailed live match pages. 
+- Notification preferences.
 
-- Live AI marker for matches with fresh analysis. 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-- Filter by league/status. 
+- AI usage / premium entitlement state.
 
-- Sorted by importance and activity, not arbitrary API order. 
+- Prediction history where appropriate.
 
-### **16. PREDICTIONS CENTER** 
+### **19. PREMIUM + ENTITLEMENTS**
 
-The Predictions area should not simply duplicate the match page. It should be an aggregated view of model forecasts across matches. 
+Premium should be feature-based, not a collection of arbitrary locked screens.
 
-- 1/X/2 overview. 
+| **Feature**                    | **Free**   | **Premium** |
+| ------------------------------ | ---------- | ----------- |
+| Basic match data               | Yes        | Yes         |
+| Basic statistics               | Yes        | Yes         |
+| Basic 1/X/2prediction          | Limited    | Yes         |
+| DeepAIpre-match analysis       | Limited    | Yes         |
+| Live AI intelligence           | Limited    | Yes         |
+| Advancedplayer intelligence    | Limited    | Yes         |
+| Historicalprediction analytics | No/Limited | Yes         |
+| Higher AI usage limits         | No         | Yes         |
 
-- High-confidence candidates. 
+### **20. DATA MODEL - CORE ENTITIES**
 
-- Goal forecasts. 
+| **Entity**             | **Purpose**<br>                                     |
+| ---------------------- | --------------------------------------------------- |
+| User                   | Authentication/profle ownership                     |
+| Team                   | Club identityand normalized team data               |
+| Player                 | Player identityand normalized career data           |
+| League                 | Competition identity                                |
+| Fixture                | Match identityand status                            |
+| FixtureEvent           | Goals/cards/substitutions/VAR/etc.<br>              |
+| FixtureStatistic       | Team-level live or fnal statistics                  |
+| Lineup                 | StartingXI,substitutes,formation<br>                |
+| PlayerMatchPerformance | Player contribution in a specifc match              |
+| Prediction             | Model forecast snapshot                             |
+| AIInsight              | Validated AI analysis tied to a data snapshot       |
+| Follow                 | Persistent user relationshipwith team/player/league |
+| Favorite               | Bookmark relationship                               |
+| Subscription           | Billingandplan state                                |
+| Entitlement            | Feature access rules                                |
 
-- Underdog scoring opportunities. 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-- Prediction changes for live matches. 
+### **21. API + SERVICE ARCHITECTURE**
 
-- Historical model performance once enough data exists. 
+UI components should not directly call the external football provider. Keep external integration isolated.
 
-### **17. FOLLOW / FAVORITE SYSTEM** 
+###### **UI → application service → domain service → cache/database → provider adapter**
 
-Separate “favorite” convenience from persistent “follow” personalization. Favorites can represent bookmarks; follows imply ongoing updates. 
+##### **21.1 Provider adapter**
 
-|**Object**|**Action**|**Futurepersonalization**|
-|---|---|---|
-|Match|Favorite|Reminder/status changes|
-|Team|Follow|Upcomingmatches,scores,AI insights|
-|Player|Follow|Appearances, goals, assists, cards, lineup<br>events|
-|League|Follow|Keymatches and competition updates|
+Create an abstraction around the external football data provider so that the rest of the product depends on internal types rather than provider-specific response shapes.
 
+##### **21.2 Recommended service boundaries**
 
+- footballService - fixtures, teams, players, leagues, standings, statistics, lineups, events.
 
-### **18. AUTHENTICATION + USER PROFILE** 
+- analyticsService - form, H2H, team strength, trends, player performance.
 
-- Registration/login. 
+- predictionService - pre-match and live prediction calculations.
 
-- Profile settings. 
+- aiContextService - converts trusted structured data into LLM context.
 
-- Followed teams/players. 
+- aiService - model invocation and structured response validation.
 
-- Favorite matches. 
+- followService - follow/favorite operations.
 
-- Notification preferences. 
+- entitlementService - premium permissions.
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+- notificationService - future push/email/in-app updates.
 
-- AI usage / premium entitlement state. 
+### **22. CACHING + REAL-TIME STRATEGY**
 
-- Prediction history where appropriate. 
+Caching is a first-class product concern because football APIs and LLM calls can become expensive.
 
-### **19. PREMIUM + ENTITLEMENTS** 
+| **Data**            | **Suggested behavior**                           |
+| ------------------- | ------------------------------------------------ |
+| Live score/events   | Short TTL / event-driven refresh where supported |
+| Live statistics<br> | Short TTL                                        |
+| Todayfxtures<br>    | Short/medium TTL                                 |
+| Upcomingfxtures     | Longer TTL                                       |
+| Team identity       | LongTTL                                          |
+| Player identity     | LongTTL                                          |
+| Historical H2H      | LongTTL with invalidation on new data            |
+| AIpre-match insight | Cache until meaningful input changes             |
+| AI live insight     | Refresh on meaningful state changes              |
 
-Premium should be feature-based, not a collection of arbitrary locked screens. 
+### **23. REAL-TIME UPDATE DESIGN**
 
-|**Feature**|**Free**|**Premium**|
-|---|---|---|
-|Basic match data|Yes|Yes|
-|Basic statistics|Yes|Yes|
-|Basic 1/X/2prediction|Limited|Yes|
-|DeepAIpre-match analysis|Limited|Yes|
-|Live AI intelligence|Limited|Yes|
-|Advancedplayer intelligence|Limited|Yes|
-|Historicalprediction analytics|No/Limited|Yes|
-|Higher AI usage limits|No|Yes|
+The application should make live updates feel smooth rather than forcing the user to refresh.
 
+- Use server-friendly data fetching and a client update mechanism appropriate to the chosen architecture.
 
+- Only update the parts of the page that changed.
 
-### **20. DATA MODEL - CORE ENTITIES** 
+- Animate meaningful score/event changes subtly.
 
-|**Entity**|**Purpose**<br>|
-|---|---|
-|User|Authentication/profle ownership|
-|Team|Club identityand normalized team data|
-|Player|Player identityand normalized career data|
-|League|Competition identity|
-|Fixture|Match identityand status|
-|FixtureEvent|Goals/cards/substitutions/VAR/etc.<br>|
-|FixtureStatistic|Team-level live or fnal statistics|
-|Lineup|StartingXI,substitutes,formation<br>|
-|PlayerMatchPerformance|Player contribution in a specifc match|
-|Prediction|Model forecast snapshot|
-|AIInsight|Validated AI analysis tied to a data snapshot|
-|Follow|Persistent user relationshipwith team/player/league|
-|Favorite|Bookmark relationship|
-|Subscription|Billingandplan state|
-|Entitlement|Feature access rules|
+- Keep the last known good state if a provider request fails temporarily.
 
+- Show stale-data indicators when the data age exceeds the configured threshold.
 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+### **24. PLAYER BIODATA + SOURCING**
 
-### **21. API + SERVICE ARCHITECTURE** 
+The requested short biography should be treated differently from provider football statistics. If a biographical source such as Wikipedia is used, implement it through a defined source/integration and display attribution where required. Never silently scrape or copy content without checking terms and practical reliability.
 
-UI components should not directly call the external football provider. Keep external integration isolated. 
+### **25. DESIGN SYSTEM**
 
-###### **UI → application service → domain service → cache/database → provider adapter** 
+The visual target is premium sports analytics: dark-first, high information density, clean typography, restrained glow/glass effects, clear data hierarchy, and excellent responsive behavior.
 
-##### **21.1 Provider adapter** 
+- Consistent spacing scale.
 
-Create an abstraction around the external football data provider so that the rest of the product depends on internal types rather than provider-specific response shapes. 
+- Consistent card radius and border treatment.
 
-##### **21.2 Recommended service boundaries** 
+- Clear typography hierarchy.
 
-- footballService - fixtures, teams, players, leagues, standings, statistics, lineups, events. 
+- Accessible contrast.
 
-- analyticsService - form, H2H, team strength, trends, player performance. 
+- Charts that prioritize readability over decoration.
 
-- predictionService - pre-match and live prediction calculations. 
+- Color semantics for positive, negative, neutral, warning and live states.
 
-- aiContextService - converts trusted structured data into LLM context. 
+- Animations used for state changes, not decoration.
 
-- aiService - model invocation and structured response validation. 
+- No visual inconsistency between Dashboard, Match, Team and Player pages.
 
-- followService - follow/favorite operations. 
+### **26. PLAYER + CLUB UI DETAIL STANDARD**
 
-- entitlementService - premium permissions. 
+Every major entity page should feel complete at first glance. A card should not exist merely because the brief says “add a card.” Each card must answer a user question.
 
-- notificationService - future push/email/in-app updates. 
+| **Card**             | **Question answered**               |
+| -------------------- | ----------------------------------- |
+| Player identity      | Who is thisplayer?                  |
+| Player attributes    | What is hegood at?                  |
+| Player form          | How has heperformed recently?       |
+| Player match history | What did he do inpreviousgames?<br> |
+| Club details         | What defnes this club right now?    |
+| Club form            | How is the teamperforming?          |
+| Club squad           | Who is available and important?     |
+| Club statistics      | Where is the team strong/weak?      |
+| AI insight           | What does the data mean?            |
 
-### **22. CACHING + REAL-TIME STRATEGY** 
+### **27. RESPONSIVE REQUIREMENTS**
 
-Caching is a first-class product concern because football APIs and LLM calls can become expensive. 
+| **Viewport** | **Expectation**                                                                                     |
+| ------------ | --------------------------------------------------------------------------------------------------- |
+| Desktop      | Full sidebar/nav,multi-column analytics,dense dashboards                                            |
+| Tablet       | Condensed navigation,adaptive two-column layouts<br>                                                |
+| Mobile       | Single-column priority fow, sticky contextual controls where<br>useful,bottom navigation ifjustifed |
 
-|**Data**|**Suggested behavior**|
-|---|---|
-|Live score/events|Short TTL / event-driven refresh where supported|
-|Live statistics<br>|Short TTL|
-|Todayfxtures<br>|Short/medium TTL|
-|Upcomingfxtures|Longer TTL|
-|Team identity|LongTTL|
-|Player identity|LongTTL|
-|Historical H2H|LongTTL with invalidation on new data|
-|AIpre-match insight|Cache until meaningful input changes|
-|AI live insight|Refresh on meaningful state changes|
+Player and club pages must remain readable on mobile. Tables should become stacked cards or horizontally scrollable sections instead of breaking the layout.
 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
+### **28. ACCESSIBILITY**
 
-### **23. REAL-TIME UPDATE DESIGN** 
+- Semantic headings and landmarks.
 
-The application should make live updates feel smooth rather than forcing the user to refresh. 
+- Keyboard-accessible controls.
 
-- Use server-friendly data fetching and a client update mechanism appropriate to the chosen architecture. 
+- Visible focus states.
 
-- Only update the parts of the page that changed. 
+- Accessible data tables/charts.
 
-- Animate meaningful score/event changes subtly. 
+- Color must not be the only indicator of a state.
 
-- Keep the last known good state if a provider request fails temporarily. 
+- Reduced-motion support.
 
-- Show stale-data indicators when the data age exceeds the configured threshold. 
+- Screen-reader labels for icons and compact controls.
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-### **24. PLAYER BIODATA + SOURCING** 
+### **29. PERFORMANCE REQUIREMENTS**
 
-The requested short biography should be treated differently from provider football statistics. If a biographical source such as Wikipedia is used, implement it through a defined source/integration and display attribution where required. Never silently scrape or copy content without checking terms and practical reliability. 
+- Prefer Server Components for static/server-fetched content where possible.
 
-### **25. DESIGN SYSTEM** 
+- Keep client-side state localized.
 
-The visual target is premium sports analytics: dark-first, high information density, clean typography, restrained glow/glass effects, clear data hierarchy, and excellent responsive behavior. 
+- Optimize images and team/player logos.
 
-- Consistent spacing scale. 
+- Cache external API data.
 
-- Consistent card radius and border treatment. 
+- Cache AI outputs.
 
-- Clear typography hierarchy. 
+- Avoid duplicate provider calls from multiple components.
 
-- Accessible contrast. 
+- Use request deduplication where possible.
 
-- Charts that prioritize readability over decoration. 
+- Paginate or virtualize long lists.
 
-- Color semantics for positive, negative, neutral, warning and live states. 
+- Lazy-load heavy charts when appropriate.
 
-- Animations used for state changes, not decoration. 
+### **30. SECURITY REQUIREMENTS**
 
-- No visual inconsistency between Dashboard, Match, Team and Player pages. 
+- External API keys are server-only secrets.
 
-### **26. PLAYER + CLUB UI DETAIL STANDARD** 
+- AI provider keys are server-only secrets.
 
-Every major entity page should feel complete at first glance. A card should not exist merely because the brief says “add a card.” Each card must answer a user question. 
+- Database credentials are server-only secrets.
 
-|**Card**|**Question answered**|
-|---|---|
-|Player identity|Who is thisplayer?|
-|Player attributes|What is hegood at?|
-|Player form|How has heperformed recently?|
-|Player match history|What did he do inpreviousgames?<br>|
-|Club details|What defnes this club right now?|
-|Club form|How is the teamperforming?|
-|Club squad|Who is available and important?|
-|Club statistics|Where is the team strong/weak?|
-|AI insight|What does the data mean?|
+- Validate all user input.
 
+- Protect authenticated routes.
 
+- Enforce authorization on user-owned resources.
 
-### **27. RESPONSIVE REQUIREMENTS** 
+- Rate-limit expensive AI endpoints.
 
-|**Viewport**|**Expectation**|
-|---|---|
-|Desktop|Full sidebar/nav,multi-column analytics,dense dashboards|
-|Tablet|Condensed navigation,adaptive two-column layouts<br>|
-|Mobile|Single-column priority fow, sticky contextual controls where<br>useful,bottom navigation ifjustifed|
+- Prevent prompt injection from untrusted football text or user content where relevant.
 
+- Log security-relevant failures without exposing secrets.
 
+### **31. AI COST CONTROL**
 
-Player and club pages must remain readable on mobile. Tables should become stacked cards or horizontally scrollable sections instead of breaking the layout. 
+- Never call the LLM on every render.
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+- Generate pre-match analysis when needed and cache it.
 
-### **28. ACCESSIBILITY** 
+- Regenerate after meaningful data changes.
 
-- Semantic headings and landmarks. 
+- Use compact structured contexts rather than entire raw API responses.
 
-- Keyboard-accessible controls. 
+- Prefer deterministic model calculations for probabilities.
 
-- Visible focus states. 
+- Use LLM tokens for interpretation and scenario explanation.
 
-- Accessible data tables/charts. 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-- Color must not be the only indicator of a state. 
+### **32. MODEL EVALUATION**
 
-- Reduced-motion support. 
+The prediction engine must eventually be evaluated using historical results. Track enough information to answer whether the model is calibrated and genuinely useful.
 
-- Screen-reader labels for icons and compact controls. 
+| **Metric**               | **Purpose**                                 |
+| ------------------------ | ------------------------------------------- |
+| Accuracy                 | Simple outcome accuracy                     |
+| Brier score              | Probability quality<br>                     |
+| Logloss                  | Penaltyfor overconfdent errors              |
+| Calibration              | Does 70% actuallymean roughly70% over time? |
+| Performance byleague<br> | Detect weak competitions<br>                |
+| Performance byconfdence  | Detect overconfdence                        |
+| Live vspre-match         | Compare engine modes                        |
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+### **33. AI EVALUATION**
 
-### **29. PERFORMANCE REQUIREMENTS** 
+Maintain a benchmark set containing historical matches and expected evidence. Review AI output for factual support, relevance, uncertainty and hallucination rate. Model quality must be measurable, not assumed.
 
-- Prefer Server Components for static/server-fetched content where possible. 
+### **34. ERROR + EMPTY + STALE STATES**
 
-- Keep client-side state localized. 
+Every major card/page needs defined states:
 
-- Optimize images and team/player logos. 
+- Loading - skeleton or progress indication.
 
-- Cache external API data. 
+- Empty - no data available and an explanation.
 
-- Cache AI outputs. 
+- Error - graceful explanation and retry where appropriate.
 
-- Avoid duplicate provider calls from multiple components. 
+- Stale - show last known data and age when relevant.
 
-- Use request deduplication where possible. 
+- Partial - render available information but clearly communicate missing fields.
 
-- Paginate or virtualize long lists. 
+### **35. DEVELOPMENT WORKFLOW IN CURSOR**
 
-- Lazy-load heavy charts when appropriate. 
+Cursor should treat this document as product truth. The AI coding agent should not optimize for “make it look finished” by using fake data. It should implement the actual data contracts and state transitions.
 
-### **30. SECURITY REQUIREMENTS** 
+**1.** Inspect and understand the current phase before editing.
 
-- External API keys are server-only secrets. 
+**2.** Propose architecture for substantial changes.
 
-- AI provider keys are server-only secrets. 
+**3.** Implement the smallest coherent slice.
 
-- Database credentials are server-only secrets. 
+**4.** Run type checks, linting and relevant tests.
 
-- Validate all user input. 
+**5.** Inspect the resulting UI at desktop and mobile widths.
 
-- Protect authenticated routes. 
+**6.** Verify real provider data and error behavior.
 
-- Enforce authorization on user-owned resources. 
+**7.** Only then move to the next slice.
 
-- Rate-limit expensive AI endpoints. 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-- Prevent prompt injection from untrusted football text or user content where relevant. 
+### **36. AGENT RULES - COPY INTO CURSOR CONTEXT**
 
-- Log security-relevant failures without exposing secrets. 
+1. Do not invent football data.
 
-### **31. AI COST CONTROL** 
+2. Do not hardcode player history, H2H, lineups, statistics or biographies in production.
 
-- Never call the LLM on every render. 
+3. Keep data retrieval, analytics, prediction and AI explanation as separate layers.
 
-- Generate pre-match analysis when needed and cache it. 
+4. The prediction engine is responsible for probabilities; the LLM is responsible for interpretation.
 
-- Regenerate after meaningful data changes. 
+5. Live matches must use a live-specific AI context and refresh strategy.
 
-- Use compact structured contexts rather than entire raw API responses. 
+6. AI outputs must be structured and validated before rendering.
 
-- Prefer deterministic model calculations for probabilities. 
+7. Always expose uncertainty and data quality.
 
-- Use LLM tokens for interpretation and scenario explanation. 
+8. Cache expensive football API and AI operations.
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+9. Do not expose secrets to the browser.
 
-### **32. MODEL EVALUATION** 
+10. Every production feature needs loading, empty, error and stale-data states.
 
-The prediction engine must eventually be evaluated using historical results. Track enough information to answer whether the model is calibrated and genuinely useful. 
+11. Build the deep Match, Player and Club experiences described in this brief; do not reduce them to placeholder cards.
 
-|**Metric**|**Purpose**|
-|---|---|
-|Accuracy|Simple outcome accuracy|
-|Brier score|Probability quality<br>|
-|Logloss|Penaltyfor overconfdent errors|
-|Calibration|Does 70% actuallymean roughly70% over time?|
-|Performance byleague<br>|Detect weak competitions<br>|
-|Performance byconfdence|Detect overconfdence|
-|Live vspre-match|Compare engine modes|
+12. When a provider does not support a field, show a proper unavailable state rather than fabricate a value.
 
+13. Avoid unnecessary client-side rendering.
 
+14. Prefer reusable domain services and typed contracts.
 
-### **33. AI EVALUATION** 
+15. Before declaring a phase complete, verify correctness, not only visual appearance.
 
-Maintain a benchmark set containing historical matches and expected evidence. Review AI output for factual support, relevance, uncertainty and hallucination rate. Model quality must be measurable, not assumed. 
+### **37. DEVELOPMENT PHASES**
 
-### **34. ERROR + EMPTY + STALE STATES** 
+| **Phase** | **Primary goal**   | **Defnition of done**                                                  |
+| --------- | ------------------ | ---------------------------------------------------------------------- |
+| 0         | Foundation         | Architecture, rules, data-provider<br>selection,design system          |
+| 1         | Football data      | Reliable normalized football data layer<br>with caching/error handling |
+| 2         | Core UX            | Dashboard, match discovery, match<br>details,live center               |
+| 3         | Analytics          | Form, H2H, comparison, team/player<br>statistics, prediction engine    |
+| 4         | AI                 | Pre-match and live AI engine with<br>structured outputs                |
+| 5         | Entityintelligence | Deep player,club and leaguepages                                       |
+| 6         | Accounts           | Auth,follows,favorites, preferences                                    |
+| 7         | Premium            | Entitlements, subscription and usage<br>controls                       |
+| 8         | Evaluation         | Prediction and AIqualitymeasurement                                    |
+| 9         | Production         | Security, performance, SEO, observability,<br>deployment               |
 
-Every major card/page needs defined states: 
+### **38. MVP DEFINITION**
 
-- Loading - skeleton or progress indication. 
+The first marketable version is complete when a user can open a real match, read trustworthy facts, understand current or expected probabilities, see evidence-backed factors, read AI analysis, and follow the match/team/player. The system should be genuinely data-driven before adding complex gamification.
 
-- Empty - no data available and an explanation. 
+### **39. FINAL PRODUCT STANDARD**
 
-- Error - graceful explanation and retry where appropriate. 
+The final product should feel like a serious sports intelligence company built around football. The design should be premium. The data should be real. The predictions should be measurable. The AI should explain rather than hallucinate. The live system should react to the match as it evolves.
 
-- Stale - show last known data and age when relevant. 
+**The defining capability is not “AI text”. The defining capability is a continuous intelligence loop: real data → model → explanation → updated state.**
 
-- Partial - render available information but clearly communicate missing fields. 
+Sports AI Analyst - Master Brief v2 | Greenfield Specification
 
-### **35. DEVELOPMENT WORKFLOW IN CURSOR** 
+### **40. FINAL IMPLEMENTATION CHECKLIST**
 
-Cursor should treat this document as product truth. The AI coding agent should not optimize for “make it look finished” by using fake data. It should implement the actual data contracts and state transitions. 
+- Football data provider selected and costed.
 
-**1.** Inspect and understand the current phase before editing. 
+- Normalized domain model defined.
 
-**2.** Propose architecture for substantial changes. 
+- Provider adapter isolated.
 
-**3.** Implement the smallest coherent slice. 
+- Caching strategy implemented.
 
-**4.** Run type checks, linting and relevant tests. 
+- Dashboard built around match priority.
 
-**5.** Inspect the resulting UI at desktop and mobile widths. 
+- Match page built to the required depth.
 
-**6.** Verify real provider data and error behavior. 
+- Pre-match prediction engine implemented.
 
-**7.** Only then move to the next slice. 
+- Live prediction engine implemented.
 
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
+- AI pre-match analysis implemented.
 
-### **36. AGENT RULES - COPY INTO CURSOR CONTEXT** 
+- AI live commentary implemented with meaningful-event refresh.
 
-1. Do not invent football data. 
+- Player profiles built to required field depth.
 
-2. Do not hardcode player history, H2H, lineups, statistics or biographies in production. 
+- Player match history includes goals/assists indicators.
 
-3. Keep data retrieval, analytics, prediction and AI explanation as separate layers. 
+- Player follow functionality implemented.
 
-4. The prediction engine is responsible for probabilities; the LLM is responsible for interpretation. 
+- Club pages include Details, Matches, Standings, Squad, Top Players and Statistics.
 
-5. Live matches must use a live-specific AI context and refresh strategy. 
+- Team/player/league pages use real data.
 
-6. AI outputs must be structured and validated before rendering. 
+- Auth and persistence implemented.
 
-7. Always expose uncertainty and data quality. 
+- Premium entitlements implemented.
 
-8. Cache expensive football API and AI operations. 
+- Prediction performance tracked.
 
-9. Do not expose secrets to the browser. 
+- AI evaluation framework implemented.
 
-10. Every production feature needs loading, empty, error and stale-data states. 
+- Security/performance/accessibility checks complete.
 
-11. Build the deep Match, Player and Club experiences described in this brief; do not reduce them to placeholder cards. 
+- Production deployment verified.
 
-12. When a provider does not support a field, show a proper unavailable state rather than fabricate a value. 
-
-13. Avoid unnecessary client-side rendering. 
-
-14. Prefer reusable domain services and typed contracts. 
-
-15. Before declaring a phase complete, verify correctness, not only visual appearance. 
-
-### **37. DEVELOPMENT PHASES** 
-
-|**Phase**|**Primary goal**|**Defnition of done**|
-|---|---|---|
-|0|Foundation|Architecture, rules, data-provider<br>selection,design system|
-|1|Football data|Reliable normalized football data layer<br>with caching/error handling|
-|2|Core UX|Dashboard, match discovery, match<br>details,live center|
-|3|Analytics|Form, H2H, comparison, team/player<br>statistics, prediction engine|
-|4|AI|Pre-match and live AI engine with<br>structured outputs|
-|5|Entityintelligence|Deep player,club and leaguepages|
-|6|Accounts|Auth,follows,favorites, preferences|
-|7|Premium|Entitlements, subscription and usage<br>controls|
-|8|Evaluation|Prediction and AIqualitymeasurement|
-|9|Production|Security, performance, SEO, observability,<br>deployment|
-
-
-
-### **38. MVP DEFINITION** 
-
-The first marketable version is complete when a user can open a real match, read trustworthy facts, understand current or expected probabilities, see evidence-backed factors, read AI analysis, and follow the match/team/player. The system should be genuinely data-driven before adding complex gamification. 
-
-### **39. FINAL PRODUCT STANDARD** 
-
-The final product should feel like a serious sports intelligence company built around football. The design should be premium. The data should be real. The predictions should be measurable. The AI should explain rather than hallucinate. The live system should react to the match as it evolves. 
-
-**The defining capability is not “AI text”. The defining capability is a continuous intelligence loop: real data → model → explanation → updated state.** 
-
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
-
-### **40. FINAL IMPLEMENTATION CHECKLIST** 
-
-- Football data provider selected and costed. 
-
-- Normalized domain model defined. 
-
-- Provider adapter isolated. 
-
-- Caching strategy implemented. 
-
-- Dashboard built around match priority. 
-
-- Match page built to the required depth. 
-
-- Pre-match prediction engine implemented. 
-
-- Live prediction engine implemented. 
-
-- AI pre-match analysis implemented. 
-
-- AI live commentary implemented with meaningful-event refresh. 
-
-- Player profiles built to required field depth. 
-
-- Player match history includes goals/assists indicators. 
-
-- Player follow functionality implemented. 
-
-- Club pages include Details, Matches, Standings, Squad, Top Players and Statistics. 
-
-- Team/player/league pages use real data. 
-
-- Auth and persistence implemented. 
-
-- Premium entitlements implemented. 
-
-- Prediction performance tracked. 
-
-- AI evaluation framework implemented. 
-
-- Security/performance/accessibility checks complete. 
-
-- Production deployment verified. 
-
-Sports AI Analyst - Master Brief v2 | Greenfield Specification 
-
+Sports AI Analyst - Master Brief v2 | Greenfield Specification

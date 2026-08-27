@@ -1,6 +1,6 @@
 # Kivora — Product Requirements Document (PRD)
 
-> **Tagline:** *The Game, Decoded.*
+> **Tagline:** _The Game, Decoded._
 > **Version:** 1.0 (MVP Specification)
 > **Last updated:** 2026-08-26
 > **Owner:** Strahinja (Solo founder / dev)
@@ -62,15 +62,15 @@ Real data → statistical model → structured prediction → AI explanation →
 
 ### Layered value proposition
 
-| Layer                | Purpose                                                         | User value                                     |
-| -------------------- | --------------------------------------------------------------- | ---------------------------------------------- |
-| Real football data   | Fixtures, teams, players, events, statistics, lineups, standings| Trustworthy foundation                         |
-| Analytics            | Form, H2H, team strength, player performance, trends            | Understanding the match                        |
-| Prediction engine    | 1/X/2 and goal-related probabilities                            | Structured forecast                            |
-| AI engine            | Explain what the numbers mean                                   | Human-readable intelligence                    |
-| Live intelligence    | Recalculate during the match                                    | Understand momentum and why                    |
-| Personalization      | Follow teams/players, favorites, history                        | Return value                                   |
-| Premium              | Deeper analytics and higher AI usage                            | Monetization                                   |
+| Layer              | Purpose                                                          | User value                  |
+| ------------------ | ---------------------------------------------------------------- | --------------------------- |
+| Real football data | Fixtures, teams, players, events, statistics, lineups, standings | Trustworthy foundation      |
+| Analytics          | Form, H2H, team strength, player performance, trends             | Understanding the match     |
+| Prediction engine  | 1/X/2 and goal-related probabilities                             | Structured forecast         |
+| AI engine          | Explain what the numbers mean                                    | Human-readable intelligence |
+| Live intelligence  | Recalculate during the match                                     | Understand momentum and why |
+| Personalization    | Follow teams/players, favorites, history                         | Return value                |
+| Premium            | Deeper analytics and higher AI usage                             | Monetization                |
 
 ---
 
@@ -89,7 +89,7 @@ Future audiences (post-MVP): fantasy players, semi-pro analysts, scouting-orient
 
 1. **Data before narrative** — every AI claim is grounded in provider data.
 2. **Prediction before prose** — the statistical engine produces probabilities; the LLM only explains.
-3. **No fake data** — no hardcoded form, H2H, lineups, biographies, or statistics in production. If a value is missing, the UI shows *unavailable*, never a made-up placeholder.
+3. **No fake data** — no hardcoded form, H2H, lineups, biographies, or statistics in production. If a value is missing, the UI shows _unavailable_, never a made-up placeholder.
 4. **Live means live** — during a match, the AI layer must refresh its context and update conclusions.
 5. **Uncertainty is a feature** — confidence and data quality are always visible.
 6. **Premium simplicity** — depth is available, but the primary read is easy to scan.
@@ -190,6 +190,7 @@ Hierarchy (top to bottom):
 9. **Favorite / Follow actions** — for match, teams, players.
 
 Behavior:
+
 - Pre-match AI insight is generated **24h before kickoff**, regenerated at **60 min before** with confirmed lineups.
 - At kickoff, switches to live mode.
 - Live updates arrive via Supabase Realtime Broadcast; UI updates only the parts that changed.
@@ -247,12 +248,12 @@ Match contribution badges: goal (with minute), assist (with minute), clean sheet
 
 ### 6.9 Follow / Favorite system
 
-| Object | Free   | Follow effect (Premium adds richer notifications later)                        |
-| ------ | ------ | ------------------------------------------------------------------------------ |
-| Match  | Favorite | Reminder + status changes                                                    |
-| Team   | Follow   | Upcoming matches, scores, AI insights                                        |
-| Player | Follow   | Appearances, goals, assists, cards, lineup confirmations                     |
-| League | Follow  | Key matches, competition updates                                              |
+| Object | Free     | Follow effect (Premium adds richer notifications later)  |
+| ------ | -------- | -------------------------------------------------------- |
+| Match  | Favorite | Reminder + status changes                                |
+| Team   | Follow   | Upcoming matches, scores, AI insights                    |
+| Player | Follow   | Appearances, goals, assists, cards, lineup confirmations |
+| League | Follow   | Key matches, competition updates                         |
 
 Favorites and follows are preserved even after a premium subscription lapses.
 
@@ -272,31 +273,31 @@ Provider → Normalization → Validation → Cache/DB
                 AI context builder → LLM → Structured insight → UI
 ```
 
-| Subsystem            | Responsibility                                     | Must not do                             |
-| -------------------- | -------------------------------------------------- | --------------------------------------- |
-| Data layer           | Fetch & normalize provider data                    | Generate facts                          |
-| Analytics layer      | Compute form, H2H, ratings, trends                 | Invent missing values                   |
-| Prediction engine    | Numerical probabilities & scenarios                | Write narrative                         |
-| AI context builder   | Select & summarize trusted inputs                  | Call provider directly from UI          |
-| LLM                  | Explain structured inputs, generate insight        | Invent stats or override model outputs  |
-| UI                   | Present state clearly                              | Perform business logic                  |
+| Subsystem          | Responsibility                              | Must not do                            |
+| ------------------ | ------------------------------------------- | -------------------------------------- |
+| Data layer         | Fetch & normalize provider data             | Generate facts                         |
+| Analytics layer    | Compute form, H2H, ratings, trends          | Invent missing values                  |
+| Prediction engine  | Numerical probabilities & scenarios         | Write narrative                        |
+| AI context builder | Select & summarize trusted inputs           | Call provider directly from UI         |
+| LLM                | Explain structured inputs, generate insight | Invent stats or override model outputs |
+| UI                 | Present state clearly                       | Perform business logic                 |
 
 ### 7.2 Structured AI output schema (validated via Zod + OpenAI Structured Outputs)
 
-| Field                       | Example                                            |
-| --------------------------- | -------------------------------------------------- |
-| `summary`                   | One concise sentence describing current edge       |
-| `advantage`                 | `HOME` / `DRAW` / `AWAY` / `EVEN`                  |
-| `winOutcome`                | `1` / `X` / `2`                                    |
-| `winProbabilities`          | `{ home: 0.54, draw: 0.25, away: 0.21 }`           |
-| `expectedGoalsRange`        | `[min, max]` e.g. `[1, 3]`                         |
-| `weakerTeamScoringChance`   | e.g. `0.42`                                        |
-| `confidence`                | `LOW` / `MEDIUM` / `HIGH`                          |
-| `keyFactors`                | Array of evidence-based factors (2–5 items)        |
-| `scenarios`                 | `{ best, likely, upset }` — labeled forecasts      |
-| `commentary`                | Human-readable analyst-style prose (streaming OK)  |
-| `dataTimestamp`             | ISO timestamp of underlying data                   |
-| `dataQuality`               | `COMPLETE` / `PARTIAL` / `STALE`                   |
+| Field                     | Example                                           |
+| ------------------------- | ------------------------------------------------- |
+| `summary`                 | One concise sentence describing current edge      |
+| `advantage`               | `HOME` / `DRAW` / `AWAY` / `EVEN`                 |
+| `winOutcome`              | `1` / `X` / `2`                                   |
+| `winProbabilities`        | `{ home: 0.54, draw: 0.25, away: 0.21 }`          |
+| `expectedGoalsRange`      | `[min, max]` e.g. `[1, 3]`                        |
+| `weakerTeamScoringChance` | e.g. `0.42`                                       |
+| `confidence`              | `LOW` / `MEDIUM` / `HIGH`                         |
+| `keyFactors`              | Array of evidence-based factors (2–5 items)       |
+| `scenarios`               | `{ best, likely, upset }` — labeled forecasts     |
+| `commentary`              | Human-readable analyst-style prose (streaming OK) |
+| `dataTimestamp`           | ISO timestamp of underlying data                  |
+| `dataQuality`             | `COMPLETE` / `PARTIAL` / `STALE`                  |
 
 ### 7.3 Pre-match categories
 
@@ -340,12 +341,13 @@ Minimal but effective (no external guardrail library in MVP):
 
 ### 7.7 LLM model tiers
 
-| Task                              | Model            |
-| --------------------------------- | ---------------- |
-| Rutinski AI insights, live cards  | `gpt-4o-mini`    |
-| Premium deep pre-match analysis   | `gpt-4o`         |
+| Task                             | Model         |
+| -------------------------------- | ------------- |
+| Rutinski AI insights, live cards | `gpt-4o-mini` |
+| Premium deep pre-match analysis  | `gpt-4o`      |
 
 Cost control:
+
 - Never call LLM on every render.
 - Cache pre-match analysis until meaningful inputs change.
 - Regenerate live analysis only on **meaningful events**: goal, red card, penalty, xG delta > 0.5, probability shift > 10pp, significant substitution.
@@ -370,11 +372,11 @@ Cost control:
 
 ### 8.2 Confidence bucketing
 
-| Bucket | Threshold                            |
-| ------ | ------------------------------------ |
-| HIGH   | max probability > 60%                |
-| MEDIUM | 40% ≤ max probability ≤ 60%          |
-| LOW    | max probability < 40%                |
+| Bucket | Threshold                   |
+| ------ | --------------------------- |
+| HIGH   | max probability > 60%       |
+| MEDIUM | 40% ≤ max probability ≤ 60% |
+| LOW    | max probability < 40%       |
 
 ### 8.3 Underdog scoring threshold
 
@@ -580,20 +582,20 @@ Premium sports analytics: **dark-first only in MVP**, high information density, 
 
 ### 14.2 Brand palette
 
-| Token                | Hex        | Purpose                              |
-| -------------------- | ---------- | ------------------------------------ |
-| Background base      | `#0A0B0F`  | Near-black with blue nuance          |
-| Surface              | `#12141B`  | Cards & containers                   |
-| Border / subtle      | `#1F2330`  | Dividers                             |
-| Primary accent       | `#00E5A0`  | Electric mint — CTAs, primary highlights |
-| Secondary accent     | `#4C7BF3`  | Analytical blue — links, secondary   |
-| Win / positive       | `#10B981`  | Emerald                              |
-| Draw / neutral       | `#F59E0B`  | Amber                                |
-| Loss / negative      | `#EF4444`  | Red                                  |
-| Live indicator       | `#FF3B30`  | With pulse animation                 |
-| Text primary         | `#F5F7FA`  | High contrast                        |
-| Text secondary       | `#8B94A8`  | Muted                                |
-| Text muted           | `#4A5266`  | Least emphasis                       |
+| Token            | Hex       | Purpose                                  |
+| ---------------- | --------- | ---------------------------------------- |
+| Background base  | `#0A0B0F` | Near-black with blue nuance              |
+| Surface          | `#12141B` | Cards & containers                       |
+| Border / subtle  | `#1F2330` | Dividers                                 |
+| Primary accent   | `#00E5A0` | Electric mint — CTAs, primary highlights |
+| Secondary accent | `#4C7BF3` | Analytical blue — links, secondary       |
+| Win / positive   | `#10B981` | Emerald                                  |
+| Draw / neutral   | `#F59E0B` | Amber                                    |
+| Loss / negative  | `#EF4444` | Red                                      |
+| Live indicator   | `#FF3B30` | With pulse animation                     |
+| Text primary     | `#F5F7FA` | High contrast                            |
+| Text secondary   | `#8B94A8` | Muted                                    |
+| Text muted       | `#4A5266` | Least emphasis                           |
 
 ### 14.3 Typography
 
@@ -669,18 +671,18 @@ Player and club pages must remain readable on mobile. Tables become stacked card
 
 Configured based on API-Football rate limits (Pro plan: 7,500 req/day, 300 req/min):
 
-| Data category               | TTL / refresh                                        |
-| --------------------------- | ---------------------------------------------------- |
-| Live fixtures / events      | 15–30s                                               |
-| Live statistics             | 30–60s                                               |
-| Match details (live)        | 30–60s                                               |
-| Match details (pre/post)    | 5–15 min                                             |
-| Fixtures list               | 5–15 min                                             |
-| Standings                   | 15–30 min                                            |
-| Team / player metadata      | 1–24h                                                |
-| Static (leagues, countries) | 24h+                                                 |
-| AI pre-match insight        | Until meaningful input changes                       |
-| AI live insight             | Refresh only on meaningful state changes             |
+| Data category               | TTL / refresh                            |
+| --------------------------- | ---------------------------------------- |
+| Live fixtures / events      | 15–30s                                   |
+| Live statistics             | 30–60s                                   |
+| Match details (live)        | 30–60s                                   |
+| Match details (pre/post)    | 5–15 min                                 |
+| Fixtures list               | 5–15 min                                 |
+| Standings                   | 15–30 min                                |
+| Team / player metadata      | 1–24h                                    |
+| Static (leagues, countries) | 24h+                                     |
+| AI pre-match insight        | Until meaningful input changes           |
+| AI live insight             | Refresh only on meaningful state changes |
 
 All caches are **server-side shared** — no per-client cache invalidation storm. Rate-limit awareness via response headers (`x-ratelimit-requests-remaining`, `X-RateLimit-Remaining`) with exponential backoff on 429.
 
@@ -694,7 +696,7 @@ All caches are **server-side shared** — no per-client cache invalidation storm
 - Terms of Service explicitly disclaim use for gambling decisions.
 - Global AI disclaimer in the footer of every AI card and in the site footer:
 
-> *Kivora predictions are AI-generated statistical estimates based on historical and live football data. They are not guaranteed outcomes and should be treated as analytical insights. Football, like life, has surprises.*
+> _Kivora predictions are AI-generated statistical estimates based on historical and live football data. They are not guaranteed outcomes and should be treated as analytical insights. Football, like life, has surprises._
 
 ### 16.2 Cookie consent
 

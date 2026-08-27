@@ -1,17 +1,11 @@
-import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
-
-export default async function Page() {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
-  const { data: todos } = await supabase.from('todos').select()
-
+export default function HomePage() {
   return (
-    <ul>
-      {todos?.map((todo) => (
-        <li key={todo.id}>{todo.name}</li>
-      ))}
-    </ul>
-  )
+    <main className="flex min-h-screen flex-col items-center justify-center p-8">
+      <h1 className="text-3xl font-semibold tracking-tight">Kivora</h1>
+      <p className="text-muted-foreground mt-2 text-center text-sm">
+        Foundation scaffolding is in place. Landing page ships in Phase 0
+        marketing deliverables.
+      </p>
+    </main>
+  );
 }
