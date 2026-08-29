@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { AppProviders } from "@/components/providers/AppProviders";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/toast";
+import { BRAND } from "@/lib/marketing/copy";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -20,8 +22,11 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Kivora",
-  description: "The Game, Decoded.",
+  title: {
+    default: BRAND.name,
+    template: `%s — ${BRAND.name}`,
+  },
+  description: BRAND.tagline,
   icons: {
     icon: "/brand/favicon.svg",
   },
@@ -38,8 +43,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         spaceGrotesk.variable
       )}
     >
-      <body className="flex min-h-full flex-col">
-        {children}
+      <body className="flex min-h-full flex-col" suppressHydrationWarning>
+        <AppProviders>{children}</AppProviders>
         <Toaster />
       </body>
     </html>

@@ -1,5 +1,17 @@
 import { Resend } from "resend";
 
-export const resend = new Resend(process.env.RESEND_API_KEY);
+import { getServerEnv } from "@/lib/env.server";
 
-export const DEFAULT_FROM = "Smart Sport <onboarding@resend.dev>";
+let cachedResend: Resend | undefined;
+
+export function getResend(): Resend {
+  if (!cachedResend) {
+    cachedResend = new Resend(getServerEnv().RESEND_API_KEY);
+  }
+
+  return cachedResend;
+}
+
+export function getResendFrom(): string {
+  return getServerEnv().RESEND_FROM;
+}
