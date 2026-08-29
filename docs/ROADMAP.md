@@ -73,58 +73,58 @@ The dev environment, brand, and repo structure are complete. A public landing pa
 
 **Repository & tooling**
 
-- [ ] `.github/workflows/ci.yml` — typecheck, lint, test, build on PR.
-- [ ] `prettier` + `prettier-plugin-tailwindcss` config.
-- [ ] `vitest` config + one sample unit test.
-- [ ] Migrate `utils/supabase/*` → `lib/supabase/*` and update imports.
-- [ ] `lib/redis/client.ts` — Upstash client.
-- [ ] Env schema validation (`lib/env.ts` with Zod) so missing env vars fail loudly at boot.
+- [x] `.github/workflows/ci.yml` — typecheck, lint, test, build on PR.
+- [x] `prettier` + `prettier-plugin-tailwindcss` config.
+- [x] `vitest` config + one sample unit test.
+- [x] Migrate `utils/supabase/*` → `lib/supabase/*` and update imports.
+- [x] `lib/redis/client.ts` — Upstash client.
+- [x] Env schema validation (`lib/env.ts` with Zod) so missing env vars fail loudly at boot.
 
 **Design system**
 
-- [ ] Brand palette applied to `app/globals.css` (dark-only tokens).
-- [ ] Load `Inter`, `JetBrains Mono`, `Space Grotesk` via `next/font/google`.
-- [ ] `components/brand/Wordmark.tsx` — SVG wordmark logo (Kivora + accent).
-- [ ] shadcn primitives added: `button`, `input`, `label`, `form`, `card`, `badge`, `skeleton`, `tooltip`, `toast`, `separator`, `dropdown-menu`, `dialog`, `sheet`, `tabs`.
-- [ ] `components/layout/AppShell.tsx` skeleton (top nav placeholder, mobile bottom nav placeholder).
-- [ ] `components/common/EmptyState.tsx`, `ErrorState.tsx`, `StaleBadge.tsx`, `DataQualityChip.tsx`.
+- [x] Brand palette applied to `app/globals.css` (dark-only tokens).
+- [x] Load `Inter`, `JetBrains Mono`, `Space Grotesk` via `next/font/google`.
+- [x] `components/brand/Wordmark.tsx` — SVG wordmark logo (Kivora + accent).
+- [x] shadcn primitives added: `button`, `input`, `label`, `form`, `card`, `badge`, `skeleton`, `tooltip`, `toast`, `separator`, `dropdown-menu`, `dialog`, `sheet`, `tabs`.
+- [x] `components/layout/AppShell.tsx` skeleton (top nav placeholder, mobile bottom nav placeholder).
+- [x] `components/common/EmptyState.tsx`, `ErrorState.tsx`, `StaleBadge.tsx`, `DataQualityChip.tsx`.
 
 **Supabase**
 
-- [ ] `dev` and `prod` Supabase projects provisioned.
-- [ ] Supabase CLI installed; `supabase init`; `supabase link` to dev.
-- [ ] Migration `0001` through `0007` from [DB.md §17](./DB.md#17-migration-ordering) applied to dev.
-- [ ] `supabase gen types typescript` → `types/supabase.ts` regenerated and committed.
+- [x] `dev` and `prod` Supabase projects provisioned.
+- [x] Supabase CLI installed; `supabase init`; `supabase link` to dev.
+- [x] Migration `0001` through `0007` from [DB.md §17](./DB.md#17-migration-ordering) applied to dev.
+- [x] `supabase gen types typescript` → `types/supabase.ts` regenerated and committed.
 - [ ] `handle_new_user` trigger verified with a test signup.
 
 **Third-party accounts**
 
 - [ ] API-Football (Pro $19/mo) subscribed. Key in `.env.local`.
 - [ ] OpenAI account with billing + spend cap. Key in `.env.local`.
-- [ ] Upstash Redis (Free tier) provisioned. Keys in `.env.local`.
+- [x] Upstash Redis (Free tier) provisioned. Keys in `.env.local`.
 - [ ] LemonSqueezy account, single €2.99 variant created (Dev store).
-- [ ] Resend account, `kivora.app` domain verified (or `.dev`/`.app` per availability).
-- [ ] PostHog Cloud (EU). Key wired.
-- [ ] Sentry project. DSN wired.
+- [x] Resend account, `kivora.app` domain verified (or `.dev`/`.app` per availability). _(Account + API key; domain pending — using `onboarding@resend.dev` sandbox.)_
+- [x] PostHog Cloud (EU). Key wired. _(Replace personal `phx_` key with Project API key `phc_`.)_
+- [ ] Sentry project. DSN wired. _(Placeholder DSN in env — SDK integrated.)_
 - [ ] Vercel project created, `dev` + `prod` env vars filled.
 - [ ] Domain: `kivora.app` acquired (or backup); attached to Vercel.
 
 **Marketing surface**
 
-- [ ] `/` landing page — value prop, hero mock, waitlist CTA, 3 feature blocks, footer.
-- [ ] `/privacy`, `/terms` from a reviewed template (GDPR + no-gambling clauses).
-- [ ] Waitlist form → `/api/waitlist/subscribe` → `waitlist` table + Resend confirmation email.
-- [ ] Cookie consent banner (self-hosted, 3 categories, defaults per GDPR).
-- [ ] Basic OG image + favicon set.
+- [x] `/` landing page — value prop, hero mock, waitlist CTA, 3 feature blocks, footer.
+- [x] `/privacy`, `/terms` from a reviewed template (GDPR + no-gambling clauses).
+- [x] Waitlist form → `/api/waitlist/subscribe` → `waitlist` table + Resend confirmation email.
+- [x] Cookie consent banner (self-hosted, 3 categories, defaults per GDPR).
+- [x] Basic OG image + favicon set.
 
 ### Definition of Done
 
-- [ ] Repo builds clean (`npm.cmd run build`) with zero warnings.
-- [ ] Landing page renders on `kivora.app` (or preview domain) at ≤ 200KB First Load JS.
-- [ ] Signing up for the waitlist writes to Postgres and sends a Resend email.
-- [ ] `supabase db reset` reproduces the schema from scratch.
-- [ ] PostHog sees a `waitlist_signup` event.
-- [ ] Sentry sees a test error from a deliberately failing route.
+- [x] Repo builds clean (`npm.cmd run build`) with zero warnings.
+- [ ] Landing page renders on `kivora.app` (or preview domain) at ≤ 200KB First Load JS. _(Code ready; run `vercel login && vercel deploy`.)_
+- [ ] Signing up for the waitlist writes to Postgres and sends a Resend email. _(Postgres verified; Resend needs domain or sandbox recipient.)_
+- [ ] `supabase db reset` reproduces the schema from scratch. _(All 17 migrations applied on dev remote; local reset requires Docker Desktop.)_
+- [ ] PostHog sees a `waitlist_signup` event. _(Server capture wired; use Project API key `phc_...` in env.)_
+- [ ] Sentry sees a test error from a deliberately failing route. _(SDK wired at `/api/debug/sentry-test`; replace placeholder DSN.)_
 
 ### Risks / watch-outs
 
@@ -695,4 +695,4 @@ Some items span multiple phases; keep them visible.
 - **PostHog event catalog.** A living `docs/EVENTS.md` (Phase 2 onwards) mapping every tracked event → funnel it supports.
 - **Cost dashboard.** A Notion or Sheet with daily spend on Supabase, API-Football, OpenAI, LemonSqueezy, Vercel, Upstash, Resend, PostHog, Sentry.
 - **Founder log.** Public build-in-public log (weekly, optional) — helps with marketing and self-accountability.
-- **Cursor rules.** Update `AGENTS.md` and `.cursor/rules/*` any time a new pattern emerges (services, cache keys, RLS conventions).
+- **Cursor rules.** Update `AGENTS.md` and `.cursor/rules/`* any time a new pattern emerges (services, cache keys, RLS conventions).

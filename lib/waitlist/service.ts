@@ -51,7 +51,10 @@ export async function subscribeToWaitlist(
     });
     emailSent = true;
   } catch (emailError) {
-    console.error("[waitlist] confirmation email failed:", emailError);
+    console.error(
+      "[waitlist] confirmation email failed:",
+      emailError instanceof Error ? emailError.message : emailError
+    );
   }
 
   try {

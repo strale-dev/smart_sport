@@ -20,7 +20,8 @@
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --linked --schema public > types/supabase.ts",
     "db:diff": "supabase db diff --linked",
-    "db:verify-migrations": "node scripts/verify-supabase-migrations.mjs"
+    "db:verify-migrations": "node scripts/verify-supabase-migrations.mjs",
+    "phase0:check": "node scripts/phase0-dod-check.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs}": [
@@ -36,6 +37,7 @@
     "@hookform/resolvers": "^5.9.1",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",
+    "@sentry/nextjs": "^10.72.0",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "@upstash/ratelimit": "^2.0.8",

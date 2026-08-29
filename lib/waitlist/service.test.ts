@@ -21,6 +21,12 @@ vi.mock("@/lib/posthog/server", () => ({
     mockCaptureWaitlistSignup(...args),
 }));
 
+vi.mock("@/lib/env.server", () => ({
+  env: {
+    NEXT_PUBLIC_SITE_URL: "https://kivora.app",
+  },
+}));
+
 describe("subscribeToWaitlist", () => {
   beforeEach(() => {
     mockInsert.mockReset();

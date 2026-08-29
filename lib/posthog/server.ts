@@ -1,6 +1,7 @@
 import { PostHog } from "posthog-node";
 
 import { env, getServerEnv } from "@/lib/env.server";
+import { isPostHogProjectKey } from "@/lib/posthog/key";
 import { hashEmail } from "@/lib/waitlist/ip";
 
 let cachedPostHog: PostHog | undefined;
@@ -27,6 +28,15 @@ export type WaitlistSignupEventInput = {
 export async function captureWaitlistSignup(
   input: WaitlistSignupEventInput
 ): Promise<void> {
+  const posthogKey = getServerEnv().NEXT_PUBLIC_POSTHOG_KEY;
+
+  if (!isPostHogProjectKey(posthogKey)) {
+    console.warn(
+      "[posthog] NEXT_PUBLIC_POSTHOG_KEY must be a Project API key (phc_...) for server capture"
+    );
+    return;
+  }
+
   const posthog = getPostHog();
 
   posthog.capture({
