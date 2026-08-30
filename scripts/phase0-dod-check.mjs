@@ -62,7 +62,11 @@ function checkEnvFile() {
     );
   }
 
-  if (!/RESEND_FROM=Scorence <hello@scorence\.app>/.test(env)) {
+  if (
+    !/RESEND_FROM=(?:Scorence <hello@scorence\.app>|"Scorence <hello@scorence\.app>")/.test(
+      env
+    )
+  ) {
     warnings.push(
       "RESEND_FROM should be Scorence <hello@scorence.app> after Resend domain verification"
     );
