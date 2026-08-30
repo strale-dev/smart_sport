@@ -15,6 +15,9 @@ export const serverEnvSchema = publicEnvSchema.extend({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+  API_FOOTBALL_KEY: z.string().min(1).optional(),
+  API_FOOTBALL_BASE_URL: z.string().url().optional(),
+  API_FOOTBALL_DAILY_LIMIT: z.coerce.number().int().positive().optional(),
   RESEND_API_KEY: z.string().min(1),
   RESEND_FROM: z.string().min(1),
   SENTRY_DSN: z.string().url(),
@@ -31,8 +34,14 @@ function formatZodError(error: z.ZodError): string {
     .join("\n");
 }
 
+import { normalizeEnvValue } from "@/lib/env/load-local";
+
 function emptyToUndefined(value: string | undefined): string | undefined {
-  return value === "" ? undefined : value;
+  if (value === "" || value === undefined) {
+    return undefined;
+  }
+
+  return normalizeEnvValue(value);
 }
 
 function readPublicEnvSource(
@@ -57,6 +66,9 @@ function readServerEnvSource(
     SUPABASE_SERVICE_ROLE_KEY: source.SUPABASE_SERVICE_ROLE_KEY,
     UPSTASH_REDIS_REST_URL: emptyToUndefined(source.UPSTASH_REDIS_REST_URL),
     UPSTASH_REDIS_REST_TOKEN: emptyToUndefined(source.UPSTASH_REDIS_REST_TOKEN),
+    API_FOOTBALL_KEY: emptyToUndefined(source.API_FOOTBALL_KEY),
+    API_FOOTBALL_BASE_URL: emptyToUndefined(source.API_FOOTBALL_BASE_URL),
+    API_FOOTBALL_DAILY_LIMIT: emptyToUndefined(source.API_FOOTBALL_DAILY_LIMIT),
     RESEND_API_KEY: source.RESEND_API_KEY,
     RESEND_FROM: source.RESEND_FROM,
     SENTRY_DSN: source.SENTRY_DSN,
@@ -100,4 +112,25 @@ export function hasRedisConfig(
     emptyToUndefined(source.UPSTASH_REDIS_REST_URL) &&
     emptyToUndefined(source.UPSTASH_REDIS_REST_TOKEN)
   );
+}
+
+export function hasApiFootballConfig(
+  source: Record<string, string | undefined>
+): boolean {
+  return Boolean(emptyToUndefined(source.API_FOOTBALL_KEY));
+}
+
+export const DEFAULT_API_FOOTBALL_BASE_URL =
+  "https://v3.football.api-sports.io";
+
+export function getApiFootballDailyLimit(
+  source: Record<string, string | undefined> = process.env
+): number {
+  const raw = emptyToUndefined(source.API_FOOTBALL_DAILY_LIMIT);
+  if (!raw) {
+    return 100;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 100;
 }

@@ -104,7 +104,7 @@ The dev environment, brand, and repo structure are complete. A public landing pa
 - [x] Upstash Redis (Free tier) provisioned. Keys in `.env.local`.
 - [ ] LemonSqueezy account, single €2.99 variant created (Dev store).
 - [x] Resend account; `scorence.app` domain to verify in Resend for production email. _(API key wired; verify DNS in Resend dashboard.)_
-- [x] PostHog Cloud (EU). Key wired. _(Replace personal `phx_` key with Project API key `phc_`.)_
+- [x] PostHog Cloud (EU). Key wired. _(Replace personal_ `phx_` _key with Project API key_ `phc_`_.)_
 - [x] Sentry project (`scorence` / `javascript-nextjs`). DSN wired in `.env.local`. _(No domain verification needed — Sentry uses DSN only.)_
 - [ ] Vercel project: Production env vars (`NEXT_PUBLIC_SITE_URL`, `RESEND_FROM`, `NEXT_PUBLIC_APP_ENV=production`).
 - [x] Domain: `scorence.app` acquired on Vercel.
@@ -126,11 +126,11 @@ The dev environment, brand, and repo structure are complete. A public landing pa
 ### Definition of Done
 
 - [x] Repo builds clean (`npm.cmd run build`) with zero warnings.
-- [ ] Landing page renders on `scorence.app` (or preview domain) at ≤ 200KB First Load JS. _(Code ready; run `vercel login && vercel deploy`.)_
+- [ ] Landing page renders on `scorence.app` (or preview domain) at ≤ 200KB First Load JS. _(Code ready; run_ `vercel login && vercel deploy`_.)_
 - [ ] Signing up for the waitlist writes to Postgres and sends a Resend email. _(Postgres verified; Resend needs domain or sandbox recipient.)_
 - [ ] `supabase db reset` reproduces the schema from scratch. _(All 17 migrations applied on dev remote; local reset requires Docker Desktop.)_
-- [ ] PostHog sees a `waitlist_signup` event. _(Server capture wired; use Project API key `phc_...` in env.)_
-- [ ] Sentry sees a test error from a deliberately failing route. _(SDK wired at `/api/debug/sentry-test`; replace placeholder DSN.)_
+- [ ] PostHog sees a `waitlist_signup` event. _(Server capture wired; use Project API key_ `phc_...` _in env.)_
+- [ ] Sentry sees a test error from a deliberately failing route. _(SDK wired at_ `/api/debug/sentry-test`_; replace placeholder DSN.)_
 
 ### Risks / watch-outs
 
@@ -150,24 +150,24 @@ API-Football is fully wrapped, cached, and rate-limit aware. Cron pulls fixtures
 
 **Provider adapter**
 
-- [ ] `lib/api-football/client.ts` — fetch wrapper with:
-  - HMAC key injection.
+- [x] `lib/api-football/client.ts` — fetch wrapper with:
+  - `x-apisports-key` header injection.
   - Response header capture (`x-ratelimit-*`).
   - `p-retry` exponential backoff on 429/5xx.
   - In-flight dedup via short Redis SETNX.
-- [ ] `lib/api-football/endpoints/*` — typed endpoint functions:
+- [x] `lib/api-football/endpoints/*` — typed endpoint functions:
   - `getFixtureById`, `listFixturesByDate`, `listLiveFixtures`.
   - `getFixtureEvents`, `getFixtureStatistics`, `getFixtureLineups`, `getFixturePlayers`.
   - `getTeamById`, `getPlayerById`.
   - `getLeagueById`, `listSeasonsByLeague`, `getStandings`.
   - `searchTeams`, `searchPlayers`.
-- [ ] `lib/api-football/adapter.ts` — maps raw provider payloads to internal types in `types/domain.ts`.
+- [x] `lib/api-football/adapter.ts` — maps raw provider payloads to internal types in `types/domain.ts`.
 
 **Cache layer**
 
-- [ ] `lib/redis/cache.ts` — typed `cached<T>(key, ttl, fn)` helper with stampede protection.
-- [ ] `lib/redis/lock.ts` — SETNX lock with auto-renewal.
-- [ ] Cache keys aligned with [Tech.md §10.2](./Tech.md#102-cache-key-conventions).
+- [x] `lib/redis/cache.ts` — typed `cached<T>(key, ttl, fn)` helper with stampede protection.
+- [x] `lib/redis/lock.ts` — SETNX lock with auto-renewal.
+- [x] Cache keys aligned with [Tech.md §10.2](./Tech.md#102-cache-key-conventions).
 
 **Ingestion (cron)**
 
@@ -180,7 +180,7 @@ API-Football is fully wrapped, cached, and rate-limit aware. Cron pulls fixtures
 
 **Services**
 
-- [ ] `lib/services/footballService.ts` — facade over provider + cache + DB.
+- [x] `lib/services/footballService.ts` — facade over provider + cache + DB.
 - [ ] Domain types stable (`types/domain.ts`).
 
 ### Definition of Done
@@ -196,6 +196,17 @@ API-Football is fully wrapped, cached, and rate-limit aware. Cron pulls fixtures
 - **API-Football lower-league coverage is thin.** Accept it; log a `data_quality: PARTIAL` marker at ingestion time.
 - Provider payload shape changes silently — versioned raw payload stored in `provider_payload` JSONB gives us forensic recovery.
 - Rate limits are strict on Pro — the throttled backfill respects 5 req/sec ceiling.
+
+### API-Football key — kada je obavezan
+
+| Faza                                      | Potreban ključ?     | Zašto                                          |
+| ----------------------------------------- | ------------------- | ---------------------------------------------- |
+| Adapter PR (provider adapter iteracija 1) | Ne                  | Unit testovi koriste snimljene JSON response-e |
+| `npm run api-football:smoke`              | Da (Pro preporučen) | Ručna verifikacija protiv live API-ja          |
+| Phase 1 cache + cron                      | Da                  | Real data ingestion u Postgres                 |
+| Phase 2+ UI sa pravim podacima            | Da                  | Server-side servisi čitaju live/cache podatke  |
+
+**Preporuka:** pretplati se na **Pro ($19/mo)** pre nego što kreneš na cache/cron deo Phase 1 (DoD: `SELECT COUNT(*) FROM fixtures...`). Adapter PR može biti merge-ovan bez ključa.
 
 ---
 

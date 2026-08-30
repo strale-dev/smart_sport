@@ -78,6 +78,34 @@ function checkEnvFile() {
     );
   }
 
+  if (!/^API_FOOTBALL_KEY=\S+/m.test(env)) {
+    warnings.push(
+      "API_FOOTBALL_KEY is missing — required for cache smoke and cron ingest"
+    );
+  }
+
+  if (!/^UPSTASH_REDIS_REST_URL=\S+/m.test(env)) {
+    warnings.push(
+      "UPSTASH_REDIS_REST_URL is missing — cache falls back to in-memory only"
+    );
+  }
+
+  if (!/^UPSTASH_REDIS_REST_TOKEN=\S+/m.test(env)) {
+    warnings.push(
+      "UPSTASH_REDIS_REST_TOKEN is missing — cache falls back to in-memory only"
+    );
+  }
+
+  if (/your-project\.supabase\.co/.test(env)) {
+    warnings.push(
+      "Supabase env vars are still placeholders — replace with dev project credentials"
+    );
+  }
+
+  if (!/^API_FOOTBALL_DAILY_LIMIT=\d+/m.test(env)) {
+    warnings.push("Set API_FOOTBALL_DAILY_LIMIT (100 for Free, 7500 for Pro)");
+  }
+
   if (warnings.length === 0) {
     console.log("✓ No obvious env issues");
     return;

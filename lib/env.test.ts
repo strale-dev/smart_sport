@@ -65,6 +65,16 @@ describe("serverEnvSchema", () => {
     ).not.toThrow();
   });
 
+  it("accepts optional API-Football vars when present", () => {
+    expect(() =>
+      parseServerEnv({
+        ...validServerEnv,
+        API_FOOTBALL_KEY: "api_football_test_key",
+        API_FOOTBALL_BASE_URL: "https://v3.football.api-sports.io",
+      })
+    ).not.toThrow();
+  });
+
   it("throws when a required server var is missing", () => {
     const incomplete = {
       ...validServerEnv,
