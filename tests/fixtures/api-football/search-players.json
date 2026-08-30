@@ -1,0 +1,28 @@
+{
+  "get": "players",
+  "parameters": { "search": "bruno" },
+  "errors": [],
+  "results": 1,
+  "paging": { "current": 1, "total": 1 },
+  "response": [
+    {
+      "player": {
+        "id": 909,
+        "name": "Bruno Fernandes",
+        "firstname": "Bruno",
+        "lastname": "Fernandes",
+        "age": 29,
+        "birth": {
+          "date": "1994-09-08",
+          "place": "Maia",
+          "country": "Portugal"
+        },
+        "nationality": "Portugal",
+        "height": "179 cm",
+        "weight": "69 kg",
+        "injured": false,
+        "photo": "https://media.api-sports.io/football/players/909.png"
+      }
+    }
+  ]
+}

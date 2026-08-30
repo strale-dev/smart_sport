@@ -1,0 +1,61 @@
+{
+  "get": "fixtures/lineups",
+  "parameters": { "fixture": "1035037" },
+  "errors": [],
+  "results": 2,
+  "paging": { "current": 1, "total": 1 },
+  "response": [
+    {
+      "team": {
+        "id": 33,
+        "name": "Manchester United",
+        "logo": "https://media.api-sports.io/football/teams/33.png",
+        "colors": null
+      },
+      "coach": {
+        "id": 19,
+        "name": "Erik ten Hag",
+        "photo": "https://media.api-sports.io/football/coachs/19.png"
+      },
+      "formation": "4-2-3-1",
+      "startXI": [
+        {
+          "player": {
+            "id": 909,
+            "name": "Bruno Fernandes",
+            "number": 8,
+            "pos": "M",
+            "grid": "3:2"
+          }
+        }
+      ],
+      "substitutes": [
+        {
+          "player": {
+            "id": 1485,
+            "name": "Joshua Zirkzee",
+            "number": 11,
+            "pos": "F",
+            "grid": null
+          }
+        }
+      ]
+    },
+    {
+      "team": {
+        "id": 36,
+        "name": "Fulham",
+        "logo": "https://media.api-sports.io/football/teams/36.png",
+        "colors": null
+      },
+      "coach": {
+        "id": 21,
+        "name": "Marco Silva",
+        "photo": null
+      },
+      "formation": "4-3-3",
+      "startXI": [],
+      "substitutes": []
+    }
+  ]
+}

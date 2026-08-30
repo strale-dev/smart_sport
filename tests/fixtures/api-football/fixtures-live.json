@@ -1,0 +1,64 @@
+{
+  "get": "fixtures",
+  "parameters": { "live": "all" },
+  "errors": [],
+  "results": 1,
+  "paging": { "current": 1, "total": 1 },
+  "response": [
+    {
+      "fixture": {
+        "id": 1200001,
+        "referee": null,
+        "timezone": "UTC",
+        "date": "2024-08-16T20:00:00+00:00",
+        "timestamp": 1723838400,
+        "periods": { "first": 1723838400, "second": null },
+        "venue": {
+          "id": 700,
+          "name": "Anfield",
+          "city": "Liverpool",
+          "capacity": 61276,
+          "surface": "grass",
+          "image": null
+        },
+        "status": {
+          "long": "First Half",
+          "short": "1H",
+          "elapsed": 23,
+          "extra": null
+        }
+      },
+      "league": {
+        "id": 39,
+        "name": "Premier League",
+        "country": "England",
+        "logo": "https://media.api-sports.io/football/leagues/39.png",
+        "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+        "season": 2024,
+        "round": "Regular Season - 1",
+        "type": "League"
+      },
+      "teams": {
+        "home": {
+          "id": 40,
+          "name": "Liverpool",
+          "logo": "https://media.api-sports.io/football/teams/40.png",
+          "winner": null
+        },
+        "away": {
+          "id": 49,
+          "name": "Chelsea",
+          "logo": "https://media.api-sports.io/football/teams/49.png",
+          "winner": null
+        }
+      },
+      "goals": { "home": 1, "away": 0 },
+      "score": {
+        "halftime": { "home": null, "away": null },
+        "fulltime": { "home": null, "away": null },
+        "extratime": { "home": null, "away": null },
+        "penalty": { "home": null, "away": null }
+      }
+    }
+  ]
+}

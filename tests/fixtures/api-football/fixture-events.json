@@ -1,0 +1,22 @@
+{
+  "get": "fixtures/events",
+  "parameters": { "fixture": "1035037" },
+  "errors": [],
+  "results": 1,
+  "paging": { "current": 1, "total": 1 },
+  "response": [
+    {
+      "time": { "elapsed": 87, "extra": null },
+      "team": {
+        "id": 33,
+        "name": "Manchester United",
+        "logo": "https://media.api-sports.io/football/teams/33.png"
+      },
+      "player": { "id": 909, "name": "Bruno Fernandes" },
+      "assist": { "id": 1485, "name": "Joshua Zirkzee" },
+      "type": "Goal",
+      "detail": "Normal Goal",
+      "comments": null
+    }
+  ]
+}

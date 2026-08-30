@@ -1,0 +1,47 @@
+{
+  "get": "fixtures/statistics",
+  "parameters": { "fixture": "1035037" },
+  "errors": [],
+  "results": 2,
+  "paging": { "current": 1, "total": 1 },
+  "response": [
+    {
+      "team": {
+        "id": 33,
+        "name": "Manchester United",
+        "logo": "https://media.api-sports.io/football/teams/33.png"
+      },
+      "statistics": [
+        { "type": "Shots on Goal", "value": 5 },
+        { "type": "Shots off Goal", "value": 3 },
+        { "type": "Total Shots", "value": 11 },
+        { "type": "Blocked Shots", "value": 3 },
+        { "type": "Shots insidebox", "value": 7 },
+        { "type": "Shots outsidebox", "value": 4 },
+        { "type": "Fouls", "value": 12 },
+        { "type": "Corner Kicks", "value": 6 },
+        { "type": "Offsides", "value": 2 },
+        { "type": "Ball Possession", "value": "58%" },
+        { "type": "Yellow Cards", "value": 2 },
+        { "type": "Red Cards", "value": 0 },
+        { "type": "Goalkeeper Saves", "value": 2 },
+        { "type": "Total passes", "value": 420 },
+        { "type": "Passes accurate", "value": 360 },
+        { "type": "Passes %", "value": "86%" },
+        { "type": "expected_goals", "value": "1.42" }
+      ]
+    },
+    {
+      "team": {
+        "id": 36,
+        "name": "Fulham",
+        "logo": "https://media.api-sports.io/football/teams/36.png"
+      },
+      "statistics": [
+        { "type": "Shots on Goal", "value": 2 },
+        { "type": "Total Shots", "value": 7 },
+        { "type": "Ball Possession", "value": "42%" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "get": "teams",
+  "parameters": { "search": "manchester" },
+  "errors": [],
+  "results": 2,
+  "paging": { "current": 1, "total": 1 },
+  "response": [
+    {
+      "team": {
+        "id": 33,
+        "name": "Manchester United",
+        "code": "MUN",
+        "country": "England",
+        "founded": 1878,
+        "national": false,
+        "logo": "https://media.api-sports.io/football/teams/33.png"
+      },
+      "venue": {
+        "id": 556,
+        "name": "Old Trafford",
+        "address": null,
+        "city": "Manchester",
+        "capacity": 76212,
+        "surface": "grass",
+        "image": null
+      }
+    },
+    {
+      "team": {
+        "id": 50,
+        "name": "Manchester City",
+        "code": "MCI",
+        "country": "England",
+        "founded": 1880,
+        "national": false,
+        "logo": "https://media.api-sports.io/football/teams/50.png"
+      },
+      "venue": {
+        "id": 555,
+        "name": "Etihad Stadium",
+        "address": null,
+        "city": "Manchester",
+        "capacity": 55097,
+        "surface": "grass",
+        "image": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "get": "fixtures/players",
+  "parameters": { "fixture": "1035037" },
+  "errors": [],
+  "results": 1,
+  "paging": { "current": 1, "total": 1 },
+  "response": [
+    {
+      "team": {
+        "id": 33,
+        "name": "Manchester United",
+        "logo": "https://media.api-sports.io/football/teams/33.png",
+        "update": "2024-08-16T21:05:00+00:00"
+      },
+      "players": [
+        {
+          "player": {
+            "id": 909,
+            "name": "Bruno Fernandes",
+            "photo": "https://media.api-sports.io/football/players/909.png"
+          },
+          "statistics": [
+            {
+              "games": {
+                "minutes": 90,
+                "number": 8,
+                "position": "M",
+                "rating": "8.1",
+                "captain": true,
+                "substitute": false
+              },
+              "offsides": null,
+              "shots": { "total": 3, "on": 2 },
+              "goals": {
+                "total": 1,
+                "conceded": 0,
+                "assists": 0,
+                "saves": null
+              },
+              "passes": { "total": 62, "key": 4, "accuracy": "88%" },
+              "tackles": { "total": 2, "blocks": 0, "interceptions": 1 },
+              "duels": { "total": 10, "won": 6 },
+              "dribbles": { "attempts": 2, "success": 1, "past": null },
+              "fouls": { "drawn": 2, "committed": 1 },
+              "cards": { "yellow": 0, "red": 0 },
+              "penalty": {
+                "won": null,
+                "commited": null,
+                "scored": 0,
+                "missed": 0,
+                "saved": null
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

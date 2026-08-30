@@ -1,0 +1,45 @@
+{
+  "get": "standings",
+  "parameters": { "league": "39", "season": "2024" },
+  "errors": [],
+  "results": 1,
+  "paging": { "current": 1, "total": 1 },
+  "response": [
+    {
+      "league": {
+        "id": 39,
+        "name": "Premier League",
+        "country": "England",
+        "logo": "https://media.api-sports.io/football/leagues/39.png",
+        "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+        "season": 2024,
+        "standings": [
+          [
+            {
+              "rank": 1,
+              "team": {
+                "id": 50,
+                "name": "Manchester City",
+                "logo": "https://media.api-sports.io/football/teams/50.png"
+              },
+              "points": 3,
+              "goalsDiff": 2,
+              "group": "Premier League",
+              "form": "W",
+              "status": "same",
+              "description": "Promotion - Champions League (Group Stage)",
+              "all": {
+                "played": 1,
+                "win": 1,
+                "draw": 0,
+                "lose": 0,
+                "goals": { "for": 2, "against": 0 }
+              },
+              "update": "2024-08-16T00:00:00+00:00"
+            }
+          ]
+        ]
+      }
+    }
+  ]
+}
