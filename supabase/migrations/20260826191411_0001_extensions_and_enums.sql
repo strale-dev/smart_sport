@@ -1,5 +1,5 @@
 -- 0001_extensions_and_enums.sql
--- Kivora / smart_sport — base extensions and enum types.
+-- Scorence — base extensions and enum types.
 -- Source of truth: docs/DB.md §2 and §3.
 
 -- Extensions -----------------------------------------------------------------

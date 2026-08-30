@@ -21,8 +21,8 @@ export function CookieConsentBanner({ onManage }: CookieConsentBannerProps) {
       <div className="mx-auto flex max-w-5xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-muted-foreground text-sm leading-relaxed">
           We use necessary cookies for security and optional analytics cookies
-          (PostHog, EU) to understand how visitors use Kivora. Marketing cookies
-          are not used in the MVP.{" "}
+          (PostHog, EU) to understand how visitors use Scorence. Marketing
+          cookies are not used in the MVP.{" "}
           <Link href="/privacy" className="text-info hover:underline">
             Privacy Policy
           </Link>

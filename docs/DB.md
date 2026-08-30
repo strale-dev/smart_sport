@@ -1,4 +1,4 @@
-# Kivora — Database Schema
+# Scorence — Database Schema
 
 > Companion to [PRD.md](./PRD.md) and [Tech.md](./Tech.md).
 > **Database:** Supabase Postgres (16+).

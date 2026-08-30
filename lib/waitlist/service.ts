@@ -46,7 +46,7 @@ export async function subscribeToWaitlist(
   try {
     await sendEmail({
       to: input.email,
-      subject: "You're on the Kivora waitlist",
+      subject: "You're on the Scorence waitlist",
       react: WaitlistConfirmationEmail({ siteUrl: env.NEXT_PUBLIC_SITE_URL }),
     });
     emailSent = true;

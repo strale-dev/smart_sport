@@ -1,6 +1,6 @@
-# Kivora — Product Requirements Document (PRD)
+# Scorence — Product Requirements Document (PRD)
 
-> **Tagline:** _The Game, Decoded._
+> **Tagline:** _The Future of Sports Prediction_
 > **Version:** 1.0 (MVP Specification)
 > **Last updated:** 2026-08-26
 > **Owner:** Strahinja (Solo founder / dev)
@@ -33,14 +33,14 @@
 
 ## 1. Product overview
 
-**Kivora** is a premium football intelligence SaaS product that combines real football data, statistical modeling, and AI-generated explanations. It answers four core questions for the user on any given match:
+**Scorence** is a premium football intelligence SaaS product that combines real football data, statistical modeling, and AI-generated explanations. It answers four core questions for the user on any given match:
 
 1. **What is happening?** — verified factual data (score, events, statistics).
 2. **Who has the advantage?** — model probabilities and current match state.
 3. **Why?** — evidence-based key factors and AI explanation.
 4. **What could happen next?** — labeled scenarios (pre-match & live).
 
-Kivora is **not** a betting app. Odds, bookmakers, gambling promotion and "value bet" language are **explicitly excluded from the product**. The product is positioned as an **AI-powered football analyst**.
+Scorence is **not** a betting app. Odds, bookmakers, gambling promotion and "value bet" language are **explicitly excluded from the product**. The product is positioned as an **AI-powered football analyst**.
 
 - **Sport (MVP):** Football (soccer) only.
 - **Extensibility:** Architecture is sport-extensible; other sports come post-MVP.
@@ -54,7 +54,7 @@ Kivora is **not** a betting app. Odds, bookmakers, gambling promotion and "value
 
 > **"I have a football analyst beside me."**
 
-Kivora is designed to feel like a serious analytics platform, not a score widget with an AI text box. The **defining capability is not "AI text"**; it is a **continuous intelligence loop**:
+Scorence is designed to feel like a serious analytics platform, not a score widget with an AI text box. The **defining capability is not "AI text"**; it is a **continuous intelligence loop**:
 
 ```
 Real data → statistical model → structured prediction → AI explanation → updated state
@@ -613,7 +613,7 @@ Premium sports analytics: **dark-first only in MVP**, high information density, 
 
 ### 14.5 Logo
 
-- Wordmark logo only in MVP (`Kivora` in the display font with brand accent color as an element).
+- Wordmark logo only in MVP (`Scorence` in the display font with brand accent color as an element).
 - SVG format, versioned in `/public/brand/`.
 
 ### 14.6 Responsive requirements
@@ -696,7 +696,7 @@ All caches are **server-side shared** — no per-client cache invalidation storm
 - Terms of Service explicitly disclaim use for gambling decisions.
 - Global AI disclaimer in the footer of every AI card and in the site footer:
 
-> _Kivora predictions are AI-generated statistical estimates based on historical and live football data. They are not guaranteed outcomes and should be treated as analytical insights. Football, like life, has surprises._
+> _Scorence predictions are AI-generated statistical estimates based on historical and live football data. They are not guaranteed outcomes and should be treated as analytical insights. Football, like life, has surprises._
 
 ### 16.2 Cookie consent
 

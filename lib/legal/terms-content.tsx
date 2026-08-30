@@ -54,15 +54,14 @@ export function TermsContent() {
     <LegalPageShell title="Terms of Service">
       <LegalSection title="1. Agreement">
         <p>
-          By accessing {BRAND.name} (&quot;Kivora&quot;, &quot;the
-          Service&quot;), you agree to these Terms. If you do not agree, do not
-          use the Service.
+          By accessing {BRAND.name} (&quot;the Service&quot;), you agree to
+          these Terms. If you do not agree, do not use the Service.
         </p>
       </LegalSection>
 
       <LegalSection title="2. Service description">
         <p>
-          Kivora provides football analytics, statistical modeling, and
+          {BRAND.name} provides football analytics, statistical modeling, and
           AI-generated explanatory content for informational and educational
           purposes. Features may change during early access and beta periods.
         </p>
@@ -92,8 +91,8 @@ export function TermsContent() {
 
       <LegalSection title="5. No gambling — predictive analysis only">
         <p>
-          Kivora is <strong className="text-foreground">not</strong> a betting
-          service, bookmaker, or gambling advisor.
+          {BRAND.name} is <strong className="text-foreground">not</strong> a
+          betting service, bookmaker, or gambling advisor.
         </p>
         <div className="border-border overflow-x-auto rounded-lg border">
           <table className="w-full text-left text-sm">
@@ -101,10 +100,10 @@ export function TermsContent() {
               <tr className="border-border border-b">
                 <th className="text-foreground p-3 font-medium">Term</th>
                 <th className="text-foreground p-3 font-medium">
-                  What Kivora provides
+                  What {BRAND.name} provides
                 </th>
                 <th className="text-foreground p-3 font-medium">
-                  What Kivora does not provide
+                  What {BRAND.name} does not provide
                 </th>
               </tr>
             </thead>
@@ -150,7 +149,7 @@ export function TermsContent() {
         </p>
         <p>
           We do not display odds, facilitate bets, or link to bookmakers. You
-          use Kivora at your own discretion and risk.
+          use {BRAND.name} at your own discretion and risk.
         </p>
       </LegalSection>
 
@@ -158,8 +157,8 @@ export function TermsContent() {
         <p>{AI_DISCLAIMER}</p>
         <p>
           AI outputs may be incomplete, outdated, or incorrect. Always verify
-          critical information independently. Kivora does not guarantee accuracy
-          of predictions, analyses, or third-party data feeds.
+          critical information independently. {BRAND.name} does not guarantee
+          accuracy of predictions, analyses, or third-party data feeds.
         </p>
       </LegalSection>
 
@@ -172,8 +171,8 @@ export function TermsContent() {
 
       <LegalSection title="8. Limitation of liability">
         <p>
-          To the maximum extent permitted by law, Kivora is provided &quot;as
-          is&quot; without warranties. We are not liable for indirect,
+          To the maximum extent permitted by law, {BRAND.name} is provided
+          &quot;as is&quot; without warranties. We are not liable for indirect,
           incidental, or consequential damages arising from your use of the
           Service, including any gambling losses.
         </p>

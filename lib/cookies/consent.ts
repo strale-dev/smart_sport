@@ -6,7 +6,7 @@ import type {
   CookieConsentState,
 } from "@/lib/cookies/types";
 
-export const CONSENT_STORAGE_KEY = "kivora_cookie_consent_v1";
+export const CONSENT_STORAGE_KEY = "scorence_cookie_consent_v1";
 
 export const cookieConsentSchema = z.object({
   version: z.literal(1),

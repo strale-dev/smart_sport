@@ -6,7 +6,7 @@
  * Manual follow-ups (require dashboard credentials):
  * - Replace SENTRY_DSN placeholder with a real DSN, then GET /api/debug/sentry-test
  * - Use PostHog Project API key (phc_...) in NEXT_PUBLIC_POSTHOG_KEY
- * - Verify Resend email to your account inbox (onboarding@resend.dev sandbox)
+ * - Verify Resend email from hello@scorence.app after domain verification
  * - vercel login && vercel deploy
  * - supabase db reset (requires Docker Desktop for local stack)
  */
@@ -53,6 +53,18 @@ function checkEnvFile() {
   if (/NEXT_PUBLIC_POSTHOG_KEY=phx_/.test(env)) {
     warnings.push(
       "NEXT_PUBLIC_POSTHOG_KEY looks like a personal key (phx_) — use Project API key (phc_)"
+    );
+  }
+
+  if (!/NEXT_PUBLIC_SITE_URL=https:\/\/scorence\.app/.test(env)) {
+    warnings.push(
+      "NEXT_PUBLIC_SITE_URL should be https://scorence.app for production (use localhost only for local-only dev)"
+    );
+  }
+
+  if (!/RESEND_FROM=Scorence <hello@scorence\.app>/.test(env)) {
+    warnings.push(
+      "RESEND_FROM should be Scorence <hello@scorence.app> after Resend domain verification"
     );
   }
 

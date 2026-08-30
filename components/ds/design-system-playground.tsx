@@ -182,7 +182,7 @@ export function DesignSystemPlayground() {
             Internal only
           </p>
           <h1 className="font-heading text-2xl font-semibold">
-            Kivora Design System
+            Scorence Design System
           </h1>
           <p className="text-muted-foreground max-w-2xl text-sm">
             Phase 0 tokens, typography, shadcn primitives, state components, and

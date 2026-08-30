@@ -1,16 +1,15 @@
 export const BRAND = {
-  name: "Kivora",
-  tagline: "The Game, Decoded.",
-  contactEmail: "hello@kivora.app",
-  privacyEmail: "privacy@kivora.app",
+  name: "Scorence",
+  tagline: "The Future of Sports Prediction",
+  contactEmail: "hello@scorence.app",
+  privacyEmail: "privacy@scorence.app",
 } as const;
 
 export const AI_DISCLAIMER =
-  "Kivora predictions are AI-generated statistical estimates based on historical and live football data. They are not guaranteed outcomes and should be treated as analytical insights. Football, like life, has surprises.";
+  "Scorence predictions are AI-generated statistical estimates based on historical and live football data. They are not guaranteed outcomes and should be treated as analytical insights. Football, like life, has surprises.";
 
 export const landingCopy = {
   hero: {
-    headline: "The Game, Decoded.",
     subheadline:
       "Real football data, statistical modeling, and AI explanations — so you understand every match, not just the scoreline. No betting odds. No bookmakers. Just football intelligence.",
     waitlistHint: "Join the waitlist for early access.",
@@ -41,7 +40,7 @@ export const landingCopy = {
   waitlistSection: {
     title: "Get early access",
     description:
-      "Be first in when Kivora opens. One email, no spam, no odds — we'll notify you when early access is ready.",
+      "Be first in when Scorence opens. One email, no spam, no odds — we'll notify you when early access is ready.",
   },
   footer: {
     tagline: BRAND.tagline,
@@ -51,11 +50,12 @@ export const landingCopy = {
 export const legalMeta = {
   privacy: {
     title: "Privacy Policy",
-    description: "How Kivora collects, uses, and protects your personal data.",
+    description:
+      "How Scorence collects, uses, and protects your personal data.",
   },
   terms: {
     title: "Terms of Service",
-    description: "Terms governing your use of Kivora.",
+    description: "Terms governing your use of Scorence.",
   },
   lastUpdated: "2026-08-28",
   selfReviewNote:

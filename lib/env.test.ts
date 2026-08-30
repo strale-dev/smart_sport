@@ -12,7 +12,7 @@ const validPublicEnv = {
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "pk_test_publishable_key",
   NEXT_PUBLIC_POSTHOG_KEY: "phc_test_key",
   NEXT_PUBLIC_POSTHOG_HOST: "https://eu.i.posthog.com",
-  NEXT_PUBLIC_SITE_URL: "https://kivora.app",
+  NEXT_PUBLIC_SITE_URL: "https://scorence.app",
   NEXT_PUBLIC_APP_ENV: "development",
 } as const;
 
@@ -20,10 +20,10 @@ const validServerEnv = {
   ...validPublicEnv,
   SUPABASE_SERVICE_ROLE_KEY: "service_role_test_key",
   RESEND_API_KEY: "re_test_key",
-  RESEND_FROM: "Kivora <hello@kivora.app>",
+  RESEND_FROM: "Scorence <hello@scorence.app>",
   SENTRY_DSN: "https://example@sentry.io/123",
-  SENTRY_ORG: "kivora",
-  SENTRY_PROJECT: "kivora-web",
+  SENTRY_ORG: "scorence",
+  SENTRY_PROJECT: "javascript-nextjs",
 } as const;
 
 describe("publicEnvSchema", () => {

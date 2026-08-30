@@ -52,7 +52,7 @@ export function CookieConsentDialog({
         <DialogHeader>
           <DialogTitle>Cookie preferences</DialogTitle>
           <DialogDescription>
-            Choose which cookies Kivora may use. Necessary cookies are always
+            Choose which cookies Scorence may use. Necessary cookies are always
             active.
           </DialogDescription>
         </DialogHeader>

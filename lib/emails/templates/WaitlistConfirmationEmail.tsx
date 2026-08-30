@@ -11,6 +11,8 @@ import {
   Text,
 } from "@react-email/components";
 
+import { AI_DISCLAIMER, BRAND } from "@/lib/marketing/copy";
+
 // TODO(Phase 7): Implement double opt-in — confirmation link in WaitlistConfirmationEmail
 // must be clicked before email is marked confirmed and before any marketing list send.
 // Required before waitlist blast / launch announcement (ROADMAP Phase 7).
@@ -25,18 +27,18 @@ export function WaitlistConfirmationEmail({
   return (
     <Html>
       <Head />
-      <Preview>You&apos;re on the Kivora waitlist</Preview>
+      <Preview>You&apos;re on the {BRAND.name} waitlist</Preview>
       <Body style={main}>
         <Container style={container}>
           <Section style={header}>
-            <Heading style={brand}>Kivora</Heading>
-            <Text style={tagline}>The Game, Decoded.</Text>
+            <Heading style={brand}>{BRAND.name}</Heading>
+            <Text style={tagline}>{BRAND.tagline}</Text>
           </Section>
 
           <Heading style={heading}>You&apos;re on the waitlist</Heading>
 
           <Text style={paragraph}>
-            Thanks for signing up. Kivora combines real football data,
+            Thanks for signing up. {BRAND.name} combines real football data,
             statistical modeling, and AI explanations to help you understand
             every match — not just the scoreline.
           </Text>
@@ -48,17 +50,13 @@ export function WaitlistConfirmationEmail({
 
           <Section style={buttonSection}>
             <Button href={siteUrl} style={button}>
-              Visit Kivora
+              Visit {BRAND.name}
             </Button>
           </Section>
 
           <Hr style={hr} />
 
-          <Text style={footer}>
-            Kivora predictions are AI-generated statistical estimates based on
-            historical and live football data. They are not guaranteed outcomes
-            and should be treated as analytical insights.
-          </Text>
+          <Text style={footer}>{AI_DISCLAIMER}</Text>
         </Container>
       </Body>
     </Html>

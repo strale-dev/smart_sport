@@ -28,7 +28,7 @@ export async function GET() {
     );
   }
 
-  const error = new Error("Kivora Phase 0 Sentry test error");
+  const error = new Error("Scorence Phase 0 Sentry test error");
 
   Sentry.captureException(error, {
     tags: { source: "debug_sentry_test_route" },

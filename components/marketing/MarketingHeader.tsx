@@ -12,7 +12,7 @@ export function MarketingHeader({ className }: { className?: string }) {
       )}
     >
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" aria-label="Kivora home">
+        <Link href="/" aria-label="Scorence home">
           <Wordmark size="nav" />
         </Link>
         <nav aria-label="Marketing" className="flex items-center gap-6 text-sm">

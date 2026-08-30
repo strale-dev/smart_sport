@@ -47,7 +47,8 @@ export function PrivacyContent() {
     <LegalPageShell title="Privacy Policy">
       <LegalSection title="1. Data controller">
         <p>
-          {BRAND.name} (&quot;we&quot;, &quot;us&quot;) operates the Kivora
+          {BRAND.name} (&quot;we&quot;, &quot;us&quot;) operates the{" "}
+          {BRAND.name}
           website and related services. For privacy inquiries, contact{" "}
           <a
             href={`mailto:${BRAND.privacyEmail}`}
@@ -141,7 +142,7 @@ export function PrivacyContent() {
       </LegalSection>
 
       <LegalSection title="5. Subprocessors">
-        <p>We use the following service providers to operate Kivora:</p>
+        <p>We use the following service providers to operate {BRAND.name}:</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>Supabase — database and authentication (EU)</li>
           <li>Resend — transactional email</li>

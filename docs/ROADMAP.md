@@ -1,4 +1,4 @@
-# Kivora — Implementation Roadmap
+# Scorence — Implementation Roadmap
 
 > Companion to [PRD.md](./PRD.md), [Tech.md](./Tech.md), and [DB.md](./DB.md).
 > **Timeline:** 8 weeks to MVP launch.
@@ -84,7 +84,7 @@ The dev environment, brand, and repo structure are complete. A public landing pa
 
 - [x] Brand palette applied to `app/globals.css` (dark-only tokens).
 - [x] Load `Inter`, `JetBrains Mono`, `Space Grotesk` via `next/font/google`.
-- [x] `components/brand/Wordmark.tsx` — SVG wordmark logo (Kivora + accent).
+- [x] `components/brand/Wordmark.tsx` — SVG wordmark logo (Scorence + accent).
 - [x] shadcn primitives added: `button`, `input`, `label`, `form`, `card`, `badge`, `skeleton`, `tooltip`, `toast`, `separator`, `dropdown-menu`, `dialog`, `sheet`, `tabs`.
 - [x] `components/layout/AppShell.tsx` skeleton (top nav placeholder, mobile bottom nav placeholder).
 - [x] `components/common/EmptyState.tsx`, `ErrorState.tsx`, `StaleBadge.tsx`, `DataQualityChip.tsx`.
@@ -103,11 +103,17 @@ The dev environment, brand, and repo structure are complete. A public landing pa
 - [ ] OpenAI account with billing + spend cap. Key in `.env.local`.
 - [x] Upstash Redis (Free tier) provisioned. Keys in `.env.local`.
 - [ ] LemonSqueezy account, single €2.99 variant created (Dev store).
-- [x] Resend account, `kivora.app` domain verified (or `.dev`/`.app` per availability). _(Account + API key; domain pending — using `onboarding@resend.dev` sandbox.)_
+- [x] Resend account; `scorence.app` domain to verify in Resend for production email. _(API key wired; verify DNS in Resend dashboard.)_
 - [x] PostHog Cloud (EU). Key wired. _(Replace personal `phx_` key with Project API key `phc_`.)_
-- [ ] Sentry project. DSN wired. _(Placeholder DSN in env — SDK integrated.)_
-- [ ] Vercel project created, `dev` + `prod` env vars filled.
-- [ ] Domain: `kivora.app` acquired (or backup); attached to Vercel.
+- [x] Sentry project (`scorence` / `javascript-nextjs`). DSN wired in `.env.local`. _(No domain verification needed — Sentry uses DSN only.)_
+- [ ] Vercel project: Production env vars (`NEXT_PUBLIC_SITE_URL`, `RESEND_FROM`, `NEXT_PUBLIC_APP_ENV=production`).
+- [x] Domain: `scorence.app` acquired on Vercel.
+- [ ] Domain: `scorence.app` attached to Vercel project + DNS propagated.
+
+- [x] Rebrand: Kivora → **Scorence** (`lib/marketing/copy.ts`, wordmark, favicon, legal, emails, docs).
+- [x] Local `.env`: `NEXT_PUBLIC_SITE_URL=https://scorence.app`, `RESEND_FROM=Scorence <hello@scorence.app>`.
+- [ ] **Manual (founder):** Attach `scorence.app` to Vercel project; verify domain in Resend (DNS).
+- [ ] **Manual (founder):** Vercel Production env — mirror `.env.local` secrets + `NEXT_PUBLIC_APP_ENV=production`.
 
 **Marketing surface**
 
@@ -120,7 +126,7 @@ The dev environment, brand, and repo structure are complete. A public landing pa
 ### Definition of Done
 
 - [x] Repo builds clean (`npm.cmd run build`) with zero warnings.
-- [ ] Landing page renders on `kivora.app` (or preview domain) at ≤ 200KB First Load JS. _(Code ready; run `vercel login && vercel deploy`.)_
+- [ ] Landing page renders on `scorence.app` (or preview domain) at ≤ 200KB First Load JS. _(Code ready; run `vercel login && vercel deploy`.)_
 - [ ] Signing up for the waitlist writes to Postgres and sends a Resend email. _(Postgres verified; Resend needs domain or sandbox recipient.)_
 - [ ] `supabase db reset` reproduces the schema from scratch. _(All 17 migrations applied on dev remote; local reset requires Docker Desktop.)_
 - [ ] PostHog sees a `waitlist_signup` event. _(Server capture wired; use Project API key `phc_...` in env.)_

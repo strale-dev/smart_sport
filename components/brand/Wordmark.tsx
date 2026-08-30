@@ -16,11 +16,11 @@ export function Wordmark({ size = "nav", className }: WordmarkProps) {
   return (
     <span
       role="img"
-      aria-label="Kivora"
+      aria-label="Scorence"
       className={cn("inline-flex shrink-0 items-center", className)}
     >
       <svg
-        viewBox="0 0 160 40"
+        viewBox="0 0 210 40"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className={cn(sizeClasses[size])}
@@ -38,9 +38,9 @@ export function Wordmark({ size = "nav", className }: WordmarkProps) {
             letterSpacing: "-0.02em",
           }}
         >
-          Kivora
+          Scorence
         </text>
-        <circle cx="148" cy="10" r="5" className="fill-primary" />
+        <circle cx="198" cy="10" r="5" className="fill-primary" />
       </svg>
     </span>
   );

@@ -23,7 +23,7 @@ vi.mock("@/lib/posthog/server", () => ({
 
 vi.mock("@/lib/env.server", () => ({
   env: {
-    NEXT_PUBLIC_SITE_URL: "https://kivora.app",
+    NEXT_PUBLIC_SITE_URL: "https://scorence.app",
   },
 }));
 
