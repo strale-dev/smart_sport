@@ -22,8 +22,14 @@
     "db:diff": "supabase db diff --linked",
     "db:verify-migrations": "node scripts/verify-supabase-migrations.mjs",
     "phase0:check": "node scripts/phase0-dod-check.mjs",
+    "phase1:check": "node scripts/phase1-dod-check.mjs",
     "api-football:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/api-football-smoke.ts",
-    "cache:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/cache-smoke.ts"
+    "bootstrap:static-data": "tsx --import ./scripts/preload-env.ts ./scripts/bootstrap-static-data.ts",
+    "sync:fixtures": "tsx --import ./scripts/preload-env.ts ./scripts/run-sync-fixtures.ts",
+    "sync:standings": "tsx --import ./scripts/preload-env.ts ./scripts/run-sync-standings.ts",
+    "verify:ingestion": "tsx --import ./scripts/preload-env.ts ./scripts/verify-ingestion.ts",
+    "cache:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/cache-smoke.ts",
+    "quota:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/quota-smoke.ts"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs}": [

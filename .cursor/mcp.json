@@ -3,6 +3,15 @@
     "shadcn": {
       "command": "npx.cmd",
       "args": ["shadcn@latest", "mcp"]
+    },
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer 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"
+      }
+    },
+    "resend": {
+      "url": "https://mcp.resend.com/mcp"
     }
   }
 }

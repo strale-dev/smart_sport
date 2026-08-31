@@ -186,7 +186,17 @@ describe("fixtureToInsert", () => {
     const envelope =
       loadApiFootballFixture<RawApiFootballFixture[]>("fixture-by-id.json");
     const fixture = mapFixture(envelope.response[0]!);
-    const insert = fixtureToInsert(fixture, envelope.response[0]);
+    const insert = fixtureToInsert(
+      fixture,
+      {
+        leagueId: "league-uuid",
+        seasonId: "season-uuid",
+        homeTeamId: "home-uuid",
+        awayTeamId: "away-uuid",
+        venueId: null,
+      },
+      envelope.response[0]
+    );
 
     expect(insert.provider_id).toBe(1035037);
     expect(insert.status).toBe("FT");

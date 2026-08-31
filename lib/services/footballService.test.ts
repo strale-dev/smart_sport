@@ -18,12 +18,15 @@ describe("footballService", () => {
   beforeEach(() => {
     resetCacheForTests();
     resetMemoryLocksForTests();
+    process.env.API_FOOTBALL_INGEST_ONLY = "false";
+    process.env.NEXT_PUBLIC_APP_ENV = "production";
   });
 
   afterEach(() => {
     resetCacheForTests();
     resetMemoryLocksForTests();
     vi.restoreAllMocks();
+    delete process.env.API_FOOTBALL_INGEST_ONLY;
   });
 
   it("caches getMatchesForDate responses", async () => {

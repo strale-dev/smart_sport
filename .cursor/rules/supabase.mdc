@@ -2,6 +2,8 @@
 alwaysApply: true
 ---
 
-Whenever I ask you to do something related to supabase you must know that you have MCP connection to my supabase project. Do  not ever leave sql or any other actions to users to complete, you do it yourself... only let user know when you can't accompish ceratin task using MCP.
+Whenever I ask you to do something related to supabase you must know that you have MCP connection to my supabase project. Do not ever leave sql or any other actions to users to complete, you do it yourself... only let user know when you can't accompish ceratin task using MCP.
+
+**Scorence dev project:** use MCP namespace `user-supabasei` (project ref `zovobemlpqoclyjhvkpw`). Do not use `user-supabase` — that is a different project.
 
 

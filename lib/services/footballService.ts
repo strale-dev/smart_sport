@@ -20,6 +20,16 @@ import {
   getTeamById as getTeamByIdEndpoint,
   searchTeams as searchTeamsEndpoint,
 } from "@/lib/api-football/endpoints/teams";
+import { isApiFootballIngestOnly } from "@/lib/env";
+import {
+  readFixtureByProviderIdFromDb,
+  readFixturesForDateFromDb,
+  readLeagueDetailFromDb,
+  readLiveFixturesFromDb,
+  readSeasonsByLeagueFromDb,
+  readStandingsFromDb,
+  readTeamByProviderIdFromDb,
+} from "@/lib/ingestion/db-read";
 import { cached, type CacheMeta } from "@/lib/redis/cache";
 import {
   CACHE_TTL,
@@ -66,11 +76,30 @@ function toServiceResult<T>(result: {
   };
 }
 
-// Postgres authoritative store — add read-through after cron ingest lands.
+function emptyIngestOnlyResult<T>(value: T): ServiceResult<T> {
+  return {
+    data: value,
+    meta: {
+      cached: false,
+      stale: false,
+    },
+  };
+}
 
 export async function getMatchesForDate(
   date: string
 ): Promise<ServiceResult<Fixture[]>> {
+  if (isApiFootballIngestOnly()) {
+    const result = await cached({
+      key: providerFixturesDateKey(date),
+      freshTtlSeconds: CACHE_TTL.fixturesDateFresh,
+      staleTtlSeconds: CACHE_TTL.fixturesDateStale,
+      fn: () => readFixturesForDateFromDb(date),
+    });
+
+    return toServiceResult(result);
+  }
+
   const result = await cached({
     key: providerFixturesDateKey(date),
     freshTtlSeconds: CACHE_TTL.fixturesDateFresh,
@@ -84,6 +113,17 @@ export async function getMatchesForDate(
 export async function getFixtureById(
   id: number
 ): Promise<ServiceResult<Fixture | null>> {
+  if (isApiFootballIngestOnly()) {
+    const result = await cached({
+      key: providerFixtureKey(id),
+      freshTtlSeconds: CACHE_TTL.fixtureNonLiveFresh,
+      staleTtlSeconds: CACHE_TTL.fixtureStale,
+      fn: () => readFixtureByProviderIdFromDb(id),
+    });
+
+    return toServiceResult(result);
+  }
+
   const result = await cached({
     key: providerFixtureKey(id),
     freshTtlSeconds: (fixture) =>
@@ -98,6 +138,17 @@ export async function getFixtureById(
 }
 
 export async function listLiveFixtures(): Promise<ServiceResult<Fixture[]>> {
+  if (isApiFootballIngestOnly()) {
+    const result = await cached({
+      key: providerFixturesLiveKey(),
+      freshTtlSeconds: CACHE_TTL.fixturesLiveFresh,
+      staleTtlSeconds: CACHE_TTL.fixturesLiveStale,
+      fn: () => readLiveFixturesFromDb(),
+    });
+
+    return toServiceResult(result);
+  }
+
   const result = await cached({
     key: providerFixturesLiveKey(),
     freshTtlSeconds: CACHE_TTL.fixturesLiveFresh,
@@ -111,6 +162,10 @@ export async function listLiveFixtures(): Promise<ServiceResult<Fixture[]>> {
 export async function getFixtureEvents(
   fixtureId: number
 ): Promise<ServiceResult<FixtureEvent[]>> {
+  if (isApiFootballIngestOnly()) {
+    return emptyIngestOnlyResult([]);
+  }
+
   const result = await cached({
     key: providerFixtureEventsKey(fixtureId),
     freshTtlSeconds: CACHE_TTL.fixtureEventsFresh,
@@ -124,6 +179,10 @@ export async function getFixtureEvents(
 export async function getFixtureStatistics(
   fixtureId: number
 ): Promise<ServiceResult<FixtureTeamStatistics[]>> {
+  if (isApiFootballIngestOnly()) {
+    return emptyIngestOnlyResult([]);
+  }
+
   const result = await cached({
     key: providerFixtureStatsKey(fixtureId),
     freshTtlSeconds: CACHE_TTL.fixtureStatsFresh,
@@ -137,6 +196,10 @@ export async function getFixtureStatistics(
 export async function getFixtureLineups(
   fixtureId: number
 ): Promise<ServiceResult<Lineup[]>> {
+  if (isApiFootballIngestOnly()) {
+    return emptyIngestOnlyResult([]);
+  }
+
   const result = await cached({
     key: providerFixtureLineupsKey(fixtureId),
     freshTtlSeconds: CACHE_TTL.fixtureLineupsFresh,
@@ -150,6 +213,10 @@ export async function getFixtureLineups(
 export async function getFixturePlayers(
   fixtureId: number
 ): Promise<ServiceResult<FixturePlayerPerformance[]>> {
+  if (isApiFootballIngestOnly()) {
+    return emptyIngestOnlyResult([]);
+  }
+
   const result = await cached({
     key: providerFixturePlayersKey(fixtureId),
     freshTtlSeconds: CACHE_TTL.fixtureStatsFresh,
@@ -163,6 +230,17 @@ export async function getFixturePlayers(
 export async function getTeamById(
   id: number
 ): Promise<ServiceResult<Team | null>> {
+  if (isApiFootballIngestOnly()) {
+    const result = await cached({
+      key: providerTeamKey(id),
+      freshTtlSeconds: CACHE_TTL.teamFresh,
+      staleTtlSeconds: CACHE_TTL.teamStale,
+      fn: () => readTeamByProviderIdFromDb(id),
+    });
+
+    return toServiceResult(result);
+  }
+
   const result = await cached({
     key: providerTeamKey(id),
     freshTtlSeconds: CACHE_TTL.teamFresh,
@@ -176,6 +254,10 @@ export async function getTeamById(
 export async function searchTeams(
   query: string
 ): Promise<ServiceResult<Team[]>> {
+  if (isApiFootballIngestOnly()) {
+    return emptyIngestOnlyResult([]);
+  }
+
   const result = await cached({
     key: providerSearchTeamsKey(query),
     freshTtlSeconds: CACHE_TTL.searchFresh,
@@ -189,6 +271,10 @@ export async function searchTeams(
 export async function getPlayerById(
   id: number
 ): Promise<ServiceResult<Player | null>> {
+  if (isApiFootballIngestOnly()) {
+    return emptyIngestOnlyResult(null);
+  }
+
   const result = await cached({
     key: providerPlayerKey(id),
     freshTtlSeconds: CACHE_TTL.playerFresh,
@@ -202,6 +288,10 @@ export async function getPlayerById(
 export async function searchPlayers(
   query: string
 ): Promise<ServiceResult<Player[]>> {
+  if (isApiFootballIngestOnly()) {
+    return emptyIngestOnlyResult([]);
+  }
+
   const result = await cached({
     key: providerSearchPlayersKey(query),
     freshTtlSeconds: CACHE_TTL.searchFresh,
@@ -215,6 +305,17 @@ export async function searchPlayers(
 export async function getLeagueById(
   id: number
 ): Promise<ServiceResult<Awaited<ReturnType<typeof getLeagueByIdEndpoint>>>> {
+  if (isApiFootballIngestOnly()) {
+    const result = await cached({
+      key: providerLeagueKey(id),
+      freshTtlSeconds: CACHE_TTL.leagueFresh,
+      staleTtlSeconds: CACHE_TTL.leagueStale,
+      fn: () => readLeagueDetailFromDb(id),
+    });
+
+    return toServiceResult(result);
+  }
+
   const result = await cached({
     key: providerLeagueKey(id),
     freshTtlSeconds: CACHE_TTL.leagueFresh,
@@ -228,6 +329,17 @@ export async function getLeagueById(
 export async function listSeasonsByLeague(
   leagueId: number
 ): Promise<ServiceResult<Season[]>> {
+  if (isApiFootballIngestOnly()) {
+    const result = await cached({
+      key: providerSeasonsKey(leagueId),
+      freshTtlSeconds: CACHE_TTL.seasonsFresh,
+      staleTtlSeconds: CACHE_TTL.seasonsStale,
+      fn: () => readSeasonsByLeagueFromDb(leagueId),
+    });
+
+    return toServiceResult(result);
+  }
+
   const result = await cached({
     key: providerSeasonsKey(leagueId),
     freshTtlSeconds: CACHE_TTL.seasonsFresh,
@@ -242,6 +354,17 @@ export async function getStandings(
   leagueId: number,
   season: number
 ): Promise<ServiceResult<StandingsGroup[]>> {
+  if (isApiFootballIngestOnly()) {
+    const result = await cached({
+      key: providerStandingsKey(leagueId, season),
+      freshTtlSeconds: CACHE_TTL.standingsFresh,
+      staleTtlSeconds: CACHE_TTL.standingsStale,
+      fn: () => readStandingsFromDb(leagueId, season),
+    });
+
+    return toServiceResult(result);
+  }
+
   const result = await cached({
     key: providerStandingsKey(leagueId, season),
     freshTtlSeconds: CACHE_TTL.standingsFresh,

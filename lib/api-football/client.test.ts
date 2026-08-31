@@ -1,6 +1,15 @@
+import pRetry from "p-retry";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("p-retry", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("p-retry")>();
+  return {
+    default: vi.fn(actual.default),
+  };
+});
+
 import { apiFootballFetch } from "@/lib/api-football/client";
+import { ApiFootballQuotaError } from "@/lib/api-football/errors";
 import { resetInFlightDedupForTests } from "@/lib/api-football/dedup";
 import {
   getInMemoryQuotaSnapshot,
@@ -145,5 +154,70 @@ describe("apiFootballFetch", () => {
         }
       )
     ).rejects.toThrow(/API_FOOTBALL_KEY is not configured/);
+  });
+
+  it("refuses non-critical requests when quota is low", async () => {
+    await recordQuotaFromHeaders(
+      new Headers({
+        "x-ratelimit-requests-remaining": "0",
+      })
+    );
+
+    expect(getInMemoryQuotaSnapshot().isLowBudget).toBe(true);
+
+    await expect(
+      apiFootballFetch(
+        "/fixtures",
+        { id: 1035037 },
+        {
+          fetchImpl: vi.fn(),
+          priority: "normal",
+        }
+      )
+    ).rejects.toBeInstanceOf(ApiFootballQuotaError);
+  });
+
+  it("allows critical requests when quota is low", async () => {
+    const fixture = loadApiFootballFixture("fixture-by-id.json");
+    await recordQuotaFromHeaders(
+      new Headers({
+        "x-ratelimit-requests-remaining": "0",
+      })
+    );
+
+    const fetchImpl = vi.fn().mockResolvedValue(
+      mockResponse(fixture, {
+        headers: {
+          "x-ratelimit-requests-remaining": "0",
+        },
+      })
+    );
+
+    const result = await apiFootballFetch(
+      "/fixtures",
+      { id: 1035037 },
+      { fetchImpl, priority: "critical" }
+    );
+
+    expect(result.response).toHaveLength(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps exhausted 429 retries to ApiFootballQuotaError", async () => {
+    vi.mocked(pRetry).mockImplementationOnce(async (fn) =>
+      (fn as () => Promise<Response>)()
+    );
+
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(mockResponse({}, { status: 429 }));
+
+    await expect(
+      apiFootballFetch(
+        "/fixtures",
+        { id: 1035037 },
+        { fetchImpl, priority: "critical" }
+      )
+    ).rejects.toBeInstanceOf(ApiFootballQuotaError);
   });
 });

@@ -1,4 +1,5 @@
 import type {
+  CountryRef,
   Fixture,
   FixtureEvent,
   FixturePlayerPerformance,
@@ -9,10 +10,13 @@ import type {
   Season,
   StandingRow,
   Team,
+  TeamRef,
+  VenueRef,
 } from "@/types/domain";
 import type {
-  FixtureEventInsert,
+  CountryInsert,
   FixtureInsert,
+  FixtureEventInsert,
   FixtureStatisticsInsert,
   LeagueInsert,
   LineupInsert,
@@ -20,14 +24,28 @@ import type {
   SeasonInsert,
   StandingInsert,
   TeamInsert,
+  VenueInsert,
 } from "@/types/domain-db";
 
 export function fixtureToInsert(
   fixture: Fixture,
-  rawPayload: unknown = null
+  relations: {
+    leagueId: string;
+    seasonId: string | null;
+    homeTeamId: string;
+    awayTeamId: string;
+    venueId: string | null;
+  },
+  rawPayload: unknown = null,
+  syncedAt = new Date().toISOString()
 ): FixtureInsert {
   return {
     provider_id: fixture.externalId,
+    league_id: relations.leagueId,
+    season_id: relations.seasonId,
+    home_team_id: relations.homeTeamId,
+    away_team_id: relations.awayTeamId,
+    venue_id: relations.venueId,
     round: fixture.round,
     referee: fixture.referee,
     kickoff_at: fixture.kickoffAt,
@@ -43,7 +61,41 @@ export function fixtureToInsert(
     et_away: fixture.score.extratimeAway,
     pen_home: fixture.score.penaltyHome,
     pen_away: fixture.score.penaltyAway,
+    last_provider_sync_at: syncedAt,
     provider_payload: rawPayload as FixtureInsert["provider_payload"],
+  };
+}
+
+export function countryRefToInsert(country: CountryRef): CountryInsert {
+  return {
+    provider_id: country.code ?? country.name,
+    code: country.code,
+    name: country.name,
+    flag_url: country.flagUrl,
+  };
+}
+
+export function venueRefToInsert(venue: VenueRef): VenueInsert {
+  return {
+    provider_id: venue.externalId,
+    name: venue.name,
+    city: venue.city,
+    capacity: venue.capacity,
+    surface: venue.surface,
+    image_url: venue.imageUrl,
+  };
+}
+
+export function teamRefToInsert(
+  team: TeamRef
+): Omit<TeamInsert, "provider_payload"> {
+  return {
+    provider_id: team.externalId,
+    name: team.name,
+    code: team.code,
+    founded: null,
+    is_national: team.isNational,
+    logo_url: team.logoUrl,
   };
 }
 
@@ -165,12 +217,20 @@ export function lineupToInsert(
 
 export function standingRowToInsert(
   row: StandingRow,
+  relations: {
+    leagueId: string;
+    seasonId: string;
+    teamId: string;
+  },
   rawPayload: unknown = null
 ): StandingInsert {
   return {
+    league_id: relations.leagueId,
+    season_id: relations.seasonId,
+    team_id: relations.teamId,
     rank: row.rank,
     points: row.points,
-    goals_diff: row.goalsDiff,
+    goal_diff: row.goalsDiff,
     group_name: row.groupName,
     form: row.form,
     played: row.played,

@@ -8,13 +8,18 @@ import {
   shouldRefuseNonCriticalRequest,
 } from "@/lib/api-football/quota";
 
-vi.mock("@sentry/nextjs", () => ({
+const { captureMessage } = vi.hoisted(() => ({
   captureMessage: vi.fn(),
+}));
+
+vi.mock("@sentry/nextjs", () => ({
+  captureMessage,
 }));
 
 describe("quota tracker", () => {
   beforeEach(() => {
     resetInMemoryQuotaForTests();
+    captureMessage.mockClear();
     process.env.API_FOOTBALL_DAILY_LIMIT = "7500";
   });
 
@@ -32,6 +37,23 @@ describe("quota tracker", () => {
     const snapshot = getInMemoryQuotaSnapshot();
     expect(snapshot.isLowBudget).toBe(true);
     expect(shouldRefuseNonCriticalRequest(snapshot)).toBe(true);
+  });
+
+  it("reports Sentry warning and refuses requests when quota is exhausted", async () => {
+    await recordQuotaFromHeaders(
+      new Headers({
+        "x-ratelimit-requests-remaining": "0",
+      })
+    );
+
+    const snapshot = getInMemoryQuotaSnapshot();
+    expect(snapshot.dayRemaining).toBe(0);
+    expect(snapshot.isLowBudget).toBe(true);
+    expect(shouldRefuseNonCriticalRequest(snapshot)).toBe(true);
+    expect(captureMessage).toHaveBeenCalledWith(
+      "API-Football daily quota is low",
+      expect.objectContaining({ level: "warning" })
+    );
   });
 
   it("allows critical traffic when budget is healthy", async () => {

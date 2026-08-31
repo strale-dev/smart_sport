@@ -492,17 +492,29 @@ When remaining < 5% of budget, the client:
 2. Refuses non-critical calls (e.g., re-fetch of standings) until reset window.
 3. Continues to serve live-match polling (highest priority).
 
-### 9.3 API-Football Pro plan budget model
+### 9.3 API-Football budget model (Free vs Pro **API key**)
 
-- 7,500 req/day = ~5 req/min average, 300 req/min peak.
-- Priority allocation:
-  - Live polling: highest.
-  - Pre-match confirmed lineup sweep (60 min pre): high.
-  - Cron fixture/standing sync: medium.
-  - On-demand player/team detail: medium.
-  - Historical backfill: lowest (throttled to <30 req/min).
+| Tier                             | Daily limit   | Minute limit (typical) | Used for                                                                  |
+| -------------------------------- | ------------- | ---------------------- | ------------------------------------------------------------------------- |
+| **Free key** (development)       | 100 req/day   | ~10 req/min            | Daily cron ingest, manual bootstrap/smoke, Postgres-backed UI             |
+| **Pro key** ($19/mo, production) | 7,500 req/day | 300 req/min            | Full cron schedule, lineups sweep, on-demand provider reads, live polling |
 
-Configuration constants live in `lib/api-football/config.ts` and are overridable via env vars for easy scaling to Ultra.
+Development ingestion config lives in `lib/ingestion/config.ts` and is driven by `NEXT_PUBLIC_APP_ENV`:
+
+- Fixtures: daily, window **today ± 1 day** (~3 API requests/run).
+- Standings: daily for allowlisted leagues (~7 requests/run).
+- Lineups cron: **disabled** (route exists as stub; not registered in `vercel.json`).
+- UI: `API_FOOTBALL_INGEST_ONLY=true` (default in development) — `footballService` reads Postgres only.
+
+Priority allocation (Pro key):
+
+- Live polling: highest.
+- Pre-match confirmed lineup sweep (60 min pre): high.
+- Cron fixture/standing sync: medium.
+- On-demand player/team detail: medium.
+- Historical backfill: lowest (throttled to <30 req/min).
+
+Configuration constants live in `lib/api-football/config.ts` and `lib/ingestion/config.ts`, overridable via env vars for easy scaling to Ultra.
 
 ---
 
@@ -960,18 +972,41 @@ Optional hardening (not required for Phase 0): in Sentry → Project Settings �
 
 ### 23.2 Vercel Cron
 
-`vercel.json`:
+**Development schedule** (Free API key, current `vercel.json`):
 
 ```json
 {
   "crons": [
-    { "path": "/api/cron/sync-fixtures", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/sync-fixtures", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/sync-standings", "schedule": "30 4 * * *" }
+  ]
+}
+```
+
+- Fixtures: daily at 04:00 UTC, window today ± 1 day, allowlisted leagues only.
+- Standings: daily at 04:30 UTC for allowlisted leagues.
+- Lineups: **not scheduled** in development (`/api/cron/sync-lineups` exists as manual/stub endpoint).
+- Auth: `CRON_SECRET` (Vercel sends `Authorization: Bearer …` automatically when configured).
+
+**Production schedule** (after API-Football **Pro key** cutover — update `vercel.json` only, no ingestion refactor):
+
+```json
+{
+  "crons": [
+    { "path": "/api/cron/sync-fixtures", "schedule": "0 4 * * *" },
     { "path": "/api/cron/sync-standings", "schedule": "0 */6 * * *" },
     { "path": "/api/cron/sync-lineups", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/cleanup-ai-usage", "schedule": "5 0 * * *" }
   ]
 }
 ```
+
+- Fixtures: daily, window today ± 7 days (~15 requests/run).
+- Standings: every 6h (~7 requests/run × 4 = ~28/day for 7 leagues).
+- Lineups: every 15 min for fixtures kicking off in ≤ 90 min (requires Pro key).
+- Live polling: Phase 5 only, presence-gated — see §11.
+
+See [ROADMAP.md Phase 1 — API-Football Pro key cutover](./ROADMAP.md#api-football-pro-key--cutover) for env and schedule migration steps.
 
 ### 23.3 GitHub Actions
 

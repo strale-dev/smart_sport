@@ -18,6 +18,8 @@ export const serverEnvSchema = publicEnvSchema.extend({
   API_FOOTBALL_KEY: z.string().min(1).optional(),
   API_FOOTBALL_BASE_URL: z.string().url().optional(),
   API_FOOTBALL_DAILY_LIMIT: z.coerce.number().int().positive().optional(),
+  API_FOOTBALL_INGEST_ONLY: z.enum(["true", "false", "1", "0"]).optional(),
+  CRON_SECRET: z.string().min(1).optional(),
   RESEND_API_KEY: z.string().min(1),
   RESEND_FROM: z.string().min(1),
   SENTRY_DSN: z.string().url(),
@@ -69,6 +71,8 @@ function readServerEnvSource(
     API_FOOTBALL_KEY: emptyToUndefined(source.API_FOOTBALL_KEY),
     API_FOOTBALL_BASE_URL: emptyToUndefined(source.API_FOOTBALL_BASE_URL),
     API_FOOTBALL_DAILY_LIMIT: emptyToUndefined(source.API_FOOTBALL_DAILY_LIMIT),
+    API_FOOTBALL_INGEST_ONLY: emptyToUndefined(source.API_FOOTBALL_INGEST_ONLY),
+    CRON_SECRET: emptyToUndefined(source.CRON_SECRET),
     RESEND_API_KEY: source.RESEND_API_KEY,
     RESEND_FROM: source.RESEND_FROM,
     SENTRY_DSN: source.SENTRY_DSN,
@@ -133,4 +137,28 @@ export function getApiFootballDailyLimit(
 
   const parsed = Number.parseInt(raw, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 100;
+}
+
+export function getApiFootballMinuteLimit(
+  source: Record<string, string | undefined> = process.env
+): number {
+  const { NEXT_PUBLIC_APP_ENV } = parsePublicEnv(source);
+  return NEXT_PUBLIC_APP_ENV === "production" ? 300 : 10;
+}
+
+export function getCronSecret(
+  source: Record<string, string | undefined> = process.env
+): string | undefined {
+  return emptyToUndefined(source.CRON_SECRET);
+}
+
+export function isApiFootballIngestOnly(
+  source: Record<string, string | undefined> = process.env
+): boolean {
+  const explicit = emptyToUndefined(source.API_FOOTBALL_INGEST_ONLY);
+  if (explicit !== undefined) {
+    return explicit === "true" || explicit === "1";
+  }
+
+  return parsePublicEnv(source).NEXT_PUBLIC_APP_ENV === "development";
 }

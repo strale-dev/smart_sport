@@ -68,6 +68,28 @@ function getMinuteKey(date = new Date()): string {
   return `${API_FOOTBALL_CONFIG.quota.minuteKeyPrefix}${minute}`;
 }
 
+export async function hydrateQuotaFromRedis(date = new Date()): Promise<void> {
+  const redis = getRedis();
+  if (!redis) {
+    return;
+  }
+
+  const [dayRemainingRaw, minuteRemainingRaw] = await Promise.all([
+    redis.get<number | string>(getDayKey(date)),
+    redis.get<number | string>(getMinuteKey(date)),
+  ]);
+
+  if (dayRemainingRaw !== null && dayRemainingRaw !== undefined) {
+    inMemoryQuota.dayRemaining = parseRemainingHeader(String(dayRemainingRaw));
+  }
+
+  if (minuteRemainingRaw !== null && minuteRemainingRaw !== undefined) {
+    inMemoryQuota.minuteRemaining = parseRemainingHeader(
+      String(minuteRemainingRaw)
+    );
+  }
+}
+
 export async function recordQuotaFromHeaders(
   headers: Headers,
   date = new Date()

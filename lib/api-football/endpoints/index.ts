@@ -12,6 +12,7 @@ export {
   getLeagueById,
   getLeagueByIdWithRaw,
   getStandings,
+  listLeagues,
   listSeasonsByLeague,
 } from "@/lib/api-football/endpoints/leagues";
 export {

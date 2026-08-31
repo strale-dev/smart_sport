@@ -13,6 +13,7 @@ import {
 } from "@/lib/api-football/errors";
 import {
   getInMemoryQuotaSnapshot,
+  hydrateQuotaFromRedis,
   recordQuotaFromHeaders,
   shouldRefuseNonCriticalRequest,
 } from "@/lib/api-football/quota";
@@ -122,6 +123,7 @@ export async function apiFootballFetch<T>(
   const priority = options.priority ?? "normal";
 
   return withInFlightDedup(requestKey, async () => {
+    await hydrateQuotaFromRedis();
     const quotaSnapshot = getInMemoryQuotaSnapshot();
     if (
       priority === "normal" &&
@@ -135,41 +137,52 @@ export async function apiFootballFetch<T>(
     const apiKey = getApiKey();
     const url = buildUrl(path, params);
 
-    const response = await pRetry(
-      async () => {
-        const result = await fetchImpl(url, {
-          method: "GET",
-          headers: {
-            "x-apisports-key": apiKey,
-          },
-          cache: "no-store",
-        });
-
-        if (isRetryableStatus(result.status)) {
-          throw new ApiFootballError(`Retryable HTTP ${result.status}`, {
-            statusCode: result.status,
-            path,
+    let response: Response;
+    try {
+      response = await pRetry(
+        async () => {
+          const result = await fetchImpl(url, {
+            method: "GET",
+            headers: {
+              "x-apisports-key": apiKey,
+            },
+            cache: "no-store",
           });
-        }
 
-        return result;
-      },
-      {
-        retries: API_FOOTBALL_CONFIG.retry.retries,
-        factor: API_FOOTBALL_CONFIG.retry.factor,
-        minTimeout: API_FOOTBALL_CONFIG.retry.minTimeoutMs,
-        maxTimeout: API_FOOTBALL_CONFIG.retry.maxTimeoutMs,
-        onFailedAttempt: (error) => {
-          if (
-            error instanceof ApiFootballError &&
-            error.statusCode !== undefined &&
-            !isRetryableStatus(error.statusCode)
-          ) {
-            throw error;
+          if (isRetryableStatus(result.status)) {
+            throw new ApiFootballError(`Retryable HTTP ${result.status}`, {
+              statusCode: result.status,
+              path,
+            });
           }
+
+          return result;
         },
+        {
+          retries: API_FOOTBALL_CONFIG.retry.retries,
+          factor: API_FOOTBALL_CONFIG.retry.factor,
+          minTimeout: API_FOOTBALL_CONFIG.retry.minTimeoutMs,
+          maxTimeout: API_FOOTBALL_CONFIG.retry.maxTimeoutMs,
+          onFailedAttempt: (error) => {
+            if (
+              error instanceof ApiFootballError &&
+              error.statusCode !== undefined &&
+              !isRetryableStatus(error.statusCode)
+            ) {
+              throw error;
+            }
+          },
+        }
+      );
+    } catch (error) {
+      if (error instanceof ApiFootballError && error.statusCode === 429) {
+        throw new ApiFootballQuotaError(
+          "API-Football daily quota exhausted after retries."
+        );
       }
-    );
+
+      throw error;
+    }
 
     await recordQuotaFromHeaders(response.headers);
 

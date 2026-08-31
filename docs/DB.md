@@ -1369,5 +1369,5 @@ Every migration is idempotent where possible (`create ... if not exists`, `add c
 Post-deploy checks (must pass before phase considered done):
 
 - `supabase db reset` completes cleanly against a fresh dev DB.
-- `select * from supabase_functions.get_advisors()` (or MCP `get_advisors`) shows no critical warnings.
+- MCP `get_advisors` on **`user-supabasei`** (Scorence dev) shows **zero security WARN/ERROR** and **zero performance WARN/ERROR**. Performance INFO `unused_index` on FK indexes from migration 0017 is expected until Phase 2+ queries hit those tables — do not drop those indexes.
 - Auto-generated types (`supabase gen types typescript`) compile against the app.

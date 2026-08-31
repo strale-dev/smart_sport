@@ -63,6 +63,11 @@ export type PlayerInsert = {
 
 export type FixtureInsert = {
   provider_id: number;
+  league_id: string;
+  season_id?: string | null;
+  home_team_id: string;
+  away_team_id: string;
+  venue_id?: string | null;
   round: string | null;
   referee: string | null;
   kickoff_at: string;
@@ -78,6 +83,7 @@ export type FixtureInsert = {
   et_away: number | null;
   pen_home: number | null;
   pen_away: number | null;
+  last_provider_sync_at?: string | null;
   provider_payload: Json;
 };
 
@@ -120,9 +126,12 @@ export type LineupInsert = {
 };
 
 export type StandingInsert = {
+  league_id: string;
+  season_id: string;
+  team_id: string;
   rank: number;
   points: number | null;
-  goals_diff: number | null;
+  goal_diff: number | null;
   group_name: string | null;
   form: string | null;
   played: number | null;

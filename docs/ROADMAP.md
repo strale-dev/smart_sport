@@ -99,7 +99,7 @@ The dev environment, brand, and repo structure are complete. A public landing pa
 
 **Third-party accounts**
 
-- [ ] API-Football (Pro $19/mo) subscribed. Key in `.env.local`.
+- [ ] API-Football **Free key** in `.env.local` for development ingestion (Pro key required before Phase 5 — see cutover below).
 - [ ] OpenAI account with billing + spend cap. Key in `.env.local`.
 - [x] Upstash Redis (Free tier) provisioned. Keys in `.env.local`.
 - [ ] LemonSqueezy account, single €2.99 variant created (Dev store).
@@ -171,42 +171,61 @@ API-Football is fully wrapped, cached, and rate-limit aware. Cron pulls fixtures
 
 **Ingestion (cron)**
 
-- [ ] `app/api/cron/sync-fixtures/route.ts` — daily fetch of "today ± 7 days" fixtures across all leagues (throttled).
-- [ ] `app/api/cron/sync-standings/route.ts` — every 6h.
-- [ ] `app/api/cron/sync-lineups/route.ts` — every 15 min (targets fixtures kicking off in ≤ 90 min).
-- [ ] `vercel.json` cron schedule from [Tech.md §23.2](./Tech.md#232-vercel-cron).
-- [ ] Idempotent upsert helpers per entity.
-- [ ] Bootstrap script (`scripts/bootstrap-static-data.ts`) — fetches all leagues + current-season metadata once.
+- [x] `app/api/cron/sync-fixtures/route.ts` — daily fetch of allowlisted leagues, window today ± 1 day in development (± 7 in production config).
+- [x] `app/api/cron/sync-standings/route.ts` — daily in development; every 6h after Pro key cutover.
+- [x] `app/api/cron/sync-lineups/route.ts` — stub in development (manual only); every 15 min after Pro key cutover.
+- [x] `vercel.json` cron schedule from [Tech.md §23.2](./Tech.md#232-vercel-cron).
+- [x] Idempotent upsert helpers per entity (`lib/ingestion/upsert.ts`).
+- [x] Bootstrap script (`scripts/bootstrap-static-data.ts`) — fetches allowlisted leagues + current-season metadata once (idempotent).
+- [x] `API_FOOTBALL_INGEST_ONLY=true` in development so UI reads Postgres, not the live provider.
 
 **Services**
 
-- [x] `lib/services/footballService.ts` — facade over provider + cache + DB.
-- [ ] Domain types stable (`types/domain.ts`).
+- [x] `lib/services/footballService.ts` — facade over provider + cache + DB (Postgres read-through when ingest-only).
+- [x] Domain types stable (`types/domain.ts`).
 
 ### Definition of Done
 
-- [ ] `SELECT COUNT(*) FROM fixtures WHERE kickoff_at::date = current_date` returns matches when queried.
-- [ ] Cache hit rate > 90% for repeated `getFixtureById` calls in a 60s window.
-- [ ] Deliberately blowing the daily quota is handled gracefully (Sentry warning, requests defer to cache).
-- [ ] `footballService.getMatchesForDate(today)` on the server returns typed, normalized data.
-- [ ] All new tables have `supabase get_advisors` clean.
+- [x] `SELECT COUNT(*) FROM fixtures WHERE (kickoff_at AT TIME ZONE 'UTC')::date = (NOW() AT TIME ZONE 'UTC')::date` returns matches when queried. _(Avoid `kickoff_at::date = current_date` — session timezone dependent; see DB.md §6.1.)_
+- [x] Cache hit rate > 90% for repeated `getFixtureById` calls in a 60s window.
+- [x] Deliberately blowing the daily quota is handled gracefully (Sentry warning, requests defer to cache).
+- [x] `footballService.getMatchesForDate(today)` on the server returns typed, normalized data from Postgres in development.
+- [x] All new tables have `supabase get_advisors` clean. _(Scorence `user-supabasei`: 0 security WARN/ERROR, 0 performance WARN/ERROR; INFO `unused_index` on FK indexes from 0017 is expected until Phase 2 queries.)_
 
 ### Risks / watch-outs
 
 - **API-Football lower-league coverage is thin.** Accept it; log a `data_quality: PARTIAL` marker at ingestion time.
 - Provider payload shape changes silently — versioned raw payload stored in `provider_payload` JSONB gives us forensic recovery.
-- Rate limits are strict on Pro — the throttled backfill respects 5 req/sec ceiling.
+- Free key daily budget is tight if `API_FOOTBALL_INGEST_ONLY=false` — keep ingest-only in development.
 
 ### API-Football key — kada je obavezan
 
-| Faza                                      | Potreban ključ?     | Zašto                                          |
-| ----------------------------------------- | ------------------- | ---------------------------------------------- |
-| Adapter PR (provider adapter iteracija 1) | Ne                  | Unit testovi koriste snimljene JSON response-e |
-| `npm run api-football:smoke`              | Da (Pro preporučen) | Ručna verifikacija protiv live API-ja          |
-| Phase 1 cache + cron                      | Da                  | Real data ingestion u Postgres                 |
-| Phase 2+ UI sa pravim podacima            | Da                  | Server-side servisi čitaju live/cache podatke  |
+| Faza                                      | Potreban ključ?  | Zašto                                          |
+| ----------------------------------------- | ---------------- | ---------------------------------------------- |
+| Adapter PR (provider adapter iteracija 1) | Ne               | Unit testovi koriste snimljene JSON response-e |
+| `npm run api-football:smoke`              | Da (Free OK)     | Ručna verifikacija protiv live API-ja          |
+| Phase 1 cache + cron (development)        | Da (**Free** OK) | ~10 cron req/day + manual bootstrap            |
+| Phase 2–3 UI sa Postgres podacima         | Da (**Free** OK) | UI čita DB; provider samo kroz cron/bootstrap  |
+| **Phase 5 Live engine**                   | Da (**Pro key**) | Live polling 30–40s nije moguć na 100 req/day  |
+| Phase 7 launch                            | Da (**Pro key**) | Production cron + lineups + live               |
 
-**Preporuka:** pretplati se na **Pro ($19/mo)** pre nego što kreneš na cache/cron deo Phase 1 (DoD: `SELECT COUNT(*) FROM fixtures...`). Adapter PR može biti merge-ovan bez ključa.
+**Preporuka sada:** koristi **Free API key** za Phase 1–3. Ne troši Pro pretplatu dok ne kreneš Phase 5.
+
+### API-Football Pro key — cutover
+
+**Hard gate: pre Phase 5 (Week 6).** Live polling potroši Free kvotu za par mečeva; lineups cron svakih 15 min takođe.
+
+Koraci (samo env + schedule + uključivanje već predviđenih sync funkcija — **bez** promene ingestion arhitekture):
+
+1. Kupiti API-Football Pro ($19/mo) i zameniti `API_FOOTBALL_KEY` u `.env.local` + Vercel env.
+2. Postaviti `API_FOOTBALL_DAILY_LIMIT=7500`.
+3. Production: `API_FOOTBALL_INGEST_ONLY=false` (development može ostati `true`).
+4. Ažurirati [vercel.json](../vercel.json): standings `0 */6 * * *`, dodati lineups `*/15 * * * *`.
+5. Implementirati `sync-lineups` body (ruta već postoji) — upcoming fixtures ≤ 90 min.
+6. Opciono proširiti league allowlist u `lib/ingestion/config.ts`.
+7. Tek tada Phase 5 live polling (`lib/live/poller.ts`, presence-gated).
+
+**Procena potrošnje (development, Free key):** ~10 cron req/day + headroom za smoke/bootstrap. Rizik prekoračenja nizak dok je `API_FOOTBALL_INGEST_ONLY=true`.
 
 ---
 
@@ -458,7 +477,7 @@ Live matches update automatically. When a user opens a live fixture, a shared po
 ### Risks / watch-outs
 
 - Supabase Realtime cold-connect latency on serverless — client uses SSE-style reconnect handling.
-- Provider quota during heavy live weekends — must be respected; reserve 20% headroom.
+- Provider quota during heavy live weekends — must be respected; reserve 20% headroom. **Blocked on Free API key — subscribe to Pro before this phase.**
 - Sound playback needs a user gesture on some browsers — first sound event only fires after any user interaction.
 
 ---

@@ -1,6 +1,7 @@
 import {
   DEFAULT_API_FOOTBALL_BASE_URL,
   getApiFootballDailyLimit,
+  getApiFootballMinuteLimit,
 } from "@/lib/env";
 
 export const API_FOOTBALL_CONFIG = {
@@ -22,7 +23,9 @@ export const API_FOOTBALL_CONFIG = {
     get defaultDailyLimit() {
       return getApiFootballDailyLimit();
     },
-    defaultMinuteLimit: 300,
+    get defaultMinuteLimit() {
+      return getApiFootballMinuteLimit();
+    },
   },
 } as const;
 

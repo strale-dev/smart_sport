@@ -669,7 +669,9 @@ Player and club pages must remain readable on mobile. Tables become stacked card
 
 ### 15.4 Cache & real-time
 
-Configured based on API-Football rate limits (Pro plan: 7,500 req/day, 300 req/min):
+**Development (Free API key):** UI reads Postgres via `footballService` when `API_FOOTBALL_INGEST_ONLY=true` (default in development). Cron ingests daily (~10 API requests/day for fixtures + standings). No automatic lineup sweep or live provider polling.
+
+**Production (API-Football Pro key — 7,500 req/day, 300 req/min):** full cache TTLs and refresh cadence below apply after Pro key cutover (see [ROADMAP.md Phase 1 cutover](./ROADMAP.md#api-football-pro-key--cutover)).
 
 | Data category               | TTL / refresh                            |
 | --------------------------- | ---------------------------------------- |
@@ -685,6 +687,13 @@ Configured based on API-Football rate limits (Pro plan: 7,500 req/day, 300 req/m
 | AI live insight             | Refresh only on meaningful state changes |
 
 All caches are **server-side shared** — no per-client cache invalidation storm. Rate-limit awareness via response headers (`x-ratelimit-requests-remaining`, `X-RateLimit-Remaining`) with exponential backoff on 429.
+
+**Pro key cutover checklist** (engineering + product trigger):
+
+1. Replace `API_FOOTBALL_KEY` with Pro key; set `API_FOOTBALL_DAILY_LIMIT=7500`.
+2. Set `API_FOOTBALL_INGEST_ONLY=false` in production.
+3. Update `vercel.json` cron schedules (standings every 6h, lineups every 15 min).
+4. Implement `sync-lineups` body; enable live polling in Phase 5.
 
 ---
 

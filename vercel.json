@@ -1,4 +1,14 @@
 {
   "framework": "nextjs",
-  "regions": ["fra1"]
+  "regions": ["fra1"],
+  "crons": [
+    {
+      "path": "/api/cron/sync-fixtures",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/sync-standings",
+      "schedule": "30 4 * * *"
+    }
+  ]
 }

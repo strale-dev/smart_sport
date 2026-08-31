@@ -1,3 +1,8 @@
+/**
+ * Normalized domain types for the provider/service layer (Phase 1 surface).
+ * Analytics types (FormSnapshot, H2HSummary) live in Phase 3; DB insert shapes
+ * are in types/domain-db.ts; generated row types are in types/supabase.ts.
+ */
 export type FixtureStatus =
   | "TBD"
   | "NS"

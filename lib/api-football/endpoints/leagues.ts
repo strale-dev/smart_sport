@@ -39,3 +39,12 @@ export async function getLeagueByIdWithRaw(id: number) {
   const raw = response[0];
   return raw ? { raw, domain: mapLeagueDetail(raw) } : null;
 }
+
+export async function listLeagues() {
+  const response =
+    await apiFootballFetchResponse<RawApiFootballLeagueDetail>("/leagues");
+  return response.map((raw) => ({
+    raw,
+    domain: mapLeagueDetail(raw),
+  }));
+}
