@@ -80,7 +80,7 @@ export function AccountMenu({
                 {initials}
               </span>
             </span>
-            Account
+            <span className="sr-only">Account</span>
           </>
         )}
       </DropdownMenuTrigger>

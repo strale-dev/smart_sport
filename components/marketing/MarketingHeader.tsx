@@ -21,22 +21,22 @@ export function MarketingHeader({ className, user }: MarketingHeaderProps) {
   return (
     <header
       className={cn(
-        "border-border/60 bg-background/80 sticky top-0 z-40 border-b backdrop-blur-md",
+        "border-border/60 bg-background/80 sticky top-0 z-40 w-full border-b backdrop-blur-md",
         className
       )}
     >
-      <div className="mx-auto grid h-14 max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 md:grid-cols-[1fr_auto_1fr]">
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 md:grid md:grid-cols-[1fr_auto_1fr] md:gap-3">
         <Link
           href="/"
           aria-label="Scorence home"
-          className="justify-self-start transition-opacity hover:opacity-80"
+          className="shrink-0 transition-opacity hover:opacity-80 md:justify-self-start"
         >
           <Wordmark size="nav" />
         </Link>
 
         <nav
           aria-label="Marketing"
-          className="bg-muted/40 hidden items-center gap-0.5 rounded-full p-1 sm:flex sm:justify-self-center"
+          className="bg-muted/40 hidden items-center gap-0.5 rounded-full p-1 sm:flex md:justify-self-center"
         >
           {marketingLinks.map((link) => (
             <Link
@@ -60,7 +60,7 @@ export function MarketingHeader({ className, user }: MarketingHeaderProps) {
           ) : null}
         </nav>
 
-        <div className="col-start-3 flex shrink-0 items-center justify-self-end">
+        <div className="hidden shrink-0 items-center sm:flex md:col-start-3 md:justify-self-end">
           {user ? <AccountMenu user={user} /> : <AuthNavActions returnTo="/" />}
         </div>
       </div>

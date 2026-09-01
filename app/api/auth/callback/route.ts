@@ -1,8 +1,7 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+import { exchangeCodeForSession } from "@/lib/auth/exchange-code-session";
 import { safeReturnTo } from "@/lib/auth/return-to";
-import { createClient } from "@/lib/supabase/server";
 
 const NEW_USER_WINDOW_MS = 120_000;
 
@@ -57,14 +56,12 @@ export async function GET(request: Request) {
     return redirectTo(request, "/login?error=callback");
   }
 
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  const result = await exchangeCodeForSession(code);
 
-  if (error || !data.user) {
+  if (!result.ok) {
     return redirectTo(request, "/login?error=callback");
   }
 
-  const event = isNewUser(data.user.created_at) ? "signup" : "login";
+  const event = isNewUser(result.createdAt) ? "signup" : "login";
   return redirectTo(request, next, event);
 }

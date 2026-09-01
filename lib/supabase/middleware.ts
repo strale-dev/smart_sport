@@ -49,6 +49,16 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const returnToParam = request.nextUrl.searchParams.get("returnTo");
 
+  if (
+    pathname === "/" &&
+    request.nextUrl.searchParams.has("code") &&
+    !request.nextUrl.searchParams.has("auth_event")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/api/auth/callback/recovery";
+    return copyCookies(NextResponse.redirect(url), supabaseResponse);
+  }
+
   if (isUpdatePasswordPath(pathname)) {
     if (!user) {
       const url = request.nextUrl.clone();

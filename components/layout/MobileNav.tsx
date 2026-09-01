@@ -22,9 +22,9 @@ export function MobileNav({ user }: MobileNavProps) {
   return (
     <nav
       aria-label="Mobile"
-      className="border-border bg-background/95 sticky bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-sm md:hidden"
+      className="border-border bg-background/95 fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-sm md:hidden"
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-stretch justify-around px-1">
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-stretch justify-around px-0.5">
         {APP_NAV_ITEMS.map((item) => (
           <MobileNavLinkItem
             key={item.href}

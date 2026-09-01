@@ -7,7 +7,7 @@ export default function LandingPage() {
   return (
     <>
       <LandingAnalytics />
-      <div className="mx-auto max-w-6xl space-y-20 px-4 py-12 sm:py-16 lg:py-20">
+      <div className="mx-auto w-full max-w-6xl min-w-0 space-y-20 px-4 py-12 sm:py-16 lg:py-20">
         <HeroSection />
         <FeatureGrid />
         <WaitlistSection />

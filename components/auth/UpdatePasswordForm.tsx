@@ -2,8 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2Icon } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { AuthCard } from "@/components/auth/AuthCard";
@@ -28,11 +29,28 @@ import { createClient } from "@/lib/supabase/client";
 export function UpdatePasswordForm() {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [sessionMissing, setSessionMissing] = useState(false);
 
   const form = useForm<UpdatePasswordValues>({
     resolver: zodResolver(updatePasswordSchema),
     defaultValues: { password: "", confirmPassword: "" },
   });
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        setSessionMissing(true);
+        setFormError(
+          "This reset link is invalid or has expired. Request a new one."
+        );
+      }
+
+      setSessionReady(true);
+    });
+  }, []);
 
   async function onSubmit(values: UpdatePasswordValues) {
     setFormError(null);
@@ -50,9 +68,23 @@ export function UpdatePasswordForm() {
     toast.add({
       type: "success",
       title: "Password updated",
+      description: "You can now sign in with your new password.",
     });
-    router.push("/");
+    router.push("/login");
     router.refresh();
+  }
+
+  if (!sessionReady) {
+    return (
+      <AuthCard
+        title="Set a new password"
+        description="Checking your reset link…"
+      >
+        <div className="text-muted-foreground flex justify-center py-6">
+          <Loader2Icon className="size-6 animate-spin" aria-hidden="true" />
+        </div>
+      </AuthCard>
+    );
   }
 
   return (
@@ -109,7 +141,7 @@ export function UpdatePasswordForm() {
           ) : null}
           <Button
             type="submit"
-            disabled={form.formState.isSubmitting}
+            disabled={form.formState.isSubmitting || sessionMissing}
             className="w-full"
           >
             {form.formState.isSubmitting ? (
@@ -123,6 +155,16 @@ export function UpdatePasswordForm() {
           </Button>
         </form>
       </Form>
+      {sessionMissing ? (
+        <p className="text-muted-foreground mt-4 text-center text-sm">
+          <Link
+            href="/reset-password"
+            className="text-foreground underline-offset-4 hover:underline"
+          >
+            Request a new reset link
+          </Link>
+        </p>
+      ) : null}
     </AuthCard>
   );
 }

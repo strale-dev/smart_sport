@@ -9,7 +9,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="bg-background flex min-h-dvh flex-col">
       <header className="border-border/60 bg-background/80 sticky top-0 z-40 border-b backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center px-4">
           <Link href="/" aria-label="Scorence home">

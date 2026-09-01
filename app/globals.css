@@ -104,8 +104,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply min-h-dvh w-full max-w-full overflow-x-clip;
+  }
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground min-h-dvh w-full max-w-full font-sans;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {

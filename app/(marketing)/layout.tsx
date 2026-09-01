@@ -37,9 +37,9 @@ export default async function MarketingLayout({
   const user = await getCurrentUser();
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex min-h-dvh w-full min-w-0 flex-col">
       <MarketingHeader user={user ? toAuthUserView(user) : null} />
-      <main className="flex-1">{children}</main>
+      <main className="min-w-0 flex-1">{children}</main>
       <MarketingFooter />
       <CookieConsentShell />
     </div>

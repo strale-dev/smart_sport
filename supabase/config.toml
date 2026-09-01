@@ -162,7 +162,10 @@ enabled = true
 additional_redirect_urls = [
   "http://127.0.0.1:3000/api/auth/callback",
   "http://localhost:3000/api/auth/callback",
+  "http://127.0.0.1:3000/api/auth/callback/recovery",
+  "http://localhost:3000/api/auth/callback/recovery",
   "https://scorence.app/api/auth/callback",
+  "https://scorence.app/api/auth/callback/recovery",
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600

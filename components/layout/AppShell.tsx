@@ -13,11 +13,13 @@ type AppShellProps = {
 
 export function AppShell({ children, className, user }: AppShellProps) {
   return (
-    <div className={cn("flex min-h-full flex-col", className)}>
+    <div className={cn("bg-background flex min-h-dvh flex-col", className)}>
       <TopNav user={user} />
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-24 md:pb-6">
-        {children}
+      <main className="mx-auto flex w-full max-w-6xl min-w-0 flex-1 flex-col px-4 pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-6">
+        <div className="flex flex-1 flex-col items-center justify-center py-4 md:items-stretch md:justify-start md:py-6">
+          {children}
+        </div>
       </main>
 
       <MobileNav user={user} />

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
@@ -22,6 +22,11 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   title: {
     default: BRAND.name,
@@ -38,13 +43,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html
       lang="en"
       className={cn(
-        "dark h-full antialiased",
+        "dark min-h-dvh w-full antialiased",
         inter.variable,
         jetbrainsMono.variable,
         spaceGrotesk.variable
       )}
     >
-      <body className="flex min-h-full flex-col" suppressHydrationWarning>
+      <body
+        className="flex min-h-dvh w-full max-w-full flex-col overflow-x-clip"
+        suppressHydrationWarning
+      >
         <AppProviders>{children}</AppProviders>
         <Toaster />
       </body>

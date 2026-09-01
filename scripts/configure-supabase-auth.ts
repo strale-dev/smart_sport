@@ -65,7 +65,7 @@ async function main() {
   const patch: AuthConfigPatch = {
     site_url: "http://localhost:3000",
     uri_allow_list:
-      "http://127.0.0.1:3000/api/auth/callback,http://localhost:3000/api/auth/callback,https://scorence.app/api/auth/callback",
+      "http://127.0.0.1:3000/api/auth/callback,http://localhost:3000/api/auth/callback,http://127.0.0.1:3000/api/auth/callback/recovery,http://localhost:3000/api/auth/callback/recovery,https://scorence.app/api/auth/callback,https://scorence.app/api/auth/callback/recovery",
     mailer_autoconfirm: false,
     mailer_subjects_confirmation: "Confirm your Scorence account",
     mailer_subjects_recovery: "Reset your Scorence password",

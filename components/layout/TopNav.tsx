@@ -19,8 +19,8 @@ export function TopNav({ user }: TopNavProps) {
   const homeHref = user ? "/dashboard" : "/";
 
   return (
-    <header className="border-border bg-background/95 sticky top-0 z-40 border-b backdrop-blur-sm">
-      <div className="mx-auto flex h-14 max-w-6xl items-center px-4 md:grid md:grid-cols-[1fr_auto_1fr] md:gap-3">
+    <header className="border-border bg-background/95 sticky top-0 z-40 w-full border-b backdrop-blur-sm">
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center px-4 md:grid md:grid-cols-[1fr_auto_1fr] md:gap-3">
         <Link
           href={homeHref}
           aria-label="Scorence home"
