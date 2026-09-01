@@ -529,3 +529,289 @@ export async function readSeasonsByLeagueFromDb(
   const detail = await readLeagueDetailFromDb(leagueProviderId);
   return detail?.seasons ?? [];
 }
+
+export type FixtureStandingsInfo = {
+  homeRank: number | null;
+  awayRank: number | null;
+  teamCount: number | null;
+};
+
+export async function readLeaguePrestigeMap(): Promise<Map<number, number>> {
+  const client = createAdminClient();
+  const config = getIngestionConfig();
+
+  const { data, error } = await client
+    .from("leagues")
+    .select("provider_id, prestige_score")
+    .in("provider_id", [...config.leagueProviderIds]);
+
+  if (error) {
+    throw new Error(`Failed to read league prestige scores: ${error.message}`);
+  }
+
+  const map = new Map<number, number>();
+  for (const row of data ?? []) {
+    map.set(row.provider_id, Number(row.prestige_score ?? 0));
+  }
+
+  return map;
+}
+
+export async function readStandingsRanksForFixtures(
+  fixtures: Fixture[]
+): Promise<Map<number, FixtureStandingsInfo>> {
+  const result = new Map<number, FixtureStandingsInfo>();
+  if (fixtures.length === 0) {
+    return result;
+  }
+
+  const leagueSeasonKeys = new Map<
+    string,
+    { leagueProviderId: number; seasonYear: number }
+  >();
+
+  for (const fixture of fixtures) {
+    if (fixture.seasonYear == null) {
+      continue;
+    }
+
+    const key = `${fixture.league.externalId}:${fixture.seasonYear}`;
+    leagueSeasonKeys.set(key, {
+      leagueProviderId: fixture.league.externalId,
+      seasonYear: fixture.seasonYear,
+    });
+  }
+
+  const standingsCache = new Map<string, StandingsGroup[]>();
+  await Promise.all(
+    [...leagueSeasonKeys.entries()].map(
+      async ([key, { leagueProviderId, seasonYear }]) => {
+        const groups = await readStandingsFromDb(leagueProviderId, seasonYear);
+        standingsCache.set(key, groups);
+      }
+    )
+  );
+
+  for (const fixture of fixtures) {
+    if (fixture.seasonYear == null) {
+      result.set(fixture.externalId, {
+        homeRank: null,
+        awayRank: null,
+        teamCount: null,
+      });
+      continue;
+    }
+
+    const key = `${fixture.league.externalId}:${fixture.seasonYear}`;
+    const groups = standingsCache.get(key) ?? [];
+    const overall =
+      groups.find((group) => group.groupName === "Overall") ?? groups[0];
+
+    if (!overall || overall.rows.length === 0) {
+      result.set(fixture.externalId, {
+        homeRank: null,
+        awayRank: null,
+        teamCount: null,
+      });
+      continue;
+    }
+
+    const teamCount = overall.rows.length;
+    const homeRow = overall.rows.find(
+      (row) => row.team.externalId === fixture.homeTeam.externalId
+    );
+    const awayRow = overall.rows.find(
+      (row) => row.team.externalId === fixture.awayTeam.externalId
+    );
+
+    result.set(fixture.externalId, {
+      homeRank: homeRow?.rank ?? null,
+      awayRank: awayRow?.rank ?? null,
+      teamCount,
+    });
+  }
+
+  return result;
+}
+
+type H2hPairLookup = {
+  fixtureExternalId: number;
+  teamAId: string;
+  teamBId: string;
+};
+
+function canonicalTeamPair(teamAId: string, teamBId: string): [string, string] {
+  return teamAId < teamBId ? [teamAId, teamBId] : [teamBId, teamAId];
+}
+
+export async function readH2hInterestForFixtures(
+  fixtures: Fixture[]
+): Promise<Map<number, number>> {
+  const result = new Map<number, number>();
+  if (fixtures.length === 0) {
+    return result;
+  }
+
+  const client = createAdminClient();
+  const providerIds = new Set<number>();
+
+  for (const fixture of fixtures) {
+    providerIds.add(fixture.homeTeam.externalId);
+    providerIds.add(fixture.awayTeam.externalId);
+  }
+
+  const { data: teams, error: teamsError } = await client
+    .from("teams")
+    .select("id, provider_id")
+    .in("provider_id", [...providerIds]);
+
+  if (teamsError) {
+    throw new Error(
+      `Failed to read teams for H2H lookup: ${teamsError.message}`
+    );
+  }
+
+  const uuidByProvider = new Map<number, string>();
+  for (const team of teams ?? []) {
+    uuidByProvider.set(team.provider_id, team.id);
+  }
+
+  const pairLookups: H2hPairLookup[] = [];
+  for (const fixture of fixtures) {
+    const homeUuid = uuidByProvider.get(fixture.homeTeam.externalId);
+    const awayUuid = uuidByProvider.get(fixture.awayTeam.externalId);
+    if (!homeUuid || !awayUuid) {
+      continue;
+    }
+
+    const [teamAId, teamBId] = canonicalTeamPair(homeUuid, awayUuid);
+    pairLookups.push({
+      fixtureExternalId: fixture.externalId,
+      teamAId,
+      teamBId,
+    });
+  }
+
+  await Promise.all(
+    pairLookups.map(async ({ fixtureExternalId, teamAId, teamBId }) => {
+      const { data, error } = await client
+        .from("h2h_summaries")
+        .select("team_a_wins, team_b_wins, draws, window_size")
+        .eq("team_a_id", teamAId)
+        .eq("team_b_id", teamBId)
+        .eq("scope", "ALL")
+        .order("captured_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(
+          `Failed to read H2H summary for fixture ${fixtureExternalId}: ${error.message}`
+        );
+      }
+
+      if (!data?.window_size || data.window_size <= 0) {
+        return;
+      }
+
+      const meetings =
+        (data.team_a_wins ?? 0) + (data.team_b_wins ?? 0) + (data.draws ?? 0);
+      result.set(fixtureExternalId, meetings / data.window_size);
+    })
+  );
+
+  return result;
+}
+
+export type PredictionChangeSummary = {
+  fixtureExternalId: number;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeWinDelta: number;
+  updatedAt: string;
+};
+
+export async function readRecentPredictionChanges(
+  limit = 5
+): Promise<PredictionChangeSummary[]> {
+  const client = createAdminClient();
+
+  const { data: latestPredictions, error } = await client
+    .from("predictions")
+    .select(
+      `
+      id,
+      home_win_prob,
+      created_at,
+      fixture:fixtures (
+        provider_id,
+        home_team:teams!fixtures_home_team_id_fkey (name),
+        away_team:teams!fixtures_away_team_id_fkey (name)
+      )
+    `
+    )
+    .order("created_at", { ascending: false })
+    .limit(limit * 4);
+
+  if (error) {
+    throw new Error(`Failed to read recent predictions: ${error.message}`);
+  }
+
+  const byFixture = new Map<
+    number,
+    Array<{
+      homeWinProb: number;
+      createdAt: string;
+      homeTeamName: string;
+      awayTeamName: string;
+    }>
+  >();
+
+  for (const row of latestPredictions ?? []) {
+    const fixture = Array.isArray(row.fixture) ? row.fixture[0] : row.fixture;
+    if (!fixture) {
+      continue;
+    }
+
+    const homeTeam = Array.isArray(fixture.home_team)
+      ? fixture.home_team[0]
+      : fixture.home_team;
+    const awayTeam = Array.isArray(fixture.away_team)
+      ? fixture.away_team[0]
+      : fixture.away_team;
+
+    const fixtureExternalId = fixture.provider_id;
+    const entries = byFixture.get(fixtureExternalId) ?? [];
+    entries.push({
+      homeWinProb: Number(row.home_win_prob),
+      createdAt: row.created_at,
+      homeTeamName: homeTeam?.name ?? "Home",
+      awayTeamName: awayTeam?.name ?? "Away",
+    });
+    byFixture.set(fixtureExternalId, entries);
+  }
+
+  const summaries: PredictionChangeSummary[] = [];
+
+  for (const [fixtureExternalId, entries] of byFixture) {
+    if (entries.length < 2) {
+      continue;
+    }
+
+    const [latest, previous] = entries;
+    const homeWinDelta = latest.homeWinProb - previous.homeWinProb;
+    if (Math.abs(homeWinDelta) < 0.01) {
+      continue;
+    }
+
+    summaries.push({
+      fixtureExternalId,
+      homeTeamName: latest.homeTeamName,
+      awayTeamName: latest.awayTeamName,
+      homeWinDelta,
+      updatedAt: latest.createdAt,
+    });
+  }
+
+  return summaries.slice(0, limit);
+}
