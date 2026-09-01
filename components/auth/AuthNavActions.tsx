@@ -15,7 +15,7 @@ export function AuthNavActions({ returnTo, className }: AuthNavActionsProps) {
   return (
     <nav
       aria-label="Account"
-      className={cn("flex items-center gap-2 sm:gap-3", className)}
+      className={cn("flex items-center gap-1.5 sm:gap-3", className)}
     >
       <Link
         href={loginHref(returnTo)}

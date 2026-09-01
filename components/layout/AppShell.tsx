@@ -17,7 +17,7 @@ export function AppShell({ children, className, user }: AppShellProps) {
       <TopNav user={user} />
 
       <main className="mx-auto flex w-full max-w-6xl min-w-0 flex-1 flex-col px-4 pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-6">
-        <div className="flex flex-1 flex-col items-center justify-center py-4 md:items-stretch md:justify-start md:py-6">
+        <div className="flex flex-1 flex-col items-center py-4 md:py-6">
           {children}
         </div>
       </main>

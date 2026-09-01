@@ -60,7 +60,7 @@ export function MarketingHeader({ className, user }: MarketingHeaderProps) {
           ) : null}
         </nav>
 
-        <div className="hidden shrink-0 items-center sm:flex md:col-start-3 md:justify-self-end">
+        <div className="flex shrink-0 items-center md:col-start-3 md:justify-self-end">
           {user ? <AccountMenu user={user} /> : <AuthNavActions returnTo="/" />}
         </div>
       </div>
