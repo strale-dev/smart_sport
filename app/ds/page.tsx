@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { DesignSystemPlayground } from "@/components/ds/design-system-playground";
 import { AppShell } from "@/components/layout/AppShell";
+import { getCurrentUser, toAuthUserView } from "@/lib/supabase/user";
 
 export const metadata: Metadata = {
   title: "Design System — Scorence",
@@ -12,9 +13,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function DesignSystemPage() {
+export default async function DesignSystemPage() {
+  const user = await getCurrentUser();
+
   return (
-    <AppShell>
+    <AppShell user={user ? toAuthUserView(user) : null}>
       <DesignSystemPlayground />
     </AppShell>
   );

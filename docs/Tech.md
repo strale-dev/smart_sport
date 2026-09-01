@@ -149,7 +149,7 @@ From `package.json`:
 
 **Existing scaffolding:**
 
-- `utils/supabase/{client,server,middleware}.ts` — Supabase clients per environment (SSR-safe cookie handling).
+- `lib/supabase/{client,server,middleware}.ts` — Supabase clients per environment (SSR-safe cookie handling).
 - `lib/resend.ts` — Resend client instance + default from.
 - `lib/utils.ts` — presumably the shadcn `cn()` helper.
 - `components/ui/button.tsx` — shadcn Button primitive.
@@ -217,7 +217,7 @@ npm.cmd install -D tsx                         # Run TS scripts (e.g. cron worke
 - `supabase/migrations/*.sql` — schema migrations (see `DB.md`).
 - `vercel.json` — Cron routes.
 - `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`.
-- `middleware.ts` at root — auth session refresh + PostHog identify + rate-limit checks.
+- `proxy.ts` at root — auth session refresh + route guards (PostHog identify runs on login/signup, not on every request).
 
 ### 4.4 Environment variables (dev + prod)
 
@@ -287,14 +287,17 @@ app/
     pricing/
     privacy/
     terms/
-    (auth)/
-      login/
-      signup/
-      reset-password/
+  (auth)/                         # Auth chrome (wordmark + centered card)
+    login/
+    signup/
+    reset-password/
+    update-password/
   (app)/                          # Authenticated app shell
     layout.tsx
     dashboard/page.tsx
+    fixtures/page.tsx
     live/page.tsx
+    favorites/page.tsx
     predictions/page.tsx
     matches/[fixtureId]/page.tsx
     teams/[teamId]/page.tsx
@@ -403,7 +406,7 @@ supabase/
     lemonsqueezy-webhook/
       index.ts
 
-middleware.ts                     # Root — auth refresh + rate-limits + PostHog identify
+proxy.ts                          # Root — auth refresh + route guards
 
 tests/
   unit/
@@ -429,9 +432,9 @@ Migration note: current `utils/supabase/*` will move to `lib/supabase/*` to unif
 
 - **App Router** (Next 16). Server Components are the default; opt-in to `"use client"` only when needed.
 - Server Components fetch data via server-side services (no direct provider calls from client).
-- **Route Handlers** for API endpoints — same runtime as pages, easier auth checking with middleware.
+- **Route Handlers** for API endpoints — same runtime as pages, easier auth checking with proxy.
 - **Server Actions** for mutations (follow/unfollow, updating preferences).
-- **Middleware** (`middleware.ts`) refreshes Supabase session, runs PostHog identify, and enforces rate-limits on select routes.
+- **Proxy** (`proxy.ts`) refreshes the Supabase session and enforces auth-required vs guest-ok routes. PostHog identify runs on login/signup with analytics consent, not on every request.
 - **Streaming UI** via `<Suspense>` for hero cards while server work happens.
 - **Read the local Next.js docs at `node_modules/next/dist/docs/`** before shipping any pattern (per `AGENTS.md` rule).
 
@@ -782,10 +785,11 @@ Via OpenAI's Structured Outputs (`response_format: { type: "json_schema", strict
 ## 15. Authentication (Supabase Auth)
 
 - Providers: **Email + password**, **Google OAuth**.
-- SSR-safe sessions via `@supabase/ssr` (already configured in `utils/supabase/{server,client,middleware}.ts`).
-- **Middleware** (`middleware.ts`) refreshes tokens on every request.
-- **Route protection**: (app) route group requires an authenticated user; unauth users are redirected to `/login?returnTo=...`.
-- **Guest mode**: (app) routes for `/matches/[id]`, `/teams/[id]`, `/players/[id]`, `/leagues/[id]` **do not** require auth but the AI Hero and Predictions Center are locked behind a signup wall (blur overlay + CTA) rendered from `entitlementService.canViewAI(user)`.
+- SSR-safe sessions via `@supabase/ssr` (`lib/supabase/{server,client,middleware}.ts`).
+- **Proxy** (`proxy.ts`) refreshes tokens on every request and enforces route guards.
+- **Route protection**: `/dashboard`, `/live`, `/predictions`, `/profile`, and `/favorites` require an authenticated user; unauth users are redirected to `/login?returnTo=...`. Guest-ok app routes include `/fixtures`, `/matches/[id]`, `/teams/[id]`, `/players/[id]`, and `/leagues/[id]`.
+- **Guest mode**: `/matches/[id]`, `/teams/[id]`, `/players/[id]`, `/leagues/[id]` **do not** require auth but the AI Hero and Predictions Center are locked behind a signup wall (blur overlay + CTA) rendered from `entitlementService.canViewAI(user)`.
+- **Auth routes**: `/login`, `/signup`, `/reset-password`, `/update-password` live in the `(auth)` route group. Callback is `/api/auth/callback`.
 - **Account deletion**: server action calls `auth.admin.deleteUser` + cleans user-owned rows in a transaction.
 
 ---
@@ -928,7 +932,7 @@ Expected MVP set: `button`, `input`, `label`, `form`, `select`, `dialog`, `sheet
 ### 21.2 Sentry
 
 - `@sentry/nextjs` init in `sentry.{client,server,edge}.config.ts`.
-- User context attached via middleware.
+- User context attached via `proxy.ts` session.
 - PII scrubbing enabled.
 - Source maps uploaded via Sentry Wizard/Action during Vercel build.
 
@@ -943,7 +947,7 @@ Expected MVP set: `button`, `input`, `label`, `form`, `select`, `dialog`, `sheet
 
 - Server-only secrets never bundled into client (enforced by not using `NEXT_PUBLIC_` prefix).
 - All API routes validate inputs with Zod.
-- Auth-required routes protected in middleware.
+- Auth-required routes protected in `proxy.ts`.
 - RLS enforced on all user-owned tables (see `DB.md`).
 - LemonSqueezy webhook signature verified before processing.
 - OpenAI: all calls server-side; no `dangerouslyAllowBrowser`.

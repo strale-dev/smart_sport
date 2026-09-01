@@ -95,7 +95,7 @@ The dev environment, brand, and repo structure are complete. A public landing pa
 - [x] Supabase CLI installed; `supabase init`; `supabase link` to dev.
 - [x] Migration `0001` through `0007` from [DB.md §17](./DB.md#17-migration-ordering) applied to dev.
 - [x] `supabase gen types typescript` → `types/supabase.ts` regenerated and committed.
-- [ ] `handle_new_user` trigger verified with a test signup.
+- [x] `handle_new_user` trigger verified with a test signup.
 
 **Third-party accounts**
 
@@ -239,19 +239,19 @@ The authenticated app shell exists. Users can sign up (email + Google), navigate
 
 **Auth**
 
-- [ ] `middleware.ts` — Supabase session refresh + PostHog identify.
-- [ ] `/login`, `/signup`, `/reset-password` pages (shadcn form + Zod).
-- [ ] Google OAuth configured in Supabase (`redirect: /api/auth/callback`).
-- [ ] `/api/auth/callback/route.ts` — exchange code for session.
-- [ ] Signed-in vs guest rendering split (via server `getUser()`).
-- [ ] Sign-out button in top nav.
+- [x] `proxy.ts` — Supabase session refresh + route guards. PostHog identify on login/signup (consent-gated), not every request.
+- [x] `/login`, `/signup`, `/reset-password`, `/update-password` pages (shadcn form + Zod).
+- [ ] Google OAuth configured in Supabase (`redirect: /api/auth/callback`). _(App callback + Google button are wired. Add Google Client ID/Secret and redirect URLs in the Auth dashboard.)_
+- [x] `/api/auth/callback/route.ts` — exchange code for session.
+- [x] Signed-in vs guest rendering split (via server `getUser()`).
+- [x] Sign-out button in top nav.
 
 **App shell**
 
-- [ ] Top nav (logo, primary links, user menu).
-- [ ] Mobile bottom nav.
-- [ ] `AppShell` wraps `(app)` route group.
-- [ ] Route group split: `(marketing)` public, `(app)` authenticated + guest-tolerant.
+- [x] Top nav (logo, primary links, user menu).
+- [x] Mobile bottom nav.
+- [x] `AppShell` wraps `(app)` route group.
+- [x] Route group split: `(marketing)` public, `(app)` authenticated + guest-tolerant.
 
 **Dashboard v1**
 

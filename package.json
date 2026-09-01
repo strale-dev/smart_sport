@@ -29,7 +29,9 @@
     "sync:standings": "tsx --import ./scripts/preload-env.ts ./scripts/run-sync-standings.ts",
     "verify:ingestion": "tsx --import ./scripts/preload-env.ts ./scripts/verify-ingestion.ts",
     "cache:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/cache-smoke.ts",
-    "quota:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/quota-smoke.ts"
+    "quota:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/quota-smoke.ts",
+    "auth:configure-supabase": "tsx --import ./scripts/preload-env.ts ./scripts/configure-supabase-auth.ts",
+    "auth:push-config": "supabase config push --yes"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs}": [
