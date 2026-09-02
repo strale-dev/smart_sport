@@ -62,8 +62,11 @@ async function main() {
   const googleClientId = process.env.GOOGLE_OAUTH_CLIENT_ID?.trim();
   const googleClientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET?.trim();
 
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://scorence.app";
+
   const patch: AuthConfigPatch = {
-    site_url: "http://localhost:3000",
+    site_url: siteUrl,
     uri_allow_list:
       "http://127.0.0.1:3000/api/auth/callback,http://localhost:3000/api/auth/callback,http://127.0.0.1:3000/api/auth/callback/recovery,http://localhost:3000/api/auth/callback/recovery,https://scorence.app/api/auth/callback,https://scorence.app/api/auth/callback/recovery",
     mailer_autoconfirm: false,

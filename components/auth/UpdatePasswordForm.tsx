@@ -68,9 +68,9 @@ export function UpdatePasswordForm() {
     toast.add({
       type: "success",
       title: "Password updated",
-      description: "You can now sign in with your new password.",
+      description: "Your password has been updated successfully.",
     });
-    router.push("/login");
+    router.push("/dashboard");
     router.refresh();
   }
 
