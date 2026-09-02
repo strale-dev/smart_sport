@@ -167,6 +167,17 @@ Future audiences (post-MVP): fantasy players, semi-pro analysts, scouting-orient
 - Live match rows: score, minute, teams, live indicator, "AI updated" marker when fresh insight exists.
 - Clicking a match navigates to Match Details.
 
+### 6.3.1 Fixtures list
+
+- **Route:** `/fixtures` (guest-ok).
+- **Window:** UTC today through the next 7 days (finished, live, and upcoming fixtures in range).
+- **League tabs:** same allowlist and prestige order as Live Center; URL-driven `?league=...`.
+- **Grouping:** day headers (`Today`, `Tomorrow`, then weekday + date); All tab groups by league within each day; single-league tab shows kickoff order only.
+- **Live indicator:** league tabs show LIVE when that league has a live match; live scores use the live accent color.
+- **Scroll:** on load, scroll to the first live match, otherwise the first upcoming match (finished matches remain above the fold).
+- **States:** loading skeleton, empty (global and per-league), error. No pagination in v1.
+- **Timezone note (v1):** day grouping uses UTC; kickoff times display in the browser timezone. User-profile timezone is deferred.
+
 ### 6.4 Match Details (flagship page)
 
 Hierarchy (top to bottom):
@@ -256,6 +267,8 @@ Match contribution badges: goal (with minute), assist (with minute), clean sheet
 | League | Follow   | Key matches, competition updates                         |
 
 Favorites and follows are preserved even after a premium subscription lapses.
+
+> **Nav note:** The `/favorites` page shows a **followed-teams match feed** (Sofascore-style). **Match bookmark** (`Favorite` on a fixture) is a separate action stored in `public.favorites` and ships with full Follow/Favorite UI in Phase 6.
 
 ---
 
@@ -459,6 +472,7 @@ Data is collected from day 1; the internal dashboard is **deferred to a later ph
 
 - **Favorite** = one-off bookmark (matches).
 - **Follow** = persistent subscription with notifications (teams, players, leagues).
+- **`/favorites` page** = authenticated feed of fixtures for followed teams (day + league grouping). Not the same as bookmarking individual matches.
 - Both are stored server-side and enforced with RLS.
 - On premium cancellation: follows/favorites are preserved (all other premium features are revoked immediately).
 

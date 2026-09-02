@@ -186,11 +186,11 @@ API-Football is fully wrapped, cached, and rate-limit aware. Cron pulls fixtures
 
 ### Definition of Done
 
-- [x] `SELECT COUNT(*) FROM fixtures WHERE (kickoff_at AT TIME ZONE 'UTC')::date = (NOW() AT TIME ZONE 'UTC')::date` returns matches when queried. _(Avoid `kickoff_at::date = current_date` — session timezone dependent; see DB.md §6.1.)_
+- [x] `SELECT COUNT(*) FROM fixtures WHERE (kickoff_at AT TIME ZONE 'UTC')::date = (NOW() AT TIME ZONE 'UTC')::date` returns matches when queried. _(Avoid_ `kickoff_at::date = current_date` _— session timezone dependent; see DB.md §6.1.)_
 - [x] Cache hit rate > 90% for repeated `getFixtureById` calls in a 60s window.
 - [x] Deliberately blowing the daily quota is handled gracefully (Sentry warning, requests defer to cache).
 - [x] `footballService.getMatchesForDate(today)` on the server returns typed, normalized data from Postgres in development.
-- [x] All new tables have `supabase get_advisors` clean. _(Scorence `user-supabasei`: 0 security WARN/ERROR, 0 performance WARN/ERROR; INFO `unused_index` on FK indexes from 0017 is expected until Phase 2 queries.)_
+- [x] All new tables have `supabase get_advisors` clean. _(Scorence_ `user-supabasei`_: 0 security WARN/ERROR, 0 performance WARN/ERROR; INFO_ `unused_index` _on FK indexes from 0017 is expected until Phase 2 queries.)_
 
 ### Risks / watch-outs
 
@@ -255,18 +255,34 @@ The authenticated app shell exists. Users can sign up (email + Google), navigate
 
 **Dashboard v1**
 
-- [ ] `/dashboard` — server component fetching:
+- [x] `/dashboard` — server component fetching:
   - Featured match (using the weighted scoring in PRD §6.2).
   - Live matches (top 6).
   - Today's important matches (top 8).
-- [ ] `MatchRow` component (used across app).
-- [ ] Followed teams/players section — empty state for new users.
+- [x] `MatchRow` component (used across app).
+- [x] Followed teams/players section — empty state for new users.
 
 **Live Center v1**
 
-- [ ] `/live` — server component listing up to 20 live matches.
-- [ ] URL-driven filters: `?league=...`, `?status=...`.
-- [ ] Pagination (page-based, not infinite).
+- [x] `/live` — server component listing up to 20 live matches.
+- [x] URL-driven filters: `?league=...`, `?status=...`.
+- [x] Pagination (page-based, not infinite).
+
+**Fixtures v1**
+
+- [x] `/fixtures` — upcoming window (7 days), league tabs, day grouping, scroll-to-now anchor.
+- [x] `readFixturesInRangeFromDb` + cached range key (`provider:fixtures:range:{from}:{to}`, UTC day boundaries).
+- [x] LIVE badge on league tabs; live scores use `text-live` in `MatchRow`.
+- [ ] **Verify against staging/prod-like data** (not local ±1 day dev sync): multi-day grouping, scroll anchor, empty states, mobile tab scroll.
+
+**Favorites feed v1 (read-only)**
+
+- [x] `/favorites` — followed-team fixtures for -30/+365 days, grouped by day and league (user timezone).
+- [x] `favoritesService` + DB reads from `follows` → `fixtures`.
+- [x] Scroll anchor on today (or live match / nearest day with fixtures).
+- [x] Empty states for no follows and no matches in window.
+- [x] Unit tests for timezone grouping and anchor logic.
+- [ ] Follow/Unfollow UI (Phase 6) — until then, follows are seeded manually for QA.
 
 **Match page skeleton**
 
@@ -509,8 +525,9 @@ Users can start a 7-day trial (card required), become paying subscribers, and hi
 **Follows & favorites (fully wired)**
 
 - [ ] Follow/Unfollow buttons on team, player, league pages.
-- [ ] Favorite button on match page.
+- [ ] Favorite button on match page (bookmark to `public.favorites`; separate from `/favorites` team feed).
 - [ ] Dashboard "Your teams/players" section becomes real.
+- [ ] Wire follow actions into the existing `/favorites` feed (no page rebuild needed).
 
 **Notifications**
 

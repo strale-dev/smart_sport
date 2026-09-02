@@ -16,12 +16,16 @@ type MatchRowProps = {
   fixture: Fixture;
   className?: string;
   highlight?: boolean;
+  showLeague?: boolean;
+  anchorId?: string;
 };
 
 export function MatchRow({
   fixture,
   className,
   highlight = false,
+  showLeague = true,
+  anchorId,
 }: MatchRowProps) {
   const isLive = isLiveFixtureStatus(fixture.status);
   const isFinished = isFinishedFixtureStatus(fixture.status);
@@ -30,30 +34,33 @@ export function MatchRow({
 
   return (
     <Link
+      id={anchorId}
       href={`/matches/${fixture.externalId}`}
       className={cn(
-        "border-border/70 hover:bg-muted/40 focus-visible:ring-ring/50 block rounded-xl border px-3 py-3 transition-colors focus-visible:ring-[3px] focus-visible:outline-none",
+        "border-border/70 hover:bg-muted/40 focus-visible:ring-ring/50 block scroll-mt-24 rounded-xl border px-3 py-3 transition-colors focus-visible:ring-[3px] focus-visible:outline-none",
         highlight && "border-primary/40 bg-card/60 ring-primary/10 ring-1",
         className
       )}
     >
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          {fixture.league.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={fixture.league.logoUrl}
-              alt=""
-              className="size-4 shrink-0 object-contain"
-              loading="lazy"
-            />
-          ) : null}
-          <span className="text-muted-foreground truncate text-xs">
-            {fixture.league.name}
-          </span>
+      {showLeague ? (
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            {fixture.league.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={fixture.league.logoUrl}
+                alt=""
+                className="size-4 shrink-0 object-contain"
+                loading="lazy"
+              />
+            ) : null}
+            <span className="text-muted-foreground truncate text-xs">
+              {fixture.league.name}
+            </span>
+          </div>
+          {isLive ? <LiveDot className="shrink-0" /> : null}
         </div>
-        {isLive ? <LiveDot className="shrink-0" /> : null}
-      </div>
+      ) : null}
 
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
         <div className="flex min-w-0 items-center gap-2">
@@ -69,7 +76,12 @@ export function MatchRow({
         <div className="text-center">
           {showScore ? (
             <div className="space-y-0.5">
-              <p className="font-mono text-lg font-semibold tabular-nums">
+              <p
+                className={cn(
+                  "font-mono text-lg font-semibold tabular-nums",
+                  isLive && "text-live"
+                )}
+              >
                 {formatFixtureScore(fixture)}
               </p>
               {minuteLabel ? (

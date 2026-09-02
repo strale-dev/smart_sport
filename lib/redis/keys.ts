@@ -50,6 +50,14 @@ export function providerFixturesDateKey(date: string): string {
   return `provider:fixtures:date:${date}`;
 }
 
+/** UTC date strings only (YYYY-MM-DD), not request timestamps. */
+export function providerFixturesRangeKey(
+  fromDate: string,
+  toDateExclusive: string
+): string {
+  return `provider:fixtures:range:${fromDate}:${toDateExclusive}`;
+}
+
 export function providerFixtureKey(id: number): string {
   return `provider:fixture:${id}`;
 }

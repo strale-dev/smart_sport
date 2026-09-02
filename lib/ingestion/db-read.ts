@@ -221,6 +221,125 @@ export async function readFixturesForDateFromDb(
   return ((data ?? []) as FixtureRow[]).map(mapFixtureRow);
 }
 
+export async function readFixturesInRangeFromDb(
+  fromDate: string,
+  toDateExclusive: string
+): Promise<Fixture[]> {
+  const client = createAdminClient();
+  const config = getIngestionConfig();
+  const { data: leagues } = await client
+    .from("leagues")
+    .select("id")
+    .in("provider_id", [...config.leagueProviderIds]);
+
+  if (!leagues?.length) {
+    return [];
+  }
+
+  const { data, error } = await client
+    .from("fixtures")
+    .select(FIXTURE_SELECT)
+    .in(
+      "league_id",
+      leagues.map((league) => league.id)
+    )
+    .gte("kickoff_at", `${fromDate}T00:00:00.000Z`)
+    .lt("kickoff_at", `${toDateExclusive}T00:00:00.000Z`)
+    .order("kickoff_at", { ascending: true });
+
+  if (error) {
+    throw new Error(
+      `Failed to read fixtures for range ${fromDate}..${toDateExclusive}: ${error.message}`
+    );
+  }
+
+  return ((data ?? []) as FixtureRow[]).map(mapFixtureRow);
+}
+
+export type FollowedTeamRow = {
+  id: string;
+  providerId: number;
+};
+
+export async function readFollowedTeamsForUser(
+  userId: string
+): Promise<FollowedTeamRow[]> {
+  const client = createAdminClient();
+
+  const { data, error } = await client
+    .from("follows")
+    .select("team_id, team:teams!follows_team_id_fkey(provider_id)")
+    .eq("user_id", userId)
+    .eq("object_type", "TEAM")
+    .not("team_id", "is", null);
+
+  if (error) {
+    throw new Error(`Failed to read followed teams: ${error.message}`);
+  }
+
+  return (data ?? []).flatMap((row) => {
+    const teamId = row.team_id;
+    const providerId = row.team?.provider_id;
+
+    if (teamId == null || providerId == null) {
+      return [];
+    }
+
+    return [{ id: teamId, providerId }];
+  });
+}
+
+export async function readFollowedTeamIdsForUser(
+  userId: string
+): Promise<string[]> {
+  const teams = await readFollowedTeamsForUser(userId);
+  return teams.map((team) => team.id);
+}
+
+export async function readFixturesForTeamsInRangeFromDb(
+  teamIds: string[],
+  fromUtc: string,
+  toUtcExclusive: string
+): Promise<Fixture[]> {
+  if (teamIds.length === 0) {
+    return [];
+  }
+
+  const client = createAdminClient();
+  const config = getIngestionConfig();
+  const { data: leagues } = await client
+    .from("leagues")
+    .select("id")
+    .in("provider_id", [...config.leagueProviderIds]);
+
+  if (!leagues?.length) {
+    return [];
+  }
+
+  const quotedTeamIds = teamIds.map((teamId) => `"${teamId}"`).join(",");
+  const teamScope = `home_team_id.in.(${quotedTeamIds}),away_team_id.in.(${quotedTeamIds})`;
+
+  const { data, error } = await client
+    .from("fixtures")
+    .select(FIXTURE_SELECT)
+    .in(
+      "league_id",
+      leagues.map((league) => league.id)
+    )
+    .gte("kickoff_at", fromUtc)
+    .lt("kickoff_at", toUtcExclusive)
+    .or(teamScope)
+    .order("kickoff_at", { ascending: true });
+
+  if (error) {
+    throw new Error(
+      `Failed to read fixtures for followed teams: ${error.message}`
+    );
+  }
+
+  return ((data ?? []) as FixtureRow[]).map(mapFixtureRow);
+}
+
 export async function readFixtureByProviderIdFromDb(
   providerId: number
 ): Promise<Fixture | null> {

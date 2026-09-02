@@ -24,6 +24,7 @@ import { isApiFootballIngestOnly } from "@/lib/env";
 import {
   readFixtureByProviderIdFromDb,
   readFixturesForDateFromDb,
+  readFixturesInRangeFromDb,
   readLeagueDetailFromDb,
   readLiveFixturesFromDb,
   readSeasonsByLeagueFromDb,
@@ -40,6 +41,7 @@ import {
   providerFixturePlayersKey,
   providerFixturesDateKey,
   providerFixturesLiveKey,
+  providerFixturesRangeKey,
   providerFixtureStatsKey,
   providerLeagueKey,
   providerPlayerKey,
@@ -105,6 +107,20 @@ export async function getMatchesForDate(
     freshTtlSeconds: CACHE_TTL.fixturesDateFresh,
     staleTtlSeconds: CACHE_TTL.fixturesDateStale,
     fn: () => listFixturesByDateEndpoint(date),
+  });
+
+  return toServiceResult(result);
+}
+
+export async function getMatchesInRange(
+  fromDate: string,
+  toDateExclusive: string
+): Promise<ServiceResult<Fixture[]>> {
+  const result = await cached({
+    key: providerFixturesRangeKey(fromDate, toDateExclusive),
+    freshTtlSeconds: CACHE_TTL.fixturesDateFresh,
+    staleTtlSeconds: CACHE_TTL.fixturesDateStale,
+    fn: () => readFixturesInRangeFromDb(fromDate, toDateExclusive),
   });
 
   return toServiceResult(result);
