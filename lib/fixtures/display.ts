@@ -8,6 +8,16 @@ export function formatFixtureKickoffTime(kickoffAt: string): string {
   }).format(new Date(kickoffAt));
 }
 
+export function formatFixtureKickoffDateTime(kickoffAt: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(kickoffAt));
+}
+
 export function formatFixtureScore(fixture: Fixture): string {
   if (
     isLiveFixtureStatus(fixture.status) ||

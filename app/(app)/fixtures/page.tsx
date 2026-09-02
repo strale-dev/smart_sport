@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { FixturesLeagueTabs } from "@/components/fixtures/FixturesLeagueTabs";
 import { FixturesList } from "@/components/fixtures/FixturesList";
+import { FixturesNotice } from "@/components/fixtures/FixturesNotice";
 import {
   getFixturesData,
   parseFixturesParams,
@@ -22,6 +23,8 @@ export default async function FixturesPage({
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
+      <FixturesNotice />
+
       <header className="space-y-1">
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
           Fixtures

@@ -286,8 +286,8 @@ The authenticated app shell exists. Users can sign up (email + Google), navigate
 
 **Match page skeleton**
 
-- [ ] `/matches/[fixtureId]` — server component with real match header, no AI yet.
-- [ ] Placeholder cards for future sections (labeled "coming soon" — never fake data).
+- [x] `/matches/[fixtureId]` — server component with real match header, no AI yet.
+- [x] Placeholder cards for future sections (labeled "coming soon" — never fake data).
 
 **Team & player profile skeletons**
 
@@ -296,7 +296,7 @@ The authenticated app shell exists. Users can sign up (email + Google), navigate
 
 **Guest paywall**
 
-- [ ] `AIHeroLockedCard` — blurred preview with "Sign up free to unlock AI" CTA (component reused later).
+- [x] `AIHeroLockedCard` — blurred preview with early-access signup CTA (component reused later).
 
 ### Definition of Done
 
