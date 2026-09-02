@@ -1,6 +1,5 @@
 export const AUTH_REQUIRED_PREFIXES = [
   "/dashboard",
-  "/live",
   "/predictions",
   "/profile",
   "/favorites",
@@ -8,6 +7,7 @@ export const AUTH_REQUIRED_PREFIXES = [
 
 export const GUEST_OK_PREFIXES = [
   "/fixtures",
+  "/live",
   "/matches",
   "/teams",
   "/players",

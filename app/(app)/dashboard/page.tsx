@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { CalendarDaysIcon } from "lucide-react";
 
 import { AIInsightsSection } from "@/components/dashboard/AIInsightsSection";
 import { DashboardQuickLinks } from "@/components/dashboard/DashboardQuickLinks";
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
 import { FeaturedMatchHero } from "@/components/dashboard/FeaturedMatchHero";
 import { FollowedSection } from "@/components/dashboard/FollowedSection";
-import { EmptyState } from "@/components/common/EmptyState";
 import { MatchRow } from "@/components/match/MatchRow";
 import { getDashboardData } from "@/lib/services/dashboardService";
 
@@ -16,21 +14,6 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage() {
   const data = await getDashboardData();
-  const hasAnyFixtures =
-    data.featured != null ||
-    data.live.length > 0 ||
-    data.todayImportant.length > 0 ||
-    data.upcoming.length > 0;
-
-  if (!hasAnyFixtures) {
-    return (
-      <EmptyState
-        icon={CalendarDaysIcon}
-        title="No fixtures in your leagues"
-        description="Check back when new matches are synced for your tracked competitions."
-      />
-    );
-  }
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-8">
@@ -60,7 +43,7 @@ export default async function DashboardPage() {
         title={data.isTodayFallback ? "Nearby matches" : "Important today"}
         description={
           data.isTodayFallback
-            ? "No matches today. Showing fixtures from yesterday and tomorrow."
+            ? "No matches today. Showing the most recent synced fixtures nearby."
             : undefined
         }
       >

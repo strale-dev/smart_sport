@@ -20,6 +20,7 @@ const LIVE_LIMIT = 6;
 const TODAY_LIMIT = 8;
 const UPCOMING_LIMIT = 8;
 const UPCOMING_DAYS = 7;
+const FALLBACK_WINDOW_DAYS = 7;
 
 export type DashboardData = {
   featured: Fixture | null;
@@ -126,10 +127,22 @@ export async function getDashboardData(
   ]);
 
   const liveFixtures = liveResult.data;
-  const fallbackFixtures = dedupeFixtures([
+  let fallbackFixtures = dedupeFixtures([
     ...yesterdayFixtures,
     ...tomorrowFixtures,
   ]);
+
+  if (todayFixtures.length === 0 && fallbackFixtures.length === 0) {
+    const extendedDates = Array.from(
+      { length: FALLBACK_WINDOW_DAYS * 2 + 1 },
+      (_, index) => addUtcDays(today, index - FALLBACK_WINDOW_DAYS)
+    ).filter(
+      (date) => date !== today && date !== yesterday && date !== tomorrow
+    );
+
+    fallbackFixtures = await fetchFixturesForDates(extendedDates);
+  }
+
   const isTodayFallback =
     todayFixtures.length === 0 && fallbackFixtures.length > 0;
   const todayCandidates = isTodayFallback ? fallbackFixtures : todayFixtures;

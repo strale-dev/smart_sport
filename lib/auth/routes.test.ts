@@ -8,22 +8,23 @@ import {
 } from "./routes";
 
 describe("auth route matchers", () => {
-  it("requires auth for dashboard, live, predictions, profile, and favorites", () => {
+  it("requires auth for dashboard, predictions, profile, and favorites", () => {
     expect(isAuthRequiredPath("/dashboard")).toBe(true);
     expect(isAuthRequiredPath("/dashboard/settings")).toBe(true);
-    expect(isAuthRequiredPath("/live")).toBe(true);
     expect(isAuthRequiredPath("/predictions")).toBe(true);
     expect(isAuthRequiredPath("/profile")).toBe(true);
     expect(isAuthRequiredPath("/profile/preferences")).toBe(true);
     expect(isAuthRequiredPath("/favorites")).toBe(true);
   });
 
-  it("treats fixtures, match, team, player, and league pages as guest-ok", () => {
+  it("treats fixtures, live, match, team, player, and league pages as guest-ok", () => {
     expect(isGuestOkPath("/fixtures")).toBe(true);
+    expect(isGuestOkPath("/live")).toBe(true);
     expect(isGuestOkPath("/matches/123")).toBe(true);
     expect(isGuestOkPath("/teams/456")).toBe(true);
     expect(isGuestOkPath("/players/789")).toBe(true);
     expect(isGuestOkPath("/leagues/1")).toBe(true);
+    expect(isAuthRequiredPath("/live")).toBe(false);
     expect(isAuthRequiredPath("/matches/123")).toBe(false);
     expect(isAuthRequiredPath("/fixtures")).toBe(false);
   });
