@@ -1,21 +1,31 @@
 import type { Fixture, FixtureStatus } from "@/types/domain";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 
+const KICKOFF_TIME_FORMAT: Intl.DateTimeFormatOptions = {
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+};
+
+const KICKOFF_DATE_TIME_FORMAT: Intl.DateTimeFormatOptions = {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+};
+
 export function formatFixtureKickoffTime(kickoffAt: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(kickoffAt));
+  return new Intl.DateTimeFormat(undefined, KICKOFF_TIME_FORMAT).format(
+    new Date(kickoffAt)
+  );
 }
 
 export function formatFixtureKickoffDateTime(kickoffAt: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(kickoffAt));
+  return new Intl.DateTimeFormat(undefined, KICKOFF_DATE_TIME_FORMAT).format(
+    new Date(kickoffAt)
+  );
 }
 
 export function formatFixtureScore(fixture: Fixture): string {

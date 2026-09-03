@@ -11,6 +11,8 @@ import {
   countAllowlistFixturesForUtcDate,
   ingestFixtureFromRaw,
 } from "@/lib/ingestion/upsert";
+import { ingestMatchDetailsFromProvider } from "@/lib/ingestion/ingest-match-details";
+import { fixtureHasMatchDetails } from "@/lib/ingestion/match-details-upsert";
 import { getRedis } from "@/lib/redis/client";
 import { providerFixturesDateKey } from "@/lib/redis/keys";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -27,6 +29,7 @@ export type SyncFixturesResult = {
     apiRequests: number;
     fixturesUpserted: number;
     fixturesFilteredOut: number;
+    matchDetailsIngested: number;
   };
 };
 
@@ -66,6 +69,7 @@ export async function syncFixtures(
   let apiRequests = 0;
   let fixturesUpserted = 0;
   let fixturesFilteredOut = 0;
+  let matchDetailsIngested = 0;
 
   for (const date of dates) {
     if (await shouldSkipDateSync(date, config.leagueProviderIds)) {
@@ -91,9 +95,22 @@ export async function syncFixtures(
     const domainFixtures: Fixture[] = [];
 
     for (const raw of allowlisted) {
-      const { domain } = await ingestFixtureFromRaw(client, raw, syncedAt);
+      const { fixtureId, domain } = await ingestFixtureFromRaw(
+        client,
+        raw,
+        syncedAt
+      );
       domainFixtures.push(domain);
       fixturesUpserted += 1;
+
+      const isTerminal = ["FT", "AET", "PEN"].includes(domain.status);
+      if (isTerminal && matchDetailsIngested === 0) {
+        const hasDetails = await fixtureHasMatchDetails(client, fixtureId);
+        if (!hasDetails) {
+          await ingestMatchDetailsFromProvider(domain.externalId);
+          matchDetailsIngested += 1;
+        }
+      }
     }
 
     const redis = getRedis();
@@ -118,6 +135,7 @@ export async function syncFixtures(
       apiRequests,
       fixturesUpserted,
       fixturesFilteredOut,
+      matchDetailsIngested,
     },
   };
 }

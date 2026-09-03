@@ -24,10 +24,13 @@ import { isApiFootballIngestOnly } from "@/lib/env";
 import { addUtcDays, utcDateString } from "@/lib/fixtures/window";
 import {
   readFixtureByProviderIdFromDb,
+  readFixtureEventsFromDb,
+  readFixtureStatisticsFromDb,
   readFixturesForDateFromDb,
   readFixturesForTeamsInRangeFromDb,
   readFixturesInRangeFromDb,
   readLeagueDetailFromDb,
+  readLineupsFromDb,
   readLiveFixturesFromDb,
   readPlayerByProviderIdFromDb,
   readSeasonsByLeagueFromDb,
@@ -188,7 +191,14 @@ export async function getFixtureEvents(
   fixtureId: number
 ): Promise<ServiceResult<FixtureEvent[]>> {
   if (isApiFootballIngestOnly()) {
-    return emptyIngestOnlyResult([]);
+    const result = await cached({
+      key: providerFixtureEventsKey(fixtureId),
+      freshTtlSeconds: CACHE_TTL.fixtureEventsFresh,
+      staleTtlSeconds: CACHE_TTL.fixtureEventsStale,
+      fn: () => readFixtureEventsFromDb(fixtureId),
+    });
+
+    return toServiceResult(result);
   }
 
   const result = await cached({
@@ -205,7 +215,14 @@ export async function getFixtureStatistics(
   fixtureId: number
 ): Promise<ServiceResult<FixtureTeamStatistics[]>> {
   if (isApiFootballIngestOnly()) {
-    return emptyIngestOnlyResult([]);
+    const result = await cached({
+      key: providerFixtureStatsKey(fixtureId),
+      freshTtlSeconds: CACHE_TTL.fixtureStatsFresh,
+      staleTtlSeconds: CACHE_TTL.fixtureStatsStale,
+      fn: () => readFixtureStatisticsFromDb(fixtureId),
+    });
+
+    return toServiceResult(result);
   }
 
   const result = await cached({
@@ -222,7 +239,14 @@ export async function getFixtureLineups(
   fixtureId: number
 ): Promise<ServiceResult<Lineup[]>> {
   if (isApiFootballIngestOnly()) {
-    return emptyIngestOnlyResult([]);
+    const result = await cached({
+      key: providerFixtureLineupsKey(fixtureId),
+      freshTtlSeconds: CACHE_TTL.fixtureLineupsFresh,
+      staleTtlSeconds: CACHE_TTL.fixtureLineupsStale,
+      fn: () => readLineupsFromDb(fixtureId),
+    });
+
+    return toServiceResult(result);
   }
 
   const result = await cached({

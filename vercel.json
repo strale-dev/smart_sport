@@ -9,6 +9,14 @@
     {
       "path": "/api/cron/sync-standings",
       "schedule": "30 4 * * *"
+    },
+    {
+      "path": "/api/cron/sync-match-details",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-analytics",
+      "schedule": "0 3 * * *"
     }
   ]
 }

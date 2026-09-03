@@ -115,6 +115,30 @@ export function providerSeasonsKey(leagueId: number): string {
   return `provider:league:${leagueId}:seasons`;
 }
 
+export function analyticsFormKey(
+  teamProviderId: number,
+  scope: string,
+  matches: number
+): string {
+  return `analytics:form:${teamProviderId}:${scope}:${matches}`;
+}
+
+export function analyticsH2hKey(
+  teamAProviderId: number,
+  teamBProviderId: number,
+  scope: string,
+  windowSize: number,
+  leagueProviderId?: number | null
+): string {
+  const leaguePart =
+    leagueProviderId != null ? `:league:${leagueProviderId}` : "";
+  const [a, b] =
+    teamAProviderId < teamBProviderId
+      ? [teamAProviderId, teamBProviderId]
+      : [teamBProviderId, teamAProviderId];
+  return `analytics:h2h:${a}:${b}:${scope}:${windowSize}${leaguePart}`;
+}
+
 export function cacheLockKey(cacheKey: string): string {
   return `lock:cache:${cacheKey}`;
 }

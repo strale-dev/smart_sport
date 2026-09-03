@@ -1,19 +1,34 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { ReactNode } from "react";
 
 import { AIHeroComingSoonCard } from "@/components/ai/AIHeroComingSoonCard";
 import { AIHeroLockedCard } from "@/components/ai/AIHeroLockedCard";
-import { MatchSectionPlaceholder } from "@/components/match/MatchSectionPlaceholder";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseMatchTab } from "@/lib/fixtures/match-url";
+import { captureClientEvent } from "@/lib/posthog/client";
+import { POSTHOG_EVENTS } from "@/lib/posthog/events";
 
 type MatchDetailsTabsProps = {
   isGuest: boolean;
   returnTo: string;
+  fixtureId: number;
+  overview: ReactNode;
+  lineups: ReactNode;
+  standings: ReactNode;
+  matches: ReactNode;
 };
 
-export function MatchDetailsTabs({ isGuest, returnTo }: MatchDetailsTabsProps) {
+export function MatchDetailsTabs({
+  isGuest,
+  returnTo,
+  fixtureId,
+  overview,
+  lineups,
+  standings,
+  matches,
+}: MatchDetailsTabsProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -32,6 +47,11 @@ export function MatchDetailsTabs({ isGuest, returnTo }: MatchDetailsTabsProps) {
     router.replace(query ? `${pathname}?${query}` : pathname, {
       scroll: false,
     });
+
+    void captureClientEvent(POSTHOG_EVENTS.matchTabChanged, {
+      tab: value,
+      fixture_id: fixtureId,
+    });
   }
 
   return (
@@ -45,20 +65,14 @@ export function MatchDetailsTabs({ isGuest, returnTo }: MatchDetailsTabsProps) {
         className="border-border/70 w-full justify-start overflow-x-auto border-b pb-0"
       >
         <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="ai">AI analysis</TabsTrigger>
+        <TabsTrigger value="ai">AI Engine</TabsTrigger>
         <TabsTrigger value="lineups">Lineups</TabsTrigger>
-        <TabsTrigger value="form">Form & H2H</TabsTrigger>
+        <TabsTrigger value="standings">Standings</TabsTrigger>
+        <TabsTrigger value="matches">Matches</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-4">
-        <MatchSectionPlaceholder
-          title="Live stats"
-          description="Shots, possession, corners, cards, and xG will appear here during and after the match."
-        />
-        <MatchSectionPlaceholder
-          title="Timeline"
-          description="Goals, cards, substitutions, and other match events will stream here."
-        />
+        {overview}
       </TabsContent>
 
       <TabsContent value="ai">
@@ -69,18 +83,14 @@ export function MatchDetailsTabs({ isGuest, returnTo }: MatchDetailsTabsProps) {
         )}
       </TabsContent>
 
-      <TabsContent value="lineups">
-        <MatchSectionPlaceholder
-          title="Lineups"
-          description="Confirmed or predicted starting elevens and substitutes will show here."
-        />
+      <TabsContent value="lineups">{lineups}</TabsContent>
+
+      <TabsContent value="standings" className="space-y-4">
+        {standings}
       </TabsContent>
 
-      <TabsContent value="form">
-        <MatchSectionPlaceholder
-          title="Form & head-to-head"
-          description="Recent form and head-to-head history between these teams will appear here."
-        />
+      <TabsContent value="matches" className="space-y-4">
+        {matches}
       </TabsContent>
     </Tabs>
   );

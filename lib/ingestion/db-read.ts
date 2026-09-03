@@ -2,7 +2,11 @@ import { getIngestionConfig } from "@/lib/ingestion/config";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   Fixture,
+  FixtureEvent,
+  FixtureTeamStatistics,
   League,
+  Lineup,
+  LineupPlayer,
   Player,
   PlayerFoot,
   PlayerPosition,
@@ -1054,4 +1058,257 @@ export async function readRecentPredictionChanges(
   }
 
   return summaries.slice(0, limit);
+}
+
+async function getFixtureUuidForRead(
+  providerId: number
+): Promise<string | null> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("fixtures")
+    .select("id")
+    .eq("provider_id", providerId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Failed to resolve fixture ${providerId}: ${error.message}`
+    );
+  }
+
+  return data?.id ?? null;
+}
+
+type FixtureEventRow = {
+  provider_event_id: string | null;
+  minute: number;
+  extra_minute: number | null;
+  type: string;
+  detail: string | null;
+  comments: string | null;
+  team: { provider_id: number } | null;
+  player: { provider_id: number } | null;
+  assist: { provider_id: number } | null;
+};
+
+function mapFixtureEventRow(row: FixtureEventRow): FixtureEvent {
+  return {
+    externalEventId: row.provider_event_id,
+    minute: row.minute,
+    extraMinute: row.extra_minute,
+    teamExternalId: row.team?.provider_id ?? null,
+    playerExternalId: row.player?.provider_id ?? null,
+    assistPlayerExternalId: row.assist?.provider_id ?? null,
+    type: row.type,
+    detail: row.detail,
+    comments: row.comments,
+  };
+}
+
+export async function readFixtureEventsFromDb(
+  providerId: number
+): Promise<FixtureEvent[]> {
+  const fixtureId = await getFixtureUuidForRead(providerId);
+  if (!fixtureId) {
+    return [];
+  }
+
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("fixture_events")
+    .select(
+      `
+      provider_event_id,
+      minute,
+      extra_minute,
+      type,
+      detail,
+      comments,
+      team:teams!fixture_events_team_id_fkey (provider_id),
+      player:players!fixture_events_player_id_fkey (provider_id),
+      assist:players!fixture_events_assist_player_id_fkey (provider_id)
+    `
+    )
+    .eq("fixture_id", fixtureId)
+    .order("minute", { ascending: true })
+    .order("extra_minute", { ascending: true, nullsFirst: true });
+
+  if (error) {
+    throw new Error(
+      `Failed to read fixture events ${providerId}: ${error.message}`
+    );
+  }
+
+  return ((data ?? []) as FixtureEventRow[]).map(mapFixtureEventRow);
+}
+
+type FixtureStatisticsRow = {
+  shots_total: number | null;
+  shots_on_target: number | null;
+  shots_off_target: number | null;
+  shots_blocked: number | null;
+  shots_inside_box: number | null;
+  shots_outside_box: number | null;
+  fouls: number | null;
+  corners: number | null;
+  offsides: number | null;
+  ball_possession: number | null;
+  yellow_cards: number | null;
+  red_cards: number | null;
+  goalkeeper_saves: number | null;
+  total_passes: number | null;
+  passes_accurate: number | null;
+  passes_percent: number | null;
+  expected_goals: number | null;
+  team: { provider_id: number } | null;
+};
+
+function mapFixtureStatisticsRow(
+  row: FixtureStatisticsRow
+): FixtureTeamStatistics {
+  return {
+    teamExternalId: row.team?.provider_id ?? 0,
+    shotsTotal: row.shots_total,
+    shotsOnTarget: row.shots_on_target,
+    shotsOffTarget: row.shots_off_target,
+    shotsBlocked: row.shots_blocked,
+    shotsInsideBox: row.shots_inside_box,
+    shotsOutsideBox: row.shots_outside_box,
+    fouls: row.fouls,
+    corners: row.corners,
+    offsides: row.offsides,
+    ballPossession: row.ball_possession,
+    yellowCards: row.yellow_cards,
+    redCards: row.red_cards,
+    goalkeeperSaves: row.goalkeeper_saves,
+    totalPasses: row.total_passes,
+    passesAccurate: row.passes_accurate,
+    passesPercent: row.passes_percent,
+    expectedGoals:
+      row.expected_goals !== null ? Number(row.expected_goals) : null,
+  };
+}
+
+export async function readFixtureStatisticsFromDb(
+  providerId: number
+): Promise<FixtureTeamStatistics[]> {
+  const fixtureId = await getFixtureUuidForRead(providerId);
+  if (!fixtureId) {
+    return [];
+  }
+
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("fixture_statistics")
+    .select(
+      `
+      shots_total,
+      shots_on_target,
+      shots_off_target,
+      shots_blocked,
+      shots_inside_box,
+      shots_outside_box,
+      fouls,
+      corners,
+      offsides,
+      ball_possession,
+      yellow_cards,
+      red_cards,
+      goalkeeper_saves,
+      total_passes,
+      passes_accurate,
+      passes_percent,
+      expected_goals,
+      team:teams!fixture_statistics_team_id_fkey (provider_id)
+    `
+    )
+    .eq("fixture_id", fixtureId);
+
+  if (error) {
+    throw new Error(
+      `Failed to read fixture statistics ${providerId}: ${error.message}`
+    );
+  }
+
+  return ((data ?? []) as FixtureStatisticsRow[]).map(mapFixtureStatisticsRow);
+}
+
+type LineupPlayerRow = {
+  shirt_number: number | null;
+  position: string | null;
+  grid: string | null;
+  is_starting: boolean;
+  is_captain: boolean;
+  provider_payload: Record<string, unknown> | null;
+  player: { provider_id: number; full_name: string } | null;
+};
+
+type LineupRow = {
+  formation: string | null;
+  coach_name: string | null;
+  is_confirmed: boolean;
+  team: { provider_id: number } | null;
+  lineup_players: LineupPlayerRow[];
+};
+
+function mapLineupPlayerRow(row: LineupPlayerRow): LineupPlayer {
+  const payloadName =
+    typeof row.provider_payload?.name === "string"
+      ? row.provider_payload.name
+      : null;
+
+  return {
+    playerExternalId: row.player?.provider_id ?? null,
+    name: row.player?.full_name ?? payloadName ?? "Unknown",
+    shirtNumber: row.shirt_number,
+    position: row.position,
+    grid: row.grid,
+    isStarting: row.is_starting,
+    isCaptain: row.is_captain,
+  };
+}
+
+function mapLineupRow(row: LineupRow): Lineup {
+  return {
+    teamExternalId: row.team?.provider_id ?? 0,
+    formation: row.formation,
+    coachName: row.coach_name,
+    isConfirmed: row.is_confirmed,
+    players: (row.lineup_players ?? []).map(mapLineupPlayerRow),
+  };
+}
+
+export async function readLineupsFromDb(providerId: number): Promise<Lineup[]> {
+  const fixtureId = await getFixtureUuidForRead(providerId);
+  if (!fixtureId) {
+    return [];
+  }
+
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("lineups")
+    .select(
+      `
+      formation,
+      coach_name,
+      is_confirmed,
+      team:teams!lineups_team_id_fkey (provider_id),
+      lineup_players (
+        shirt_number,
+        position,
+        grid,
+        is_starting,
+        is_captain,
+        provider_payload,
+        player:players (provider_id, full_name)
+      )
+    `
+    )
+    .eq("fixture_id", fixtureId);
+
+  if (error) {
+    throw new Error(`Failed to read lineups ${providerId}: ${error.message}`);
+  }
+
+  return ((data ?? []) as LineupRow[]).map(mapLineupRow);
 }

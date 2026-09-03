@@ -125,6 +125,15 @@ export type LineupInsert = {
   provider_payload: Json;
 };
 
+export type LineupPlayerInsert = {
+  shirt_number: number | null;
+  position: string | null;
+  grid: string | null;
+  is_starting: boolean;
+  is_captain: boolean;
+  provider_payload: Json;
+};
+
 export type StandingInsert = {
   league_id: string;
   season_id: string;
@@ -141,4 +150,32 @@ export type StandingInsert = {
   goals_for: number | null;
   goals_against: number | null;
   provider_payload: Json;
+};
+
+export type FormSnapshotInsert = {
+  team_id: string;
+  scope: string;
+  matches: number;
+  wins: number | null;
+  draws: number | null;
+  losses: number | null;
+  goals_for: number | null;
+  goals_against: number | null;
+  clean_sheets: number | null;
+  failed_to_score: number | null;
+  points: number | null;
+  ppg: number | null;
+};
+
+export type H2hSummaryInsert = {
+  team_a_id: string;
+  team_b_id: string;
+  scope: string;
+  league_id: string | null;
+  window_size: number;
+  team_a_wins: number | null;
+  team_b_wins: number | null;
+  draws: number | null;
+  team_a_goals: number | null;
+  team_b_goals: number | null;
 };

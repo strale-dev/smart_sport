@@ -1,8 +1,18 @@
-export const MATCH_TABS = ["overview", "ai", "lineups", "form"] as const;
+export const MATCH_TABS = [
+  "overview",
+  "ai",
+  "lineups",
+  "standings",
+  "matches",
+] as const;
 
 export type MatchTab = (typeof MATCH_TABS)[number];
 
 export function parseMatchTab(value: string | undefined): MatchTab {
+  if (value === "form") {
+    return "standings";
+  }
+
   if (value && MATCH_TABS.includes(value as MatchTab)) {
     return value as MatchTab;
   }

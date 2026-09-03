@@ -327,7 +327,7 @@ Run automated gates first: `npm.cmd run phase2:check`. Then complete the manual 
 
 #### Cross-cutting
 
-- [x] [`docs/EVENTS.md`](./EVENTS.md) documents Phase 2 PostHog events.
+- [x] `[docs/EVENTS.md](./EVENTS.md)` documents Phase 2 PostHog events.
 
 **Founder sign-off (5 min):** mobile 375px walkthrough, signed-in session check, PostHog Live Events — then tick the three open manual items above.
 
@@ -770,7 +770,7 @@ If a week overruns, cut scope by dropping the lowest-priority card from the phas
 Some items span multiple phases; keep them visible.
 
 - **Content bank.** Screenshots, mock data samples for the landing page — collected as real data lands.
-- **PostHog event catalog.** [`docs/EVENTS.md`](./EVENTS.md) — Phase 2 events live; extend each phase.
+- **PostHog event catalog.** `[docs/EVENTS.md](./EVENTS.md)` — Phase 2 events live; extend each phase.
 - **Cost dashboard.** A Notion or Sheet with daily spend on Supabase, API-Football, OpenAI, LemonSqueezy, Vercel, Upstash, Resend, PostHog, Sentry.
 - **Founder log.** Public build-in-public log (weekly, optional) — helps with marketing and self-accountability.
 - **Cursor rules.** Update `AGENTS.md` and `.cursor/rules/`* any time a new pattern emerges (services, cache keys, RLS conventions).

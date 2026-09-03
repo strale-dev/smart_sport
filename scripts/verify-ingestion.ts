@@ -29,6 +29,12 @@ async function main() {
 
   console.log("Fixtures today (UTC):", fixturesToday);
 
+  const { count: matchDetailsCount } = await client
+    .from("fixture_events")
+    .select("*", { count: "exact", head: true });
+
+  console.log("Fixture events rows:", matchDetailsCount);
+
   if ((fixturesToday ?? 0) <= 0) {
     console.error(
       "Phase 1 DoD requires fixtures for UTC today. Run sync-fixtures first."

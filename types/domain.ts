@@ -216,3 +216,52 @@ export type StandingsGroup = {
   groupName: string | null;
   rows: StandingRow[];
 };
+
+export type FormScope = "ALL" | "HOME" | "AWAY";
+export type H2HScope = "ALL" | "SAME_COMP";
+
+export type FormMatchResult = {
+  fixtureExternalId: number;
+  opponentName: string;
+  kickoffAt: string;
+  result: "W" | "D" | "L";
+  goalsFor: number;
+  goalsAgainst: number;
+  isHome: boolean;
+};
+
+export type FormSnapshot = {
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  cleanSheets: number;
+  ppg: number | null;
+  matches: number;
+  scope: FormScope;
+  results: FormMatchResult[];
+};
+
+export type H2HMeeting = {
+  fixtureExternalId: number;
+  kickoffAt: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  leagueName: string | null;
+};
+
+export type H2HSummary = {
+  teamAExternalId: number;
+  teamBExternalId: number;
+  teamAWins: number;
+  teamBWins: number;
+  draws: number;
+  teamAGoals: number;
+  teamBGoals: number;
+  windowSize: number;
+  scope: H2HScope;
+  meetings: H2HMeeting[];
+};

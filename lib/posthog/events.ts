@@ -5,6 +5,10 @@ export const POSTHOG_EVENTS = {
   signupCompleted: "signup_completed",
   loginCompleted: "login_completed",
   matchViewed: "match_viewed",
+  matchTabChanged: "match_tab_changed",
+  matchFormScopeChanged: "match_form_scope_changed",
+  matchH2hScopeChanged: "match_h2h_scope_changed",
+  matchMomentumViewed: "match_momentum_viewed",
   teamViewed: "team_viewed",
   playerViewed: "player_viewed",
 } as const;

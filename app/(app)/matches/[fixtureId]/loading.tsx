@@ -24,12 +24,12 @@ export default function MatchLoading() {
 
       <div className="space-y-4">
         <div className="flex gap-4 overflow-hidden">
-          {Array.from({ length: 4 }).map((_, index) => (
+          {Array.from({ length: 5 }).map((_, index) => (
             <Skeleton key={index} className="h-8 w-20 shrink-0" />
           ))}
         </div>
-        <Skeleton className="h-24 w-full rounded-xl" />
-        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-56 w-full rounded-xl" />
       </div>
     </div>
   );

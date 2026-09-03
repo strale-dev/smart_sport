@@ -15,6 +15,15 @@
 | `login_completed`  | User completes login (password or OAuth callback)                                | _(none beyond identify)_                        | `components/auth/LoginForm.tsx`, `components/auth/AuthAnalytics.tsx` via `lib/posthog/auth.ts`  | Return visit → engagement       |
 | `match_viewed`     | Match detail page loads (once per visit)                                         | `fixture_id`, `league_id`, `status`, `is_guest` | `components/match/MatchViewAnalytics.tsx`                                                       | Content discovery → match depth |
 
+## Phase 3 — Match Details cards
+
+| Event                      | Trigger                                          | Properties                             | Source                                   | Funnel                  |
+| -------------------------- | ------------------------------------------------ | -------------------------------------- | ---------------------------------------- | ----------------------- |
+| `match_tab_changed`        | User switches match page tab                     | `tab`, `fixture_id`                    | `components/match/MatchDetailsTabs.tsx`  | Match depth exploration |
+| `match_form_scope_changed` | User toggles form window (5/10) on Standings tab | `scope`, `matches`, `fixture_id`       | `components/match/FormCard.tsx`          | Analytics engagement    |
+| `match_h2h_scope_changed`  | User toggles H2H scope (All comps / Same league) | `scope`, `fixture_id`                  | `components/match/H2HCard.tsx`           | Analytics engagement    |
+| `match_momentum_viewed`    | Momentum card renders on live/finished Overview  | `fixture_id`, `status`, `bucket_count` | `components/match/MatchMomentumCard.tsx` | Live match engagement   |
+
 ### Notes
 
 - **Identify:** `signup_completed` and `login_completed` call `posthog.identify(userId)` before capture.

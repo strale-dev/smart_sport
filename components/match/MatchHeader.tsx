@@ -105,6 +105,14 @@ export function MatchHeader({ fixture }: MatchHeaderProps) {
                 >
                   {formatFixtureScore(fixture)}
                 </p>
+                {isFinished &&
+                fixture.score.halftimeHome != null &&
+                fixture.score.halftimeAway != null ? (
+                  <p className="text-muted-foreground font-mono text-xs tabular-nums">
+                    HT {fixture.score.halftimeHome} –{" "}
+                    {fixture.score.halftimeAway}
+                  </p>
+                ) : null}
                 {isLive && formatFixtureMinute(fixture) ? (
                   <Badge variant="live" className="font-mono tabular-nums">
                     {formatFixtureMinute(fixture)}

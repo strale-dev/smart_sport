@@ -6,6 +6,7 @@ import type {
   FixtureTeamStatistics,
   League,
   Lineup,
+  LineupPlayer,
   Player,
   Season,
   StandingRow,
@@ -20,6 +21,7 @@ import type {
   FixtureStatisticsInsert,
   LeagueInsert,
   LineupInsert,
+  LineupPlayerInsert,
   PlayerInsert,
   SeasonInsert,
   StandingInsert,
@@ -212,6 +214,20 @@ export function lineupToInsert(
     coach_name: lineup.coachName,
     is_confirmed: lineup.isConfirmed,
     provider_payload: rawPayload as LineupInsert["provider_payload"],
+  };
+}
+
+export function lineupPlayerToInsert(
+  player: LineupPlayer,
+  rawPayload: unknown = null
+): LineupPlayerInsert {
+  return {
+    shirt_number: player.shirtNumber,
+    position: player.position,
+    grid: player.grid,
+    is_starting: player.isStarting,
+    is_captain: player.isCaptain,
+    provider_payload: rawPayload as LineupPlayerInsert["provider_payload"],
   };
 }
 
