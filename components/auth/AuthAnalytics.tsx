@@ -4,6 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef } from "react";
 
 import { useCookieConsent } from "@/hooks/useCookieConsent";
+import { hasAnalyticsConsent } from "@/lib/cookies/consent";
 import { captureAuthSuccess } from "@/lib/posthog/auth";
 import { POSTHOG_EVENTS } from "@/lib/posthog/events";
 import { createClient } from "@/lib/supabase/client";
@@ -12,7 +13,7 @@ function AuthAnalyticsInner() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
-  const { consent } = useCookieConsent();
+  const { consent, isReady } = useCookieConsent();
   const handled = useRef<string | null>(null);
 
   useEffect(() => {
@@ -21,17 +22,14 @@ function AuthAnalyticsInner() {
       return;
     }
 
+    if (!isReady || !hasAnalyticsConsent(consent)) {
+      return;
+    }
+
     const key = `${pathname}?${searchParams.toString()}`;
     if (handled.current === key) {
       return;
     }
-    handled.current = key;
-
-    const nextParams = new URLSearchParams(searchParams.toString());
-    nextParams.delete("auth_event");
-    const query = nextParams.toString();
-    const next = query ? `${pathname}?${query}` : pathname;
-    router.replace(next, { scroll: false });
 
     void (async () => {
       const supabase = createClient();
@@ -50,8 +48,16 @@ function AuthAnalyticsInner() {
         userId: user.id,
         consent,
       });
+
+      handled.current = key;
+
+      const nextParams = new URLSearchParams(searchParams.toString());
+      nextParams.delete("auth_event");
+      const query = nextParams.toString();
+      const next = query ? `${pathname}?${query}` : pathname;
+      router.replace(next, { scroll: false });
     })();
-  }, [consent, pathname, router, searchParams]);
+  }, [consent, isReady, pathname, router, searchParams]);
 
   return null;
 }

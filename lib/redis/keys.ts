@@ -82,6 +82,15 @@ export function providerTeamKey(id: number): string {
   return `provider:team:${id}`;
 }
 
+/** UTC date strings only (YYYY-MM-DD), not request timestamps. */
+export function providerTeamFixturesKey(
+  teamId: number,
+  fromDate: string,
+  toDateExclusive: string
+): string {
+  return `provider:team:${teamId}:fixtures:${fromDate}:${toDateExclusive}`;
+}
+
 export function providerPlayerKey(id: number): string {
   return `provider:player:${id}`;
 }

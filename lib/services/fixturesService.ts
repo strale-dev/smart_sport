@@ -5,7 +5,7 @@ import {
   groupFixturesByDayAndLeague,
   type FixturesDayGroup,
 } from "@/lib/fixtures/grouping";
-import { buildFixturesWindow } from "@/lib/fixtures/window";
+import { buildFixturesWindow, utcDateString } from "@/lib/fixtures/window";
 import {
   parseFixturesParams,
   type FixturesSearchParams,
@@ -18,6 +18,7 @@ export type FixturesData = {
   liveLeagueIds: number[];
   activeLeagueIds: number[];
   nowAnchorFixtureId: number | null;
+  todayDateKey: string;
   filters: FixturesSearchParams;
   isEmpty: boolean;
 };
@@ -46,6 +47,7 @@ export async function getFixturesData(
     liveLeagueIds: collectLiveLeagueIds(allFixtures),
     activeLeagueIds: collectActiveLeagueIds(allFixtures),
     nowAnchorFixtureId: findNowAnchorFixtureId(filtered),
+    todayDateKey: utcDateString(now),
     filters: { league: params.league },
     isEmpty: filtered.length === 0,
   };

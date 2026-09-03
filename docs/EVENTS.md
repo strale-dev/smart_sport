@@ -1,0 +1,44 @@
+# Scorence — PostHog Event Catalog
+
+> Living catalog of tracked events. Phase 2 onwards — map every event to the funnel it supports.
+> See also [Tech.md §21.1](./Tech.md#211-posthog) and [ROADMAP.md §12](./ROADMAP.md#12-definition-of-done--general-rules).
+
+**Consent:** All client events require analytics cookie consent (`hasAnalyticsConsent`). PostHog is initialized with `opt_out_capturing_by_default: true`.
+
+---
+
+## Phase 2 — Core UX shell
+
+| Event              | Trigger                                                                          | Properties                                      | Source                                                                                          | Funnel                          |
+| ------------------ | -------------------------------------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------- |
+| `signup_completed` | User completes signup (email immediate session, or OAuth/email-confirm callback) | _(none beyond identify)_                        | `components/auth/SignupForm.tsx`, `components/auth/AuthAnalytics.tsx` via `lib/posthog/auth.ts` | Landing → signup → activation   |
+| `login_completed`  | User completes login (password or OAuth callback)                                | _(none beyond identify)_                        | `components/auth/LoginForm.tsx`, `components/auth/AuthAnalytics.tsx` via `lib/posthog/auth.ts`  | Return visit → engagement       |
+| `match_viewed`     | Match detail page loads (once per visit)                                         | `fixture_id`, `league_id`, `status`, `is_guest` | `components/match/MatchViewAnalytics.tsx`                                                       | Content discovery → match depth |
+
+### Notes
+
+- **Identify:** `signup_completed` and `login_completed` call `posthog.identify(userId)` before capture.
+- **Auth callback:** OAuth and email-confirmation flows redirect with `?auth_event=signup|login`; `AuthAnalytics` captures after consent is ready, then strips the query param.
+- **Guest funnel:** `match_viewed.is_guest = true` for anonymous viewers on guest-OK routes.
+
+---
+
+## Phase 0–1 (reference)
+
+| Event                    | Trigger                          | Source                  |
+| ------------------------ | -------------------------------- | ----------------------- |
+| `landing_view`           | Marketing landing page view      | Client page mount       |
+| `waitlist_cta_click`     | Waitlist CTA clicked             | Marketing components    |
+| `cookie_consent_updated` | User updates cookie preferences  | Cookie consent banner   |
+| `waitlist_signup`        | Waitlist form submitted (server) | `lib/posthog/server.ts` |
+
+---
+
+## Planned (later phases)
+
+From [Tech.md §21.1](./Tech.md#211-posthog) — not yet implemented:
+
+- `trial_started`, `trial_converted`, `subscription_cancelled`
+- `live_match_viewed`, `ai_insight_generated`
+- `follow_added`, `favorite_added`
+- `ai_limit_reached`, `paywall_shown`

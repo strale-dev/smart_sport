@@ -5,6 +5,7 @@ import { FixturesNowAnchor } from "@/components/fixtures/FixturesNowAnchor";
 import { EmptyState } from "@/components/common/EmptyState";
 import { MatchRow } from "@/components/match/MatchRow";
 import { LeagueFilterLogo } from "@/components/live/LeagueFilterLogo";
+import { daySectionAnchorId } from "@/lib/fixtures/ids";
 import { buildFixturesHref } from "@/lib/fixtures/url";
 import type { FixturesData } from "@/lib/services/fixturesService";
 
@@ -52,11 +53,18 @@ export function FixturesList({ data }: FixturesListProps) {
 
   return (
     <>
-      <FixturesNowAnchor fixtureId={data.nowAnchorFixtureId} />
+      <FixturesNowAnchor
+        fixtureId={data.nowAnchorFixtureId}
+        todayDateKey={data.todayDateKey}
+      />
 
       <div className="space-y-8">
         {data.dayGroups.map((dayGroup) => (
-          <section key={dayGroup.dateKey} className="space-y-4">
+          <section
+            key={dayGroup.dateKey}
+            id={daySectionAnchorId(dayGroup.dateKey)}
+            className="scroll-mt-24 space-y-4"
+          >
             <h2 className="font-heading text-base font-medium">
               {dayGroup.label}
             </h2>

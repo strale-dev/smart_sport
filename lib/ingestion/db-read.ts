@@ -3,6 +3,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   Fixture,
   League,
+  Player,
+  PlayerFoot,
+  PlayerPosition,
   Season,
   StandingsGroup,
   Team,
@@ -457,6 +460,124 @@ export async function readTeamByProviderIdFromDb(
           capacity: venue.capacity,
           surface: venue.surface,
           imageUrl: venue.image_url,
+        }
+      : null,
+  };
+}
+
+export async function readTeamIdByProviderIdFromDb(
+  providerId: number
+): Promise<string | null> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("teams")
+    .select("id")
+    .eq("provider_id", providerId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to read team id ${providerId}: ${error.message}`);
+  }
+
+  return data?.id ?? null;
+}
+
+function mapPlayerFoot(value: string | null): PlayerFoot {
+  switch (value) {
+    case "LEFT":
+    case "RIGHT":
+    case "BOTH":
+      return value;
+    default:
+      return "UNKNOWN";
+  }
+}
+
+function mapPlayerPosition(value: string | null): PlayerPosition | null {
+  switch (value) {
+    case "GK":
+    case "DF":
+    case "MF":
+    case "FW":
+      return value;
+    default:
+      return null;
+  }
+}
+
+export async function readPlayerByProviderIdFromDb(
+  providerId: number
+): Promise<Player | null> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("players")
+    .select(
+      `
+      provider_id,
+      first_name,
+      last_name,
+      full_name,
+      nationality,
+      date_of_birth,
+      height_cm,
+      weight_kg,
+      position,
+      preferred_foot,
+      photo_url,
+      player_team_history (
+        left_on,
+        team:teams (
+          provider_id,
+          name,
+          code,
+          logo_url,
+          is_national
+        )
+      )
+    `
+    )
+    .eq("provider_id", providerId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to read player ${providerId}: ${error.message}`);
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const history = Array.isArray(data.player_team_history)
+    ? data.player_team_history
+    : data.player_team_history
+      ? [data.player_team_history]
+      : [];
+  const currentRow = history.find((row) => row.left_on == null);
+  const currentTeam = currentRow?.team
+    ? Array.isArray(currentRow.team)
+      ? currentRow.team[0]
+      : currentRow.team
+    : null;
+
+  return {
+    externalId: data.provider_id,
+    firstName: data.first_name,
+    lastName: data.last_name,
+    fullName: data.full_name,
+    nationality: data.nationality,
+    dateOfBirth: data.date_of_birth,
+    heightCm: data.height_cm,
+    weightKg: data.weight_kg,
+    position: mapPlayerPosition(data.position),
+    preferredFoot: mapPlayerFoot(data.preferred_foot),
+    photoUrl: data.photo_url,
+    currentTeam: currentTeam
+      ? {
+          externalId: currentTeam.provider_id,
+          name: currentTeam.name,
+          code: currentTeam.code,
+          logoUrl: currentTeam.logo_url,
+          isNational: currentTeam.is_national,
         }
       : null,
   };

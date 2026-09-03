@@ -1,4 +1,4 @@
-export function parseFixtureId(value: string): number | null {
+export function parseProviderId(value: string): number | null {
   const trimmed = value.trim();
 
   if (!/^\d+$/.test(trimmed)) {
@@ -12,4 +12,10 @@ export function parseFixtureId(value: string): number | null {
   }
 
   return id;
+}
+
+export const parseFixtureId = parseProviderId;
+
+export function daySectionAnchorId(dateKey: string): string {
+  return `day-${dateKey}`;
 }

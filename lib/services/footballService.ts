@@ -21,15 +21,19 @@ import {
   searchTeams as searchTeamsEndpoint,
 } from "@/lib/api-football/endpoints/teams";
 import { isApiFootballIngestOnly } from "@/lib/env";
+import { addUtcDays, utcDateString } from "@/lib/fixtures/window";
 import {
   readFixtureByProviderIdFromDb,
   readFixturesForDateFromDb,
+  readFixturesForTeamsInRangeFromDb,
   readFixturesInRangeFromDb,
   readLeagueDetailFromDb,
   readLiveFixturesFromDb,
+  readPlayerByProviderIdFromDb,
   readSeasonsByLeagueFromDb,
   readStandingsFromDb,
   readTeamByProviderIdFromDb,
+  readTeamIdByProviderIdFromDb,
 } from "@/lib/ingestion/db-read";
 import { cached, type CacheMeta } from "@/lib/redis/cache";
 import {
@@ -49,8 +53,13 @@ import {
   providerSearchTeamsKey,
   providerSeasonsKey,
   providerStandingsKey,
+  providerTeamFixturesKey,
   providerTeamKey,
 } from "@/lib/redis/keys";
+import {
+  TEAM_MATCHES_FUTURE_DAYS,
+  TEAM_MATCHES_PAST_DAYS,
+} from "@/lib/teams/constants";
 import type {
   Fixture,
   FixtureEvent,
@@ -288,7 +297,14 @@ export async function getPlayerById(
   id: number
 ): Promise<ServiceResult<Player | null>> {
   if (isApiFootballIngestOnly()) {
-    return emptyIngestOnlyResult(null);
+    const result = await cached({
+      key: providerPlayerKey(id),
+      freshTtlSeconds: CACHE_TTL.playerFresh,
+      staleTtlSeconds: CACHE_TTL.playerStale,
+      fn: () => readPlayerByProviderIdFromDb(id),
+    });
+
+    return toServiceResult(result);
   }
 
   const result = await cached({
@@ -296,6 +312,46 @@ export async function getPlayerById(
     freshTtlSeconds: CACHE_TTL.playerFresh,
     staleTtlSeconds: CACHE_TTL.playerStale,
     fn: () => getPlayerByIdEndpoint(id),
+  });
+
+  return toServiceResult(result);
+}
+
+export function buildTeamFixturesWindow(now = new Date()): {
+  fromDate: string;
+  toDateExclusive: string;
+} {
+  const today = utcDateString(now);
+
+  return {
+    fromDate: addUtcDays(today, -TEAM_MATCHES_PAST_DAYS),
+    toDateExclusive: addUtcDays(today, TEAM_MATCHES_FUTURE_DAYS + 1),
+  };
+}
+
+export async function getFixturesForTeam(
+  teamProviderId: number,
+  now = new Date()
+): Promise<ServiceResult<Fixture[]>> {
+  const { fromDate, toDateExclusive } = buildTeamFixturesWindow(now);
+
+  const result = await cached({
+    key: providerTeamFixturesKey(teamProviderId, fromDate, toDateExclusive),
+    freshTtlSeconds: CACHE_TTL.fixturesDateFresh,
+    staleTtlSeconds: CACHE_TTL.fixturesDateStale,
+    fn: async () => {
+      const teamId = await readTeamIdByProviderIdFromDb(teamProviderId);
+
+      if (!teamId) {
+        return [];
+      }
+
+      return readFixturesForTeamsInRangeFromDb(
+        [teamId],
+        `${fromDate}T00:00:00.000Z`,
+        `${toDateExclusive}T00:00:00.000Z`
+      );
+    },
   });
 
   return toServiceResult(result);

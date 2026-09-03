@@ -5,6 +5,8 @@ export const POSTHOG_EVENTS = {
   signupCompleted: "signup_completed",
   loginCompleted: "login_completed",
   matchViewed: "match_viewed",
+  teamViewed: "team_viewed",
+  playerViewed: "player_viewed",
 } as const;
 
 export type PostHogEventName =

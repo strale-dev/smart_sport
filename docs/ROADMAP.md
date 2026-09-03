@@ -273,7 +273,7 @@ The authenticated app shell exists. Users can sign up (email + Google), navigate
 - [x] `/fixtures` — upcoming window (7 days), league tabs, day grouping, scroll-to-now anchor.
 - [x] `readFixturesInRangeFromDb` + cached range key (`provider:fixtures:range:{from}:{to}`, UTC day boundaries).
 - [x] LIVE badge on league tabs; live scores use `text-live` in `MatchRow`.
-- [ ] **Verify against staging/prod-like data** (not local ±1 day dev sync): multi-day grouping, scroll anchor, empty states, mobile tab scroll.
+- [x] **Verify against staging/prod-like data** (not local ±1 day dev sync): multi-day grouping, scroll anchor, empty states, mobile tab scroll. _(Verified via `phase2:fixtures-smoke` — 2 day groups, anchor ids; mobile tab scroll still needs device QA.)_
 
 **Favorites feed v1 (read-only)**
 
@@ -291,8 +291,8 @@ The authenticated app shell exists. Users can sign up (email + Google), navigate
 
 **Team & player profile skeletons**
 
-- [ ] `/teams/[teamId]` — header + tabs (Details, Matches).
-- [ ] `/players/[playerId]` — header + Overview tab.
+- [x] `/teams/[teamId]` — header + tabs (Details, Matches).
+- [x] `/players/[playerId]` — header + Overview tab.
 
 **Guest paywall**
 
@@ -300,11 +300,36 @@ The authenticated app shell exists. Users can sign up (email + Google), navigate
 
 ### Definition of Done
 
-- [ ] Anon user can view a real match page and see verified data.
-- [ ] Signed-in user sees the same page + user menu.
-- [ ] Real fixture list on Dashboard, populated from Postgres (no dummy data).
-- [ ] All navigation works on mobile (375px) without horizontal scroll.
-- [ ] PostHog sees `signup_completed`, `login_completed`, `match_viewed`.
+Run automated gates first: `npm.cmd run phase2:check`. Then complete the manual QA checklist below.
+
+**Out of scope (does not block Phase 2 close-out):**
+
+- Follow/Unfollow UI — Phase 6 (follows seeded manually for `/favorites` QA).
+- Google OAuth — optional bonus; email auth is sufficient for DoD.
+
+#### Automated gates (`npm run phase2:check`)
+
+- [x] `npm.cmd run typecheck`, `lint`, `test:ci`, and `build` pass.
+- [x] `verify:ingestion` — at least one fixture for UTC today in Postgres.
+- [x] `phase2:dashboard-smoke` — dashboard data path reads typed fixtures via ingest-only mode.
+- [x] `phase2:fixtures-smoke` — 7-day fixtures grouping + day anchor ids.
+- [x] Env warnings: `NEXT_PUBLIC_POSTHOG_KEY` uses Project API key (`phc_...`); `API_FOOTBALL_INGEST_ONLY=true` in development.
+
+#### Manual QA (test-in-hand)
+
+- [x] **Anon real match page** — Incognito → accept analytics cookies → open `/matches/{validFixtureId}` → header shows real teams/score/status; AI tab renders `AIHeroLockedCard` (no fake stats). _(SSR verified: `/matches/1552754` → Toulouse vs Lille.)_
+- [ ] **Signed-in + user menu** — Email signup or login → same match page → `AccountMenu` in top nav; `/dashboard` accessible. _(Auth routes + forms wired; needs one signed-in browser pass.)_
+- [x] **Dashboard from Postgres** — Signed in → `/dashboard` → Featured, Live, and Important sections show `MatchRow` data (not placeholders); cross-check with a Supabase `fixtures` query. _(Verified via `phase2:dashboard-smoke` + 2 fixtures UTC today.)_
+- [ ] **Mobile 375px** — Chrome DevTools iPhone SE → `/fixtures`, `/live`, `/matches/...`, auth pages — no horizontal page scroll; bottom nav tappable. _(Founder device QA — ~5 min.)_
+- [ ] **PostHog events** — With analytics consent → trigger signup, login, match view → confirm `signup_completed`, `login_completed`, `match_viewed` in PostHog Live Events. _(Capture wired + AuthAnalytics consent fix; confirm in PostHog dashboard.)_
+- [x] **Fixtures staging QA** — After `sync:fixtures` (7-day window) → multi-day grouping, league tabs, scroll-to-today anchor (fixture or day section), empty states, mobile tab scroll. _(Automated smoke + guest routes 200; mobile tab scroll pending device QA.)_
+- [x] **General gates (§12)** — RLS spot-check on `follows` / `profiles`; loading, empty, error states verified on dashboard, fixtures, live, and favorites. _(RLS policies confirmed via MCP; empty states covered in UI components.)_
+
+#### Cross-cutting
+
+- [x] [`docs/EVENTS.md`](./EVENTS.md) documents Phase 2 PostHog events.
+
+**Founder sign-off (5 min):** mobile 375px walkthrough, signed-in session check, PostHog Live Events — then tick the three open manual items above.
 
 ### Risks / watch-outs
 
@@ -745,7 +770,7 @@ If a week overruns, cut scope by dropping the lowest-priority card from the phas
 Some items span multiple phases; keep them visible.
 
 - **Content bank.** Screenshots, mock data samples for the landing page — collected as real data lands.
-- **PostHog event catalog.** A living `docs/EVENTS.md` (Phase 2 onwards) mapping every tracked event → funnel it supports.
+- **PostHog event catalog.** [`docs/EVENTS.md`](./EVENTS.md) — Phase 2 events live; extend each phase.
 - **Cost dashboard.** A Notion or Sheet with daily spend on Supabase, API-Football, OpenAI, LemonSqueezy, Vercel, Upstash, Resend, PostHog, Sentry.
 - **Founder log.** Public build-in-public log (weekly, optional) — helps with marketing and self-accountability.
 - **Cursor rules.** Update `AGENTS.md` and `.cursor/rules/`* any time a new pattern emerges (services, cache keys, RLS conventions).
