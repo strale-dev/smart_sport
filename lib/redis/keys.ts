@@ -107,6 +107,22 @@ export function providerPlayerKey(id: number): string {
   return `provider:player:${id}`;
 }
 
+export function providerPlayerStatsKey(id: number, season: number): string {
+  return `provider:player:${id}:stats:${season}`;
+}
+
+export function providerPlayerFixturesKey(id: number, season: number): string {
+  return `provider:player:${id}:fixtures:${season}`;
+}
+
+export function providerPlayerMatchHistoryKey(id: number): string {
+  return `provider:player:${id}:match-history`;
+}
+
+export function providerPlayerTransfersKey(id: number): string {
+  return `provider:player:${id}:transfers`;
+}
+
 export function providerLeagueKey(id: number): string {
   return `provider:league:${id}`;
 }

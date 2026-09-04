@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as dbRead from "@/lib/ingestion/db-read";
+import * as matchDetailsUpsert from "@/lib/ingestion/match-details-upsert";
 import * as fixtureEndpoints from "@/lib/api-football/endpoints/fixtures";
 import * as playerEndpoints from "@/lib/api-football/endpoints/players";
 import { resetCacheForTests } from "@/lib/redis/cache";
@@ -43,19 +44,64 @@ describe("footballService ingest-only mode", () => {
     expect(apiSpy).not.toHaveBeenCalled();
   });
 
-  it("reads players from Postgres instead of the provider", async () => {
+  it("reads players from Postgres when present", async () => {
     Object.assign(process.env, baseEnv);
     process.env.API_FOOTBALL_INGEST_ONLY = "true";
 
     const dbSpy = vi
       .spyOn(dbRead, "readPlayerByProviderIdFromDb")
-      .mockResolvedValue(null);
+      .mockResolvedValue({
+        externalId: 276,
+        firstName: null,
+        lastName: null,
+        fullName: "N. Kanté",
+        nationality: null,
+        dateOfBirth: null,
+        heightCm: null,
+        weightKg: null,
+        position: "MF",
+        preferredFoot: "UNKNOWN",
+        photoUrl: null,
+        currentTeam: null,
+        shirtNumber: 13,
+        marketValue: null,
+        averageRating: null,
+      });
     const apiSpy = vi.spyOn(playerEndpoints, "getPlayerById");
 
     await footballService.getPlayerById(276);
 
     expect(dbSpy).toHaveBeenCalledOnce();
     expect(apiSpy).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the provider when the player is missing from Postgres", async () => {
+    Object.assign(process.env, baseEnv);
+    process.env.API_FOOTBALL_INGEST_ONLY = "true";
+
+    vi.spyOn(dbRead, "readPlayerByProviderIdFromDb").mockResolvedValue(null);
+    vi.spyOn(matchDetailsUpsert, "persistPlayerProfile").mockResolvedValue();
+    vi.spyOn(playerEndpoints, "getPlayerProfileById").mockResolvedValue({
+      externalId: 276,
+      firstName: null,
+      lastName: null,
+      fullName: "N. Kanté",
+      nationality: null,
+      dateOfBirth: null,
+      heightCm: null,
+      weightKg: null,
+      position: "MF",
+      preferredFoot: "UNKNOWN",
+      photoUrl: null,
+      currentTeam: null,
+      shirtNumber: 13,
+      marketValue: null,
+      averageRating: null,
+    });
+
+    const result = await footballService.getPlayerById(276);
+
+    expect(result.data?.fullName).toBe("N. Kanté");
   });
 
   it("reads team fixtures from Postgres", async () => {

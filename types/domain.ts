@@ -150,6 +150,18 @@ export type FixturePlayerPerformance = {
   assists: number | null;
   yellowCards: number | null;
   redCards: number | null;
+  saves: number | null;
+  shotsTotal: number | null;
+  shotsOnTarget: number | null;
+  passes: number | null;
+  keyPasses: number | null;
+  wasStarter: boolean;
+  wasCaptain: boolean;
+};
+
+export type PlayerMarketValue = {
+  amount: number;
+  currency: string;
 };
 
 export type Team = {
@@ -176,6 +188,90 @@ export type Player = {
   preferredFoot: PlayerFoot;
   photoUrl: string | null;
   currentTeam: TeamRef | null;
+  shirtNumber: number | null;
+  marketValue: PlayerMarketValue | null;
+  averageRating: number | null;
+};
+
+export type PlayerSeasonStatistics = {
+  leagueExternalId: number;
+  leagueName: string;
+  seasonYear: number;
+  team: TeamRef;
+  appearances: number | null;
+  lineups: number | null;
+  minutes: number | null;
+  averageRating: number | null;
+  goals: number | null;
+  assists: number | null;
+  saves: number | null;
+  shotsTotal: number | null;
+  shotsOnTarget: number | null;
+  passesTotal: number | null;
+  passesAccuracy: number | null;
+  keyPasses: number | null;
+  tacklesTotal: number | null;
+  interceptions: number | null;
+  blocks: number | null;
+  dribblesAttempted: number | null;
+  dribblesSuccess: number | null;
+  foulsCommitted: number | null;
+  foulsDrawn: number | null;
+  yellowCards: number | null;
+  redCards: number | null;
+  penaltiesScored: number | null;
+  penaltiesMissed: number | null;
+  goalsConceded: number | null;
+};
+
+export type PlayerContributionBadgeType =
+  "goal" | "assist" | "yellow_card" | "red_card" | "clean_sheet" | "motm";
+
+export type PlayerContributionBadge = {
+  type: PlayerContributionBadgeType;
+  minute: number | null;
+};
+
+export type PlayerMatchAppearance = {
+  fixtureExternalId: number;
+  kickoffAt: string;
+  leagueName: string;
+  leagueLogoUrl: string | null;
+  homeTeam: TeamRef;
+  awayTeam: TeamRef;
+  homeScore: number | null;
+  awayScore: number | null;
+  status: FixtureStatus;
+  teamExternalId: number;
+  opponent: TeamRef;
+  isHome: boolean;
+  minutes: number | null;
+  rating: number | null;
+  goals: number;
+  assists: number;
+  yellowCards: number;
+  redCards: number;
+  cleanSheet: boolean;
+  isMotm: boolean;
+  badges: PlayerContributionBadge[];
+};
+
+export type PlayerMatchHistoryPage = {
+  items: PlayerMatchAppearance[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+export type PlayerCareerEntryType = "transfer" | "loan" | "free" | "inferred";
+
+export type PlayerCareerEntry = {
+  team: TeamRef;
+  fromDate: string | null;
+  toDate: string | null;
+  transferType: string | null;
+  entryType: PlayerCareerEntryType;
 };
 
 export type League = {

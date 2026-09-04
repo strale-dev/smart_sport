@@ -14,6 +14,7 @@ import {
 } from "@/lib/api-football/endpoints/leagues";
 import {
   getPlayerById as getPlayerByIdEndpoint,
+  getPlayerProfileById as getPlayerProfileByIdEndpoint,
   searchPlayers as searchPlayersEndpoint,
 } from "@/lib/api-football/endpoints/players";
 import {
@@ -25,6 +26,11 @@ import { getTeamSquad as getTeamSquadEndpoint } from "@/lib/api-football/endpoin
 import { isApiFootballIngestOnly } from "@/lib/env";
 import { safeOptionalProviderFetch } from "@/lib/api-football/safe-call";
 import { addUtcDays, utcDateString } from "@/lib/fixtures/window";
+import {
+  persistPlayerProfile,
+  upsertSquadPlayers,
+} from "@/lib/ingestion/match-details-upsert";
+import { squadPlayerToDomainPlayer } from "@/lib/players/from-squad";
 import {
   readFixtureByProviderIdFromDb,
   readFixtureEventsFromDb,
@@ -41,7 +47,12 @@ import {
   readTeamByProviderIdFromDb,
   readTeamIdByProviderIdFromDb,
 } from "@/lib/ingestion/db-read";
-import { cached, type CacheMeta } from "@/lib/redis/cache";
+import {
+  cached,
+  peekCachedValue,
+  writeCachedValue,
+  type CacheMeta,
+} from "@/lib/redis/cache";
 import {
   CACHE_TTL,
   fixtureFreshTtlSeconds,
@@ -68,6 +79,7 @@ import {
   TEAM_MATCHES_FUTURE_DAYS,
   TEAM_MATCHES_PAST_DAYS,
 } from "@/lib/teams/constants";
+import { footballSeasonCandidates } from "@/lib/players/season";
 import type {
   Fixture,
   FixtureEvent,
@@ -327,25 +339,79 @@ export async function searchTeams(
 export async function getPlayerById(
   id: number
 ): Promise<ServiceResult<Player | null>> {
-  if (isApiFootballIngestOnly()) {
-    const result = await cached({
-      key: providerPlayerKey(id),
-      freshTtlSeconds: CACHE_TTL.playerFresh,
-      staleTtlSeconds: CACHE_TTL.playerStale,
-      fn: () => readPlayerByProviderIdFromDb(id),
-    });
+  const fromDb = await readPlayerByProviderIdFromDb(id).catch(
+    (error: unknown) => {
+      console.warn("[player] DB lookup failed", error);
+      return null;
+    }
+  );
 
-    return toServiceResult(result);
+  if (fromDb) {
+    return {
+      data: fromDb,
+      meta: { cached: false, stale: false },
+    };
   }
 
-  const result = await cached({
-    key: providerPlayerKey(id),
-    freshTtlSeconds: CACHE_TTL.playerFresh,
-    staleTtlSeconds: CACHE_TTL.playerStale,
-    fn: () => getPlayerByIdEndpoint(id),
+  const cachedPlayer = await peekCachedValue<Player>(providerPlayerKey(id));
+  if (cachedPlayer) {
+    return {
+      data: cachedPlayer,
+      meta: { cached: true, stale: false },
+    };
+  }
+
+  const fromApi = await fetchPlayerFromProvider(id);
+
+  if (!fromApi) {
+    return {
+      data: null,
+      meta: { cached: false, stale: false },
+    };
+  }
+
+  await persistPlayerProfile(fromApi).catch((error: unknown) => {
+    console.warn("[player] failed to persist provider player", error);
   });
 
-  return toServiceResult(result);
+  await writeCachedValue(
+    providerPlayerKey(id),
+    fromApi,
+    CACHE_TTL.playerStale
+  ).catch(() => undefined);
+
+  const persisted = await readPlayerByProviderIdFromDb(id).catch(() => null);
+
+  return {
+    data: persisted ?? fromApi,
+    meta: { cached: false, stale: false },
+  };
+}
+
+async function fetchPlayerFromProvider(id: number): Promise<Player | null> {
+  const profile = await safeOptionalProviderFetch(
+    `player profile ${id}`,
+    () => getPlayerProfileByIdEndpoint(id),
+    null
+  );
+
+  if (profile) {
+    return profile;
+  }
+
+  for (const season of footballSeasonCandidates()) {
+    const player = await safeOptionalProviderFetch(
+      `player ${id}/${season}`,
+      () => getPlayerByIdEndpoint(id, season),
+      null
+    );
+
+    if (player) {
+      return player;
+    }
+  }
+
+  return null;
 }
 
 export function buildTeamFixturesWindow(now = new Date()): {
@@ -493,7 +559,38 @@ export async function getTeamSquad(
       ),
   });
 
+  if (result.value.length > 0) {
+    await persistSquadPlayers(teamProviderId, result.value);
+  }
+
   return toServiceResult(result);
+}
+
+async function persistSquadPlayers(
+  teamProviderId: number,
+  squad: SquadPlayer[]
+): Promise<void> {
+  const teamRef = {
+    externalId: teamProviderId,
+    name: "Unknown",
+    code: null,
+    logoUrl: null,
+    isNational: false,
+  };
+
+  await upsertSquadPlayers(teamProviderId, squad).catch((error: unknown) => {
+    console.warn("[team] failed to persist squad players", error);
+  });
+
+  await Promise.all(
+    squad.map((member) =>
+      writeCachedValue(
+        providerPlayerKey(member.externalId),
+        squadPlayerToDomainPlayer(member, teamRef),
+        CACHE_TTL.playerStale
+      ).catch(() => undefined)
+    )
+  );
 }
 
 export async function getTeamSeasonStatistics(

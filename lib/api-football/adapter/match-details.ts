@@ -136,6 +136,13 @@ export function mapFixturePlayerPerformance(
       assists: stat.goals.assists,
       yellowCards: stat.cards.yellow,
       redCards: stat.cards.red,
+      saves: stat.goals.saves,
+      shotsTotal: stat.shots.total,
+      shotsOnTarget: stat.shots.on,
+      passes: stat.passes.total,
+      keyPasses: stat.passes.key,
+      wasStarter: !stat.games.substitute,
+      wasCaptain: stat.games.captain,
     }))
   );
 }

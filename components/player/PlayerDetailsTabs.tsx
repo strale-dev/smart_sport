@@ -2,17 +2,42 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { SparklesIcon } from "lucide-react";
+
 import { ComingSoonCard } from "@/components/common/ComingSoonCard";
+import { PlayerCareerTab } from "@/components/player/PlayerCareerTab";
+import { PlayerMatchesTab } from "@/components/player/PlayerMatchesTab";
 import { PlayerOverviewFacts } from "@/components/player/PlayerOverviewFacts";
+import { PlayerStatisticsTab } from "@/components/player/PlayerStatisticsTab";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parsePlayerTab } from "@/lib/players/url";
-import type { Player } from "@/types/domain";
+import type {
+  Player,
+  PlayerCareerEntry,
+  PlayerMatchHistoryPage,
+  PlayerSeasonStatistics,
+} from "@/types/domain";
 
 type PlayerDetailsTabsProps = {
   player: Player;
+  seasonStats: PlayerSeasonStatistics | null;
+  matchHistory: PlayerMatchHistoryPage;
+  career: PlayerCareerEntry[];
 };
 
-export function PlayerDetailsTabs({ player }: PlayerDetailsTabsProps) {
+export function PlayerDetailsTabs({
+  player,
+  seasonStats,
+  matchHistory,
+  career,
+}: PlayerDetailsTabsProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -27,6 +52,10 @@ export function PlayerDetailsTabs({ player }: PlayerDetailsTabsProps) {
       next.set("tab", value);
     }
 
+    if (value !== "matches") {
+      next.delete("page");
+    }
+
     const query = next.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, {
       scroll: false,
@@ -37,7 +66,7 @@ export function PlayerDetailsTabs({ player }: PlayerDetailsTabsProps) {
     <Tabs
       value={activeTab}
       onValueChange={handleTabChange}
-      className="w-full gap-4"
+      className="w-full gap-5"
     >
       <TabsList
         variant="line"
@@ -46,10 +75,12 @@ export function PlayerDetailsTabs({ player }: PlayerDetailsTabsProps) {
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="matches">Matches</TabsTrigger>
         <TabsTrigger value="statistics">Statistics</TabsTrigger>
+        <TabsTrigger value="career">Career</TabsTrigger>
+        <TabsTrigger value="ai">AI Insight</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-4">
-        <PlayerOverviewFacts player={player} />
+        <PlayerOverviewFacts player={player} seasonStats={seasonStats} />
         <ComingSoonCard
           title="Attribute overview"
           description="Position-aware attributes will appear here in a later update."
@@ -57,18 +88,48 @@ export function PlayerDetailsTabs({ player }: PlayerDetailsTabsProps) {
       </TabsContent>
 
       <TabsContent value="matches">
-        <ComingSoonCard
-          title="Matches"
-          description="Appearances with goals, assists, cards, and minutes will appear here."
-        />
+        <PlayerMatchesTab playerId={player.externalId} history={matchHistory} />
       </TabsContent>
 
       <TabsContent value="statistics">
-        <ComingSoonCard
-          title="Statistics"
-          description="Season and career totals will appear here."
+        <PlayerStatisticsTab
+          leagueName={seasonStats?.leagueName ?? "League"}
+          seasonYear={seasonStats?.seasonYear ?? null}
+          position={player.position}
+          stats={seasonStats}
         />
       </TabsContent>
+
+      <TabsContent value="career">
+        <PlayerCareerTab career={career} />
+      </TabsContent>
+
+      <TabsContent value="ai">
+        <PlayerAIInsightPanel />
+      </TabsContent>
     </Tabs>
+  );
+}
+
+function PlayerAIInsightPanel() {
+  return (
+    <Card className="border-primary/20 bg-card/70 ring-primary/10 min-h-[min(28vh,14rem)] w-full ring-1">
+      <CardHeader className="gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <SparklesIcon
+            aria-hidden="true"
+            className="text-primary size-4 shrink-0"
+          />
+          <CardTitle className="font-heading text-lg">
+            AI playing profile
+          </CardTitle>
+          <Badge variant="outline">Coming soon</Badge>
+        </div>
+        <CardDescription className="max-w-lg">
+          AI summaries of current form, role, and playing style will appear here
+          once the AI engine launches in a future update.
+        </CardDescription>
+      </CardHeader>
+    </Card>
   );
 }

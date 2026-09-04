@@ -47,6 +47,17 @@ export async function listLiveFixtures(): Promise<Fixture[]> {
   return response.map(mapFixture);
 }
 
+export async function listFixturesByPlayer(
+  playerId: number,
+  season: number
+): Promise<Fixture[]> {
+  const response = await apiFootballFetchResponse<RawApiFootballFixture>(
+    "/fixtures",
+    { player: playerId, season }
+  );
+  return response.map(mapFixture);
+}
+
 export async function getFixtureEvents(
   fixtureId: number
 ): Promise<FixtureEvent[]> {

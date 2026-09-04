@@ -1,6 +1,7 @@
 import {
   getFixtureEvents as getFixtureEventsEndpoint,
   getFixtureLineups as getFixtureLineupsEndpoint,
+  getFixturePlayers as getFixturePlayersEndpoint,
   getFixtureStatistics as getFixtureStatisticsEndpoint,
 } from "@/lib/api-football/endpoints/fixtures";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
@@ -9,11 +10,13 @@ import {
   upsertFixtureEvents,
   upsertFixtureStatistics,
   upsertLineups,
+  upsertPlayerMatchPerformances,
 } from "@/lib/ingestion/match-details-upsert";
 import { getRedis } from "@/lib/redis/client";
 import {
   providerFixtureEventsKey,
   providerFixtureLineupsKey,
+  providerFixturePlayersKey,
   providerFixtureStatsKey,
 } from "@/lib/redis/keys";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -25,6 +28,7 @@ export type IngestMatchDetailsResult = {
     events: number;
     statistics: number;
     lineups: number;
+    playerPerformances: number;
     apiRequests: number;
   };
   reason?: string;
@@ -40,7 +44,13 @@ export async function ingestMatchDetailsFromProvider(
     return {
       ok: false,
       fixtureProviderId,
-      stats: { events: 0, statistics: 0, lineups: 0, apiRequests: 0 },
+      stats: {
+        events: 0,
+        statistics: 0,
+        lineups: 0,
+        playerPerformances: 0,
+        apiRequests: 0,
+      },
       reason: "Fixture not found in Postgres",
     };
   }
@@ -59,6 +69,10 @@ export async function ingestMatchDetailsFromProvider(
   const lineups = await getFixtureLineupsEndpoint(fixtureProviderId);
   apiRequests += 1;
 
+  await throttleProviderRequest();
+  const playerPerformances = await getFixturePlayersEndpoint(fixtureProviderId);
+  apiRequests += 1;
+
   const eventsCount = await upsertFixtureEvents(client, fixtureId, events);
   const statisticsCount = await upsertFixtureStatistics(
     client,
@@ -66,6 +80,11 @@ export async function ingestMatchDetailsFromProvider(
     statistics
   );
   const lineupsCount = await upsertLineups(client, fixtureId, lineups);
+  const playerPerformancesCount = await upsertPlayerMatchPerformances(
+    client,
+    fixtureId,
+    playerPerformances
+  );
 
   const syncedAt = new Date().toISOString();
   const redis = getRedis();
@@ -87,6 +106,11 @@ export async function ingestMatchDetailsFromProvider(
         { value: lineups, cachedAt: syncedAt },
         { ex: 86_400 }
       ),
+      redis.set(
+        providerFixturePlayersKey(fixtureProviderId),
+        { value: playerPerformances, cachedAt: syncedAt },
+        { ex: 86_400 }
+      ),
     ]);
   }
 
@@ -97,6 +121,7 @@ export async function ingestMatchDetailsFromProvider(
       events: eventsCount,
       statistics: statisticsCount,
       lineups: lineupsCount,
+      playerPerformances: playerPerformancesCount,
       apiRequests,
     },
   };

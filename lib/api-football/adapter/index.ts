@@ -13,6 +13,11 @@ export {
 } from "@/lib/api-football/adapter/match-details";
 export {
   mapPlayer,
+  mapPlayerCareerFromSeasonStatistics,
+  mapPlayerCareerFromTransfers,
+  mapPlayerProfile,
+  mapPlayerSeasonStatistics,
+  mapPlayerSeasonStatisticsEntry,
   mapSearchPlayer,
   mapSearchTeam,
   mapSquadPlayer,

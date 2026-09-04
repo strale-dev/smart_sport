@@ -247,6 +247,27 @@ export async function cached<T>(
   return populateCache(options);
 }
 
+export async function writeCachedValue<T>(
+  key: string,
+  value: T,
+  staleTtlSeconds: number
+): Promise<void> {
+  await writeEnvelope(
+    key,
+    { value, cachedAt: new Date().toISOString() },
+    staleTtlSeconds
+  );
+}
+
+export async function peekCachedValue<T>(key: string): Promise<T | undefined> {
+  const envelope = await readEnvelope<T>(key);
+  if (!envelope || envelope.value == null) {
+    return undefined;
+  }
+
+  return envelope.value;
+}
+
 export function resetCacheForTests(): void {
   memoryStore.clear();
   memoryExpiresAt.clear();

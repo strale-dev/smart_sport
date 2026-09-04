@@ -8,6 +8,9 @@ import {
   mapLeagueDetail,
   mapLineup,
   mapPlayer,
+  mapPlayerCareerFromTransfers,
+  mapPlayerProfile,
+  mapPlayerSeasonStatistics,
   mapSearchPlayer,
   mapSearchTeam,
   mapSquadPlayer,
@@ -24,7 +27,9 @@ import type {
   RawApiFootballLeagueDetail,
   RawApiFootballLineup,
   RawApiFootballPlayer,
+  RawApiFootballPlayerProfile,
   RawApiFootballSearchPlayer,
+  RawApiFootballTransfers,
   RawApiFootballSquad,
   RawApiFootballStandingsGroup,
   RawApiFootballTeamDetail,
@@ -151,6 +156,59 @@ describe("mapTeam and mapPlayer", () => {
     expect(player.heightCm).toBe(179);
     expect(player.position).toBe("MF");
     expect(player.currentTeam?.externalId).toBe(33);
+    expect(player.shirtNumber).toBe(8);
+    expect(player.averageRating).toBe(8.1);
+  });
+
+  it("maps player profile payloads without season stats", () => {
+    const player = mapPlayerProfile({
+      player: {
+        id: 276,
+        name: "N. Kanté",
+        firstname: "N'Golo",
+        lastname: "Kanté",
+        age: 33,
+        birth: {
+          date: "1991-03-29",
+          place: "Paris",
+          country: "France",
+        },
+        nationality: "France",
+        height: "168 cm",
+        weight: "70 kg",
+        injured: false,
+        photo: "https://example.com/kante.png",
+        number: 13,
+        position: "Midfielder",
+      },
+    } satisfies RawApiFootballPlayerProfile);
+
+    expect(player.fullName).toBe("N. Kanté");
+    expect(player.position).toBe("MF");
+    expect(player.shirtNumber).toBe(13);
+    expect(player.heightCm).toBe(168);
+  });
+
+  it("maps player season statistics", () => {
+    const envelope =
+      loadApiFootballFixture<RawApiFootballPlayer[]>("player-by-id.json");
+    const stats = mapPlayerSeasonStatistics(envelope.response[0]!);
+
+    expect(stats).toHaveLength(1);
+    expect(stats[0]?.leagueExternalId).toBe(39);
+    expect(stats[0]?.appearances).toBe(1);
+    expect(stats[0]?.averageRating).toBe(8.1);
+  });
+
+  it("maps player transfer history", () => {
+    const envelope = loadApiFootballFixture<RawApiFootballTransfers[]>(
+      "player-transfers.json"
+    );
+    const career = mapPlayerCareerFromTransfers(envelope.response[0]!);
+
+    expect(
+      career.map((entry) => entry.team.externalId).sort((a, b) => a - b)
+    ).toEqual([33, 211]);
   });
 
   it("maps search player payloads", () => {

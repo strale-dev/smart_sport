@@ -6,6 +6,7 @@ export {
   getFixturePlayers,
   getFixtureStatistics,
   listFixturesByDate,
+  listFixturesByPlayer,
   listLiveFixtures,
 } from "@/lib/api-football/endpoints/fixtures";
 export {
@@ -18,6 +19,9 @@ export {
 export {
   getPlayerById,
   getPlayerByIdWithRaw,
+  getPlayerProfileById,
+  getPlayerSeasonStatisticsFromApi,
+  getPlayerTransfers,
   getTeamSquad,
   searchPlayers,
 } from "@/lib/api-football/endpoints/players";

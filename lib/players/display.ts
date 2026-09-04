@@ -57,3 +57,33 @@ export function ageFromDateOfBirth(
 
   return age >= 0 && age < 80 ? age : null;
 }
+
+export function formatMarketValue(
+  marketValue: { amount: number; currency: string } | null
+): string | null {
+  if (!marketValue) {
+    return null;
+  }
+
+  const { amount, currency } = marketValue;
+
+  if (amount >= 1_000_000) {
+    const millions = amount / 1_000_000;
+    const formatted =
+      millions >= 10
+        ? Math.round(millions).toString()
+        : millions.toFixed(1).replace(/\.0$/, "");
+    return `${formatted}M ${currency}`;
+  }
+
+  if (amount >= 1_000) {
+    const thousands = amount / 1_000;
+    const formatted =
+      thousands >= 100
+        ? Math.round(thousands).toString()
+        : thousands.toFixed(1).replace(/\.0$/, "");
+    return `${formatted}K ${currency}`;
+  }
+
+  return `${amount.toLocaleString()} ${currency}`;
+}

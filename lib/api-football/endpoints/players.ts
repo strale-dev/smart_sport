@@ -1,23 +1,46 @@
 import {
   mapPlayer,
+  mapPlayerCareerFromTransfers,
+  mapPlayerProfile,
+  mapPlayerSeasonStatistics,
   mapSearchPlayer,
   mapTeamSquad,
 } from "@/lib/api-football/adapter";
 import { apiFootballFetchResponse } from "@/lib/api-football/client";
+import { currentFootballSeasonYear } from "@/lib/players/season";
 import type {
   RawApiFootballPlayer,
+  RawApiFootballPlayerProfile,
   RawApiFootballSearchPlayer,
   RawApiFootballSquad,
+  RawApiFootballTransfers,
 } from "@/lib/api-football/types";
-import type { Player, SquadPlayer } from "@/types/domain";
+import type {
+  Player,
+  PlayerCareerEntry,
+  PlayerSeasonStatistics,
+  SquadPlayer,
+} from "@/types/domain";
 
-export async function getPlayerById(id: number): Promise<Player | null> {
+export async function getPlayerById(
+  id: number,
+  season = currentFootballSeasonYear()
+): Promise<Player | null> {
   const response = await apiFootballFetchResponse<RawApiFootballPlayer>(
     "/players",
-    { id, season: new Date().getFullYear() }
+    { id, season }
   );
   const raw = response[0];
   return raw ? mapPlayer(raw) : null;
+}
+
+export async function getPlayerProfileById(id: number): Promise<Player | null> {
+  const response = await apiFootballFetchResponse<RawApiFootballPlayerProfile>(
+    "/players/profiles",
+    { player: id }
+  );
+  const raw = response[0];
+  return raw ? mapPlayerProfile(raw) : null;
 }
 
 export async function searchPlayers(query: string): Promise<Player[]> {
@@ -28,13 +51,39 @@ export async function searchPlayers(query: string): Promise<Player[]> {
   return response.map(mapSearchPlayer);
 }
 
-export async function getPlayerByIdWithRaw(id: number) {
+export async function getPlayerByIdWithRaw(
+  id: number,
+  season = currentFootballSeasonYear()
+) {
   const response = await apiFootballFetchResponse<RawApiFootballPlayer>(
     "/players",
-    { id, season: new Date().getFullYear() }
+    { id, season }
   );
   const raw = response[0];
   return raw ? { raw, domain: mapPlayer(raw) } : null;
+}
+
+export async function getPlayerSeasonStatisticsFromApi(
+  id: number,
+  season = currentFootballSeasonYear()
+): Promise<PlayerSeasonStatistics[]> {
+  const response = await apiFootballFetchResponse<RawApiFootballPlayer>(
+    "/players",
+    { id, season }
+  );
+  const raw = response[0];
+  return raw ? mapPlayerSeasonStatistics(raw) : [];
+}
+
+export async function getPlayerTransfers(
+  id: number
+): Promise<PlayerCareerEntry[]> {
+  const response = await apiFootballFetchResponse<RawApiFootballTransfers>(
+    "/transfers",
+    { player: id }
+  );
+  const raw = response[0];
+  return raw ? mapPlayerCareerFromTransfers(raw) : [];
 }
 
 export async function getTeamSquad(teamId: number): Promise<SquadPlayer[]> {

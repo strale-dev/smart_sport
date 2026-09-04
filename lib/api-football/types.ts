@@ -247,6 +247,24 @@ export type RawApiFootballFixturePlayer = {
   }>;
 };
 
+export type RawApiFootballPlayerStatisticsEntry = Omit<
+  RawApiFootballFixturePlayerStat,
+  "games"
+> & {
+  team: {
+    id: number;
+    name: string;
+    logo: string | null;
+  };
+  league: RawApiFootballLeague & {
+    season: number;
+  };
+  games: RawApiFootballFixturePlayerStat["games"] & {
+    appearences?: number | null;
+    lineups?: number | null;
+  };
+};
+
 export type RawApiFootballPlayer = {
   player: {
     id: number;
@@ -265,25 +283,31 @@ export type RawApiFootballPlayer = {
     injured: boolean;
     photo: string | null;
   };
-  statistics: Array<{
-    team: {
-      id: number;
-      name: string;
-      logo: string | null;
-    };
-    league: RawApiFootballLeague & {
-      season: number;
-    };
-    games: {
-      appearences: number | null;
-      lineups: number | null;
-      minutes: number | null;
-      number: number | null;
-      position: string | null;
-      rating: string | null;
-      captain: boolean;
-    };
-  }>;
+  statistics: RawApiFootballPlayerStatisticsEntry[];
+};
+
+export type RawApiFootballTransferTeam = {
+  id: number;
+  name: string;
+  logo: string | null;
+};
+
+export type RawApiFootballTransferEntry = {
+  date: string;
+  type: string | null;
+  teams: {
+    in: RawApiFootballTransferTeam;
+    out: RawApiFootballTransferTeam;
+  };
+};
+
+export type RawApiFootballTransfers = {
+  player: {
+    id: number;
+    name: string;
+  };
+  update: string;
+  transfers: RawApiFootballTransferEntry[];
 };
 
 export type RawApiFootballStandingTeam = {
@@ -338,6 +362,13 @@ export type RawApiFootballSearchTeam = RawApiFootballTeamDetail;
 
 export type RawApiFootballSearchPlayer = {
   player: RawApiFootballPlayer["player"];
+};
+
+export type RawApiFootballPlayerProfile = {
+  player: RawApiFootballPlayer["player"] & {
+    number?: number | null;
+    position?: string | null;
+  };
 };
 
 export type RawApiFootballTeamSeasonStatBucket = {

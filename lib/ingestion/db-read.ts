@@ -1,4 +1,5 @@
 import { getIngestionConfig } from "@/lib/ingestion/config";
+import { buildPlayerContributionBadges } from "@/lib/players/badges";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   Fixture,
@@ -8,7 +9,9 @@ import type {
   Lineup,
   LineupPlayer,
   Player,
+  PlayerCareerEntry,
   PlayerFoot,
+  PlayerMatchAppearance,
   PlayerPosition,
   Season,
   StandingsGroup,
@@ -528,16 +531,8 @@ export async function readPlayerByProviderIdFromDb(
       position,
       preferred_foot,
       photo_url,
-      player_team_history (
-        left_on,
-        team:teams (
-          provider_id,
-          name,
-          code,
-          logo_url,
-          is_national
-        )
-      )
+      market_value_amount,
+      market_value_currency
     `
     )
     .eq("provider_id", providerId)
@@ -551,17 +546,7 @@ export async function readPlayerByProviderIdFromDb(
     return null;
   }
 
-  const history = Array.isArray(data.player_team_history)
-    ? data.player_team_history
-    : data.player_team_history
-      ? [data.player_team_history]
-      : [];
-  const currentRow = history.find((row) => row.left_on == null);
-  const currentTeam = currentRow?.team
-    ? Array.isArray(currentRow.team)
-      ? currentRow.team[0]
-      : currentRow.team
-    : null;
+  const history = await readCurrentClubForPlayer(client, data.provider_id);
 
   return {
     externalId: data.provider_id,
@@ -575,16 +560,436 @@ export async function readPlayerByProviderIdFromDb(
     position: mapPlayerPosition(data.position),
     preferredFoot: mapPlayerFoot(data.preferred_foot),
     photoUrl: data.photo_url,
-    currentTeam: currentTeam
-      ? {
-          externalId: currentTeam.provider_id,
-          name: currentTeam.name,
-          code: currentTeam.code,
-          logoUrl: currentTeam.logo_url,
-          isNational: currentTeam.is_national,
-        }
-      : null,
+    currentTeam: history?.team ?? null,
+    shirtNumber: history?.shirtNumber ?? null,
+    marketValue:
+      data.market_value_amount != null && data.market_value_currency
+        ? {
+            amount: Number(data.market_value_amount),
+            currency: data.market_value_currency,
+          }
+        : null,
+    averageRating: null,
   };
+}
+
+async function readCurrentClubForPlayer(
+  client: ReturnType<typeof createAdminClient>,
+  playerProviderId: number
+): Promise<{ team: TeamRef; shirtNumber: number | null } | null> {
+  const { data: playerRow, error: playerError } = await client
+    .from("players")
+    .select("id")
+    .eq("provider_id", playerProviderId)
+    .maybeSingle();
+
+  if (playerError || !playerRow?.id) {
+    return null;
+  }
+
+  const { data, error } = await client
+    .from("player_team_history")
+    .select(
+      `
+      shirt_number,
+      team:teams!player_team_history_team_id_fkey (
+        provider_id,
+        name,
+        code,
+        logo_url,
+        is_national
+      )
+    `
+    )
+    .eq("player_id", playerRow.id)
+    .is("left_on", null)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  const teamRow = Array.isArray(data.team) ? data.team[0] : data.team;
+  if (!teamRow) {
+    return null;
+  }
+
+  return {
+    team: mapTeamRefFromRow(teamRow),
+    shirtNumber: data.shirt_number,
+  };
+}
+
+export async function readPlayerIdByProviderIdFromDb(
+  providerId: number
+): Promise<string | null> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("players")
+    .select("id")
+    .eq("provider_id", providerId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Failed to resolve player uuid ${providerId}: ${error.message}`
+    );
+  }
+
+  return data?.id ?? null;
+}
+
+type PlayerMatchPerformanceRow = {
+  minutes: number | null;
+  rating: number | null;
+  goals: number | null;
+  assists: number | null;
+  yellow_cards: number | null;
+  red_cards: number | null;
+  is_motm: boolean | null;
+  team: {
+    provider_id: number;
+    name: string;
+    code: string | null;
+    logo_url: string | null;
+    is_national: boolean;
+  } | null;
+  fixture: {
+    provider_id: number;
+    kickoff_at: string;
+    status: Fixture["status"];
+    score_home: number | null;
+    score_away: number | null;
+    home_team: FixtureRow["home_team"];
+    away_team: FixtureRow["away_team"];
+    league: FixtureRow["league"];
+  } | null;
+};
+
+const FINISHED_MATCH_STATUSES = new Set<Fixture["status"]>([
+  "FT",
+  "AET",
+  "PEN",
+  "AWD",
+  "WO",
+]);
+
+export async function readPlayerMatchHistoryFromDb(
+  providerId: number,
+  options: { limit: number; offset: number }
+): Promise<{ items: PlayerMatchAppearance[]; total: number }> {
+  const playerId = await readPlayerIdByProviderIdFromDb(providerId);
+
+  if (!playerId) {
+    return { items: [], total: 0 };
+  }
+
+  const client = createAdminClient();
+  const { data: countRows, error: countError } = await client
+    .from("player_match_performances")
+    .select(
+      `
+      id,
+      fixture:fixtures!inner (status)
+    `
+    )
+    .eq("player_id", playerId)
+    .in("fixture.status", [...FINISHED_MATCH_STATUSES]);
+
+  if (countError) {
+    throw new Error(
+      `Failed to count player match history ${providerId}: ${countError.message}`
+    );
+  }
+
+  const total = countRows?.length ?? 0;
+
+  const { data, error } = await client
+    .from("player_match_performances")
+    .select(
+      `
+      minutes,
+      rating,
+      goals,
+      assists,
+      yellow_cards,
+      red_cards,
+      is_motm,
+      team:teams!player_match_performances_team_id_fkey (
+        provider_id,
+        name,
+        code,
+        logo_url,
+        is_national
+      ),
+      fixture:fixtures!inner (
+        provider_id,
+        kickoff_at,
+        status,
+        score_home,
+        score_away,
+        home_team:teams!fixtures_home_team_id_fkey (
+          provider_id,
+          name,
+          code,
+          logo_url,
+          is_national
+        ),
+        away_team:teams!fixtures_away_team_id_fkey (
+          provider_id,
+          name,
+          code,
+          logo_url,
+          is_national
+        ),
+        league:leagues!fixtures_league_id_fkey (
+          name,
+          logo_url
+        )
+      )
+    `
+    )
+    .eq("player_id", playerId)
+    .in("fixture.status", [...FINISHED_MATCH_STATUSES])
+    .order("kickoff_at", {
+      referencedTable: "fixtures",
+      ascending: false,
+    })
+    .range(options.offset, options.offset + options.limit - 1);
+
+  if (error) {
+    throw new Error(
+      `Failed to read player match history ${providerId}: ${error.message}`
+    );
+  }
+
+  const rows = (data ?? []) as PlayerMatchPerformanceRow[];
+  const fixtureIds = rows
+    .map((row) => row.fixture?.provider_id)
+    .filter((value): value is number => value != null);
+  const eventsByFixture = await readFixtureEventsForPlayerFromDb(
+    fixtureIds,
+    providerId
+  );
+  const player = await readPlayerByProviderIdFromDb(providerId);
+
+  const items = rows.flatMap((row) => {
+    if (!row.fixture || !row.team) {
+      return [];
+    }
+
+    const homeTeam = mapTeamRefFromRow(row.fixture.home_team);
+    const awayTeam = mapTeamRefFromRow(row.fixture.away_team);
+    const team = mapTeamRefFromRow(row.team);
+    const isHome = team.externalId === homeTeam.externalId;
+    const opponent = isHome ? awayTeam : homeTeam;
+    const goalsAgainst = isHome
+      ? (row.fixture.score_away ?? 0)
+      : (row.fixture.score_home ?? 0);
+    const cleanSheet =
+      (player?.position === "GK" || player?.position === "DF") &&
+      goalsAgainst === 0 &&
+      (row.minutes ?? 0) > 0;
+
+    const events = eventsByFixture.get(row.fixture.provider_id) ?? [];
+    const goals = row.goals ?? 0;
+    const assists = row.assists ?? 0;
+    const yellowCards = row.yellow_cards ?? 0;
+    const redCards = row.red_cards ?? 0;
+
+    return [
+      {
+        fixtureExternalId: row.fixture.provider_id,
+        kickoffAt: row.fixture.kickoff_at,
+        leagueName: row.fixture.league?.name ?? "Unknown",
+        leagueLogoUrl: row.fixture.league?.logo_url ?? null,
+        homeTeam,
+        awayTeam,
+        homeScore: row.fixture.score_home,
+        awayScore: row.fixture.score_away,
+        status: row.fixture.status,
+        teamExternalId: team.externalId,
+        opponent,
+        isHome,
+        minutes: row.minutes,
+        rating: row.rating != null ? Number(row.rating) : null,
+        goals,
+        assists,
+        yellowCards,
+        redCards,
+        cleanSheet,
+        isMotm: row.is_motm ?? false,
+        badges: buildPlayerContributionBadges({
+          goals,
+          assists,
+          yellowCards,
+          redCards,
+          cleanSheet,
+          isMotm: row.is_motm ?? false,
+          events,
+          playerExternalId: providerId,
+          position: player?.position ?? null,
+        }),
+      } satisfies PlayerMatchAppearance,
+    ];
+  });
+
+  return {
+    items,
+    total,
+  };
+}
+
+async function readFixtureEventsForPlayerFromDb(
+  fixtureProviderIds: number[],
+  playerProviderId: number
+): Promise<Map<number, FixtureEvent[]>> {
+  if (fixtureProviderIds.length === 0) {
+    return new Map();
+  }
+
+  const client = createAdminClient();
+  const { data: fixtures, error: fixtureError } = await client
+    .from("fixtures")
+    .select("id, provider_id")
+    .in("provider_id", fixtureProviderIds);
+
+  if (fixtureError) {
+    throw new Error(
+      `Failed to resolve fixtures for player events: ${fixtureError.message}`
+    );
+  }
+
+  const fixtureUuidByProviderId = new Map(
+    (fixtures ?? []).map((fixture) => [fixture.provider_id, fixture.id])
+  );
+  const fixtureUuids = [...fixtureUuidByProviderId.values()];
+
+  if (fixtureUuids.length === 0) {
+    return new Map();
+  }
+
+  const { data: playerRow } = await client
+    .from("players")
+    .select("id")
+    .eq("provider_id", playerProviderId)
+    .maybeSingle();
+
+  const playerUuid = playerRow?.id ?? null;
+
+  const { data, error } = await client
+    .from("fixture_events")
+    .select(
+      `
+      minute,
+      extra_minute,
+      type,
+      detail,
+      comments,
+      provider_event_id,
+      player:players!fixture_events_player_id_fkey (provider_id),
+      assist_player:players!fixture_events_assist_player_id_fkey (provider_id),
+      team:teams!fixture_events_team_id_fkey (provider_id),
+      fixture:fixtures!inner (provider_id)
+    `
+    )
+    .in("fixture_id", fixtureUuids);
+
+  if (error) {
+    throw new Error(
+      `Failed to read fixture events for player: ${error.message}`
+    );
+  }
+
+  const grouped = new Map<number, FixtureEvent[]>();
+
+  for (const row of data ?? []) {
+    const fixtureProviderId = row.fixture?.provider_id;
+    if (fixtureProviderId == null) {
+      continue;
+    }
+
+    const playerExternalId = row.player?.provider_id ?? null;
+    const assistPlayerExternalId = row.assist_player?.provider_id ?? null;
+
+    if (
+      playerExternalId !== playerProviderId &&
+      assistPlayerExternalId !== playerProviderId
+    ) {
+      continue;
+    }
+
+    const event: FixtureEvent = {
+      externalEventId: row.provider_event_id,
+      minute: row.minute ?? 0,
+      extraMinute: row.extra_minute,
+      teamExternalId: row.team?.provider_id ?? null,
+      playerExternalId,
+      assistPlayerExternalId,
+      type: row.type,
+      detail: row.detail,
+      comments: row.comments,
+    };
+
+    const existing = grouped.get(fixtureProviderId) ?? [];
+    existing.push(event);
+    grouped.set(fixtureProviderId, existing);
+  }
+
+  void playerUuid;
+  return grouped;
+}
+
+export async function readPlayerCareerFromDb(
+  providerId: number
+): Promise<PlayerCareerEntry[]> {
+  const playerId = await readPlayerIdByProviderIdFromDb(providerId);
+
+  if (!playerId) {
+    return [];
+  }
+
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("player_team_history")
+    .select(
+      `
+      joined_on,
+      left_on,
+      team:teams!player_team_history_team_id_fkey (
+        provider_id,
+        name,
+        code,
+        logo_url,
+        is_national
+      )
+    `
+    )
+    .eq("player_id", playerId)
+    .order("joined_on", { ascending: false, nullsFirst: false });
+
+  if (error) {
+    throw new Error(
+      `Failed to read player career ${providerId}: ${error.message}`
+    );
+  }
+
+  return (data ?? []).flatMap((row) => {
+    const teamRow = Array.isArray(row.team) ? row.team[0] : row.team;
+    if (!teamRow) {
+      return [];
+    }
+
+    return [
+      {
+        team: mapTeamRefFromRow(teamRow),
+        fromDate: row.joined_on,
+        toDate: row.left_on,
+        transferType: null,
+        entryType: "inferred" as const,
+      },
+    ];
+  });
 }
 
 export async function readLeagueDetailFromDb(providerId: number): Promise<{
