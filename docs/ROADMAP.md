@@ -273,7 +273,7 @@ The authenticated app shell exists. Users can sign up (email + Google), navigate
 - [x] `/fixtures` — upcoming window (7 days), league tabs, day grouping, scroll-to-now anchor.
 - [x] `readFixturesInRangeFromDb` + cached range key (`provider:fixtures:range:{from}:{to}`, UTC day boundaries).
 - [x] LIVE badge on league tabs; live scores use `text-live` in `MatchRow`.
-- [x] **Verify against staging/prod-like data** (not local ±1 day dev sync): multi-day grouping, scroll anchor, empty states, mobile tab scroll. _(Verified via `phase2:fixtures-smoke` — 2 day groups, anchor ids; mobile tab scroll still needs device QA.)_
+- [x] **Verify against staging/prod-like data** (not local ±1 day dev sync): multi-day grouping, scroll anchor, empty states, mobile tab scroll. _(Verified via_ `phase2:fixtures-smoke` _— 2 day groups, anchor ids; mobile tab scroll still needs device QA.)_
 
 **Favorites feed v1 (read-only)**
 
@@ -317,9 +317,9 @@ Run automated gates first: `npm.cmd run phase2:check`. Then complete the manual 
 
 #### Manual QA (test-in-hand)
 
-- [x] **Anon real match page** — Incognito → accept analytics cookies → open `/matches/{validFixtureId}` → header shows real teams/score/status; AI tab renders `AIHeroLockedCard` (no fake stats). _(SSR verified: `/matches/1552754` → Toulouse vs Lille.)_
+- [x] **Anon real match page** — Incognito → accept analytics cookies → open `/matches/{validFixtureId}` → header shows real teams/score/status; AI tab renders `AIHeroLockedCard` (no fake stats). _(SSR verified:_ `/matches/1552754` _→ Toulouse vs Lille.)_
 - [ ] **Signed-in + user menu** — Email signup or login → same match page → `AccountMenu` in top nav; `/dashboard` accessible. _(Auth routes + forms wired; needs one signed-in browser pass.)_
-- [x] **Dashboard from Postgres** — Signed in → `/dashboard` → Featured, Live, and Important sections show `MatchRow` data (not placeholders); cross-check with a Supabase `fixtures` query. _(Verified via `phase2:dashboard-smoke` + 2 fixtures UTC today.)_
+- [x] **Dashboard from Postgres** — Signed in → `/dashboard` → Featured, Live, and Important sections show `MatchRow` data (not placeholders); cross-check with a Supabase `fixtures` query. _(Verified via_ `phase2:dashboard-smoke` _+ 2 fixtures UTC today.)_
 - [ ] **Mobile 375px** — Chrome DevTools iPhone SE → `/fixtures`, `/live`, `/matches/...`, auth pages — no horizontal page scroll; bottom nav tappable. _(Founder device QA — ~5 min.)_
 - [ ] **PostHog events** — With analytics consent → trigger signup, login, match view → confirm `signup_completed`, `login_completed`, `match_viewed` in PostHog Live Events. _(Capture wired + AuthAnalytics consent fix; confirm in PostHog dashboard.)_
 - [x] **Fixtures staging QA** — After `sync:fixtures` (7-day window) → multi-day grouping, league tabs, scroll-to-today anchor (fixture or day section), empty states, mobile tab scroll. _(Automated smoke + guest routes 200; mobile tab scroll pending device QA.)_
@@ -348,30 +348,30 @@ Match Details is fully populated: stats, timeline, lineups, form, H2H. Analytics
 
 **Match Details cards**
 
-- [ ] `MatchHeader` — teams, score, minute/status, venue, competition.
-- [ ] `LiveStatsCard` — shots, possession, xG, cards.
-- [ ] `TimelineCard` — event stream with icons per event type.
-- [ ] `LineupsCard` — pitch view (SVG) with grid positions; substitutes below; unavailable → "Predicted lineup" or "Lineups not confirmed yet".
-- [ ] `FormCard` — last 5/10 W/D/L with drill-down.
-- [ ] `H2HCard` — toggle for "All comps" vs "Same league".
-- [ ] `TeamComparisonCard` — bar chart via `recharts` comparing key stats.
-- [ ] `PlayersToWatchCard` — placeholder for player impact (real logic in Phase 4).
+- [x] `MatchHeader` — teams, score, minute/status, venue, competition.
+- [x] `LiveStatsCard` — shots, possession, xG, cards.
+- [x] `TimelineCard` — event stream with icons per event type.
+- [x] `LineupsCard` — pitch view (SVG) with grid positions; substitutes below; unavailable → "Predicted lineup" or "Lineups not confirmed yet".
+- [x] `FormCard` — last 5/10 W/D/L with drill-down.
+- [x] `H2HCard` — toggle for "All comps" vs "Same league".
+- [x] `TeamComparisonCard` — bar chart via `recharts` comparing key stats.
+- [x] `PlayersToWatchCard` — placeholder for player impact (real logic in Phase 4).
 
 **Analytics service**
 
-- [ ] `analyticsService.getRecentForm(teamId, {matches, scope})`.
-- [ ] `analyticsService.getH2H(teamAId, teamBId, {windowSize, scope, leagueId})`.
-- [ ] `form_snapshots` and `h2h_summaries` populated by:
+- [x] `analyticsService.getRecentForm(teamId, {matches, scope})`.
+- [x] `analyticsService.getH2H(teamAId, teamBId, {windowSize, scope, leagueId})`.
+- [x] `form_snapshots` and `h2h_summaries` populated by:
   - On-demand computation with cache fallthrough.
   - Nightly cron refresh (`app/api/cron/refresh-analytics/route.ts`).
 
 **Team profile**
 
-- [ ] Details tab (venue, country, current form).
-- [ ] Matches tab (upcoming + past).
-- [ ] Standings tab.
-- [ ] Squad tab.
-- [ ] Statistics tab.
+- [x] Details tab (venue, country, current form).
+- [x] Matches tab (upcoming + past).
+- [x] Standings tab.
+- [x] Squad tab.
+- [x] Statistics tab.
 
 **Player profile**
 

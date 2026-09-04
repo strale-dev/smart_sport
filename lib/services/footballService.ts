@@ -18,9 +18,12 @@ import {
 } from "@/lib/api-football/endpoints/players";
 import {
   getTeamById as getTeamByIdEndpoint,
+  getTeamSeasonStatistics as getTeamSeasonStatisticsEndpoint,
   searchTeams as searchTeamsEndpoint,
 } from "@/lib/api-football/endpoints/teams";
+import { getTeamSquad as getTeamSquadEndpoint } from "@/lib/api-football/endpoints/players";
 import { isApiFootballIngestOnly } from "@/lib/env";
+import { safeOptionalProviderFetch } from "@/lib/api-football/safe-call";
 import { addUtcDays, utcDateString } from "@/lib/fixtures/window";
 import {
   readFixtureByProviderIdFromDb,
@@ -58,6 +61,8 @@ import {
   providerStandingsKey,
   providerTeamFixturesKey,
   providerTeamKey,
+  providerTeamSquadKey,
+  providerTeamStatisticsKey,
 } from "@/lib/redis/keys";
 import {
   TEAM_MATCHES_FUTURE_DAYS,
@@ -71,8 +76,10 @@ import type {
   Lineup,
   Player,
   Season,
+  SquadPlayer,
   StandingsGroup,
   Team,
+  TeamSeasonStatistics,
 } from "@/types/domain";
 
 export type ServiceResult<T> = {
@@ -466,6 +473,53 @@ export async function getStandings(
     freshTtlSeconds: CACHE_TTL.standingsFresh,
     staleTtlSeconds: CACHE_TTL.standingsStale,
     fn: () => getStandingsEndpoint(leagueId, season),
+  });
+
+  return toServiceResult(result);
+}
+
+export async function getTeamSquad(
+  teamProviderId: number
+): Promise<ServiceResult<SquadPlayer[]>> {
+  const result = await cached({
+    key: providerTeamSquadKey(teamProviderId),
+    freshTtlSeconds: CACHE_TTL.teamFresh,
+    staleTtlSeconds: CACHE_TTL.teamStale,
+    fn: () =>
+      safeOptionalProviderFetch(
+        `team squad ${teamProviderId}`,
+        () => getTeamSquadEndpoint(teamProviderId),
+        []
+      ),
+  });
+
+  return toServiceResult(result);
+}
+
+export async function getTeamSeasonStatistics(
+  teamProviderId: number,
+  leagueProviderId: number,
+  seasonYear: number
+): Promise<ServiceResult<TeamSeasonStatistics | null>> {
+  const result = await cached({
+    key: providerTeamStatisticsKey(
+      teamProviderId,
+      leagueProviderId,
+      seasonYear
+    ),
+    freshTtlSeconds: CACHE_TTL.standingsFresh,
+    staleTtlSeconds: CACHE_TTL.standingsStale,
+    fn: () =>
+      safeOptionalProviderFetch(
+        `team statistics ${teamProviderId}/${leagueProviderId}/${seasonYear}`,
+        () =>
+          getTeamSeasonStatisticsEndpoint({
+            teamId: teamProviderId,
+            leagueId: leagueProviderId,
+            season: seasonYear,
+          }),
+        null
+      ),
   });
 
   return toServiceResult(result);

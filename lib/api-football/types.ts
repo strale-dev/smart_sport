@@ -339,3 +339,75 @@ export type RawApiFootballSearchTeam = RawApiFootballTeamDetail;
 export type RawApiFootballSearchPlayer = {
   player: RawApiFootballPlayer["player"];
 };
+
+export type RawApiFootballTeamSeasonStatBucket = {
+  home: number;
+  away: number;
+  total: number;
+};
+
+export type RawApiFootballTeamSeasonStatistics = {
+  league: RawApiFootballLeague & {
+    country: string;
+    flag: string | null;
+    season: number;
+  };
+  team: RawApiFootballTeam;
+  form: string | null;
+  fixtures: {
+    played: RawApiFootballTeamSeasonStatBucket;
+    wins: RawApiFootballTeamSeasonStatBucket;
+    draws: RawApiFootballTeamSeasonStatBucket;
+    loses: RawApiFootballTeamSeasonStatBucket;
+  };
+  goals: {
+    for: {
+      total: RawApiFootballTeamSeasonStatBucket;
+    };
+    against: {
+      total: RawApiFootballTeamSeasonStatBucket;
+    };
+  };
+  clean_sheet?: RawApiFootballTeamSeasonStatBucket;
+  failed_to_score?: RawApiFootballTeamSeasonStatBucket;
+  cards?: {
+    yellow?: RawApiFootballTeamSeasonStatBucket;
+    red?: RawApiFootballTeamSeasonStatBucket;
+  };
+  fouls?: {
+    committed?: RawApiFootballTeamSeasonStatBucket;
+  };
+  shots?: {
+    total?: RawApiFootballTeamSeasonStatBucket;
+    on?: RawApiFootballTeamSeasonStatBucket;
+  };
+  passes?: {
+    total?: RawApiFootballTeamSeasonStatBucket;
+    percentage?: RawApiFootballTeamSeasonStatBucket;
+  };
+  tackles?: {
+    total?: RawApiFootballTeamSeasonStatBucket;
+    interceptions?: RawApiFootballTeamSeasonStatBucket;
+  };
+  possession?: {
+    average?: RawApiFootballTeamSeasonStatBucket;
+  };
+};
+
+export type RawApiFootballSquadPlayer = {
+  id: number;
+  name: string;
+  age: number | null;
+  number: number | null;
+  position: string | null;
+  photo: string | null;
+};
+
+export type RawApiFootballSquad = {
+  team: {
+    id: number;
+    name: string;
+    logo: string | null;
+  };
+  players: RawApiFootballSquadPlayer[];
+};

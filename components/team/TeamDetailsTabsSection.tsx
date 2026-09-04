@@ -2,11 +2,29 @@ import { Suspense } from "react";
 
 import { TeamDetailsTabs } from "@/components/team/TeamDetailsTabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Fixture, Team } from "@/types/domain";
+import type { TeamPrimaryContext } from "@/lib/teams/resolve-primary-league";
+import type {
+  Fixture,
+  FormSnapshot,
+  SquadPlayer,
+  StandingsGroup,
+  Team,
+  TeamSeasonStatistics,
+} from "@/types/domain";
 
 type TeamDetailsTabsSectionProps = {
   team: Team;
   fixtures: Fixture[];
+  primaryContext: TeamPrimaryContext | null;
+  standings: StandingsGroup[];
+  squad: SquadPlayer[];
+  seasonStats: TeamSeasonStatistics | null;
+  form5All: FormSnapshot;
+  form10All: FormSnapshot;
+  form5Home: FormSnapshot;
+  form10Home: FormSnapshot;
+  form5Away: FormSnapshot;
+  form10Away: FormSnapshot;
 };
 
 function TeamDetailsTabsFallback() {
@@ -22,13 +40,10 @@ function TeamDetailsTabsFallback() {
   );
 }
 
-export function TeamDetailsTabsSection({
-  team,
-  fixtures,
-}: TeamDetailsTabsSectionProps) {
+export function TeamDetailsTabsSection(props: TeamDetailsTabsSectionProps) {
   return (
     <Suspense fallback={<TeamDetailsTabsFallback />}>
-      <TeamDetailsTabs team={team} fixtures={fixtures} />
+      <TeamDetailsTabs {...props} />
     </Suspense>
   );
 }

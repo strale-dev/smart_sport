@@ -1,0 +1,63 @@
+{
+  "get": "teams/statistics",
+  "parameters": { "team": "33", "league": "39", "season": "2025" },
+  "errors": [],
+  "results": 1,
+  "paging": { "current": 1, "total": 1 },
+  "response": [
+    {
+      "league": {
+        "id": 39,
+        "name": "Premier League",
+        "country": "England",
+        "logo": "https://media.api-sports.io/football/leagues/39.png",
+        "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+        "season": 2025
+      },
+      "team": {
+        "id": 33,
+        "name": "Manchester United",
+        "logo": "https://media.api-sports.io/football/teams/33.png"
+      },
+      "form": "WWDLL",
+      "fixtures": {
+        "played": { "home": 10, "away": 10, "total": 20 },
+        "wins": { "home": 6, "away": 4, "total": 10 },
+        "draws": { "home": 2, "away": 3, "total": 5 },
+        "loses": { "home": 2, "away": 3, "total": 5 }
+      },
+      "goals": {
+        "for": {
+          "total": { "home": 18, "away": 14, "total": 32 }
+        },
+        "against": {
+          "total": { "home": 8, "away": 12, "total": 20 }
+        }
+      },
+      "clean_sheet": { "home": 4, "away": 2, "total": 6 },
+      "failed_to_score": { "home": 1, "away": 2, "total": 3 },
+      "cards": {
+        "yellow": { "home": 12, "away": 15, "total": 27 },
+        "red": { "home": 0, "away": 1, "total": 1 }
+      },
+      "fouls": {
+        "committed": { "home": 90, "away": 110, "total": 200 }
+      },
+      "shots": {
+        "total": { "home": 120, "away": 100, "total": 220 },
+        "on": { "home": 45, "away": 38, "total": 83 }
+      },
+      "passes": {
+        "total": { "home": 4500, "away": 4200, "total": 8700 },
+        "percentage": { "home": 84, "away": 81, "total": 82 }
+      },
+      "tackles": {
+        "total": { "home": 150, "away": 170, "total": 320 },
+        "interceptions": { "home": 60, "away": 70, "total": 130 }
+      },
+      "possession": {
+        "average": { "home": 54, "away": 49, "total": 51 }
+      }
+    }
+  ]
+}

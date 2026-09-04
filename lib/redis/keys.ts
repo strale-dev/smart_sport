@@ -91,6 +91,18 @@ export function providerTeamFixturesKey(
   return `provider:team:${teamId}:fixtures:${fromDate}:${toDateExclusive}`;
 }
 
+export function providerTeamSquadKey(teamId: number): string {
+  return `provider:team:${teamId}:squad`;
+}
+
+export function providerTeamStatisticsKey(
+  teamId: number,
+  leagueId: number,
+  season: number
+): string {
+  return `provider:team:${teamId}:statistics:${leagueId}:${season}`;
+}
+
 export function providerPlayerKey(id: number): string {
   return `provider:player:${id}`;
 }

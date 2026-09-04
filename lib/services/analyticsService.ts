@@ -1,11 +1,18 @@
+import {
+  aggregateForm,
+  collectFormResults,
+  type TeamFixtureRow,
+} from "@/lib/analytics/compute-form";
+import {
+  canonicalTeamPair,
+  summarizeH2HMeetings,
+} from "@/lib/analytics/compute-h2h";
 import { cached } from "@/lib/redis/cache";
 import { analyticsFormKey, analyticsH2hKey, CACHE_TTL } from "@/lib/redis/keys";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
-  FormMatchResult,
   FormScope,
   FormSnapshot,
-  H2HMeeting,
   H2HScope,
   H2HSummary,
 } from "@/types/domain";
@@ -13,90 +20,6 @@ import type {
 const TERMINAL_STATUSES = ["FT", "AET", "PEN"] as const;
 const FORM_FRESH_SECONDS = 6 * 3_600;
 const H2H_FRESH_SECONDS = 6 * 3_600;
-
-type TeamFixtureRow = {
-  provider_id: number;
-  kickoff_at: string;
-  score_home: number | null;
-  score_away: number | null;
-  home_team: { provider_id: number; name: string } | null;
-  away_team: { provider_id: number; name: string } | null;
-  league: { provider_id: number; name: string } | null;
-};
-
-function resultForTeam(
-  row: TeamFixtureRow,
-  teamProviderId: number
-): FormMatchResult | null {
-  const home = row.home_team;
-  const away = row.away_team;
-  if (!home || !away) {
-    return null;
-  }
-
-  const isHome = home.provider_id === teamProviderId;
-  const isAway = away.provider_id === teamProviderId;
-  if (!isHome && !isAway) {
-    return null;
-  }
-
-  const goalsFor = isHome ? row.score_home : row.score_away;
-  const goalsAgainst = isHome ? row.score_away : row.score_home;
-  if (goalsFor === null || goalsAgainst === null) {
-    return null;
-  }
-
-  let result: "W" | "D" | "L" = "D";
-  if (goalsFor > goalsAgainst) {
-    result = "W";
-  } else if (goalsFor < goalsAgainst) {
-    result = "L";
-  }
-
-  return {
-    fixtureExternalId: row.provider_id,
-    opponentName: isHome ? away.name : home.name,
-    kickoffAt: row.kickoff_at,
-    result,
-    goalsFor,
-    goalsAgainst,
-    isHome,
-  };
-}
-
-function aggregateForm(
-  results: FormMatchResult[],
-  scope: FormScope,
-  requestedMatches: number
-): FormSnapshot {
-  const wins = results.filter((entry) => entry.result === "W").length;
-  const draws = results.filter((entry) => entry.result === "D").length;
-  const losses = results.filter((entry) => entry.result === "L").length;
-  const goalsFor = results.reduce((sum, entry) => sum + entry.goalsFor, 0);
-  const goalsAgainst = results.reduce(
-    (sum, entry) => sum + entry.goalsAgainst,
-    0
-  );
-  const cleanSheets = results.filter(
-    (entry) => entry.goalsAgainst === 0
-  ).length;
-  const points = wins * 3 + draws;
-  const ppg =
-    results.length > 0 ? Number((points / results.length).toFixed(2)) : null;
-
-  return {
-    wins,
-    draws,
-    losses,
-    goalsFor,
-    goalsAgainst,
-    cleanSheets,
-    ppg,
-    matches: requestedMatches,
-    scope,
-    results,
-  };
-}
 
 async function getTeamUuid(teamProviderId: number): Promise<string | null> {
   const client = createAdminClient();
@@ -210,19 +133,7 @@ export async function computeRecentForm(
   }
 
   const rows = await queryTeamFixtures(teamUuid, scope, options.matches);
-  const results: FormMatchResult[] = [];
-
-  for (const row of rows) {
-    const entry = resultForTeam(row, teamProviderId);
-    if (!entry) {
-      continue;
-    }
-    results.push(entry);
-    if (results.length >= options.matches) {
-      break;
-    }
-  }
-
+  const results = collectFormResults(rows, teamProviderId, options.matches);
   const snapshot = aggregateForm(results, scope, options.matches);
 
   if (results.length > 0) {
@@ -230,15 +141,6 @@ export async function computeRecentForm(
   }
 
   return snapshot;
-}
-
-function canonicalTeamPair(
-  teamAUuid: string,
-  teamBUuid: string
-): [string, string] {
-  return teamAUuid < teamBUuid
-    ? [teamAUuid, teamBUuid]
-    : [teamBUuid, teamAUuid];
 }
 
 async function queryH2HFixtures(
@@ -350,59 +252,15 @@ export async function computeH2H(
     leagueUuid
   );
 
-  let teamAWins = 0;
-  let teamBWins = 0;
-  let draws = 0;
-  let teamAGoals = 0;
-  let teamBGoals = 0;
-
-  const meetings: H2HMeeting[] = rows.map((row) => {
-    const home = row.home_team!;
-    const away = row.away_team!;
-    const homeScore = row.score_home;
-    const awayScore = row.score_away;
-
-    if (homeScore !== null && awayScore !== null) {
-      const homeIsA = home.provider_id === teamAProviderId;
-      const aGoals = homeIsA ? homeScore : awayScore;
-      const bGoals = homeIsA ? awayScore : homeScore;
-      teamAGoals += aGoals;
-      teamBGoals += bGoals;
-
-      if (aGoals > bGoals) {
-        teamAWins += 1;
-      } else if (aGoals < bGoals) {
-        teamBWins += 1;
-      } else {
-        draws += 1;
-      }
-    }
-
-    return {
-      fixtureExternalId: row.provider_id,
-      kickoffAt: row.kickoff_at,
-      homeTeamName: home.name,
-      awayTeamName: away.name,
-      homeScore,
-      awayScore,
-      leagueName: row.league?.name ?? null,
-    };
-  });
-
-  const summary: H2HSummary = {
-    teamAExternalId: teamAProviderId,
-    teamBExternalId: teamBProviderId,
-    teamAWins,
-    teamBWins,
-    draws,
-    teamAGoals,
-    teamBGoals,
+  const summary = summarizeH2HMeetings(
+    rows,
+    teamAProviderId,
+    teamBProviderId,
     windowSize,
-    scope,
-    meetings,
-  };
+    scope
+  );
 
-  if (meetings.length > 0) {
+  if (summary.meetings.length > 0) {
     await upsertH2hSummary(teamAUuid, teamBUuid, leagueUuid, summary);
   }
 

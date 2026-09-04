@@ -18,10 +18,12 @@ export {
 export {
   getPlayerById,
   getPlayerByIdWithRaw,
+  getTeamSquad,
   searchPlayers,
 } from "@/lib/api-football/endpoints/players";
 export {
   getTeamById,
   getTeamByIdWithRaw,
+  getTeamSeasonStatistics,
   searchTeams,
 } from "@/lib/api-football/endpoints/teams";

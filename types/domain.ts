@@ -265,3 +265,36 @@ export type H2HSummary = {
   scope: H2HScope;
   meetings: H2HMeeting[];
 };
+
+export type SquadPlayer = {
+  externalId: number;
+  name: string;
+  age: number | null;
+  shirtNumber: number | null;
+  position: PlayerPosition | null;
+  photoUrl: string | null;
+};
+
+export type TeamSeasonStatistics = {
+  leagueExternalId: number;
+  seasonYear: number;
+  form: string | null;
+  fixturesPlayed: number | null;
+  wins: number | null;
+  draws: number | null;
+  losses: number | null;
+  goalsFor: number | null;
+  goalsAgainst: number | null;
+  cleanSheets: number | null;
+  failedToScore: number | null;
+  averagePossession: number | null;
+  shotsTotal: number | null;
+  shotsOnTarget: number | null;
+  passesTotal: number | null;
+  passesAccuracy: number | null;
+  tacklesTotal: number | null;
+  interceptions: number | null;
+  yellowCards: number | null;
+  redCards: number | null;
+  foulsCommitted: number | null;
+};

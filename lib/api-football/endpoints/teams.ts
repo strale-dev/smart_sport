@@ -1,7 +1,14 @@
-import { mapSearchTeam, mapTeam } from "@/lib/api-football/adapter";
+import {
+  mapSearchTeam,
+  mapTeam,
+  mapTeamSeasonStatistics,
+} from "@/lib/api-football/adapter";
 import { apiFootballFetchResponse } from "@/lib/api-football/client";
-import type { RawApiFootballTeamDetail } from "@/lib/api-football/types";
-import type { Team } from "@/types/domain";
+import type {
+  RawApiFootballTeamDetail,
+  RawApiFootballTeamSeasonStatistics,
+} from "@/lib/api-football/types";
+import type { Team, TeamSeasonStatistics } from "@/types/domain";
 
 export async function getTeamById(id: number): Promise<Team | null> {
   const response = await apiFootballFetchResponse<RawApiFootballTeamDetail>(
@@ -29,4 +36,22 @@ export async function getTeamByIdWithRaw(id: number) {
   return raw
     ? { raw, domain: mapTeam(raw.team, raw.venue ?? undefined) }
     : null;
+}
+
+export async function getTeamSeasonStatistics(params: {
+  teamId: number;
+  leagueId: number;
+  season: number;
+}): Promise<TeamSeasonStatistics | null> {
+  const response =
+    await apiFootballFetchResponse<RawApiFootballTeamSeasonStatistics>(
+      "/teams/statistics",
+      {
+        team: params.teamId,
+        league: params.leagueId,
+        season: params.season,
+      }
+    );
+  const raw = response[0];
+  return raw ? mapTeamSeasonStatistics(raw) : null;
 }

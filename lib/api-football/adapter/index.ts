@@ -15,8 +15,11 @@ export {
   mapPlayer,
   mapSearchPlayer,
   mapSearchTeam,
+  mapSquadPlayer,
   mapStandingRow,
   mapTeam,
+  mapTeamSeasonStatistics,
+  mapTeamSquad,
 } from "@/lib/api-football/adapter/entities";
 export {
   mapLeagueDetail,

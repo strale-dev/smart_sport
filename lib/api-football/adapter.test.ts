@@ -10,7 +10,10 @@ import {
   mapPlayer,
   mapSearchPlayer,
   mapSearchTeam,
+  mapSquadPlayer,
   mapStandingsGroup,
+  mapTeamSeasonStatistics,
+  mapTeamSquad,
   mapFixtureStatus,
 } from "@/lib/api-football/adapter";
 import { fixtureToInsert } from "@/lib/api-football/to-db";
@@ -22,8 +25,10 @@ import type {
   RawApiFootballLineup,
   RawApiFootballPlayer,
   RawApiFootballSearchPlayer,
+  RawApiFootballSquad,
   RawApiFootballStandingsGroup,
   RawApiFootballTeamDetail,
+  RawApiFootballTeamSeasonStatistics,
 } from "@/lib/api-football/types";
 import { loadApiFootballFixture } from "@/tests/helpers/load-api-football-fixture";
 
@@ -202,5 +207,69 @@ describe("fixtureToInsert", () => {
     expect(insert.status).toBe("FT");
     expect(insert.score_home).toBe(1);
     expect(insert.provider_payload).toEqual(envelope.response[0]);
+  });
+});
+
+describe("mapTeamSquad", () => {
+  it("maps squad players with positions and shirt numbers", () => {
+    const envelope =
+      loadApiFootballFixture<RawApiFootballSquad[]>("team-squad.json");
+    const squad = mapTeamSquad(envelope.response[0]!);
+
+    expect(squad).toHaveLength(2);
+    expect(squad[0]?.position).toBe("GK");
+    expect(squad[1]?.name).toBe("Bruno Fernandes");
+  });
+});
+
+describe("mapTeamSeasonStatistics", () => {
+  it("maps season statistics buckets", () => {
+    const envelope = loadApiFootballFixture<
+      RawApiFootballTeamSeasonStatistics[]
+    >("team-statistics.json");
+    const stats = mapTeamSeasonStatistics(envelope.response[0]!);
+
+    expect(stats.leagueExternalId).toBe(39);
+    expect(stats.goalsFor).toBe(32);
+    expect(stats.cleanSheets).toBe(6);
+    expect(stats.averagePossession).toBe(51);
+  });
+});
+
+describe("mapSquadPlayer", () => {
+  it("maps squad position words to domain positions", () => {
+    expect(
+      mapSquadPlayer({
+        id: 1,
+        name: "Virgil van Dijk",
+        age: 32,
+        number: 4,
+        position: "Defender",
+        photo: null,
+      }).position
+    ).toBe("DF");
+    expect(
+      mapSquadPlayer({
+        id: 2,
+        name: "Erling Haaland",
+        age: 24,
+        number: 9,
+        position: "Attacker",
+        photo: null,
+      }).position
+    ).toBe("FW");
+  });
+
+  it("maps unknown positions to null", () => {
+    const player = mapSquadPlayer({
+      id: 1,
+      name: "Unknown",
+      age: 20,
+      number: 99,
+      position: "X",
+      photo: null,
+    });
+
+    expect(player.position).toBeNull();
   });
 });

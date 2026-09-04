@@ -1,4 +1,3 @@
-import { FollowComingSoonButton } from "@/components/profile/FollowComingSoonButton";
 import { TeamLogo } from "@/components/match/TeamLogo";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -8,16 +7,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  formatTeamStandingLabel,
+  type TeamPrimaryContext,
+} from "@/lib/teams/resolve-primary-league";
 import type { Team } from "@/types/domain";
 
 type TeamHeaderProps = {
   team: Team;
+  primaryContext: TeamPrimaryContext | null;
 };
 
-export function TeamHeader({ team }: TeamHeaderProps) {
+export function TeamHeader({ team, primaryContext }: TeamHeaderProps) {
+  const standingLabel = primaryContext
+    ? formatTeamStandingLabel(primaryContext)
+    : null;
+
   return (
     <Card className="w-full">
-      <CardHeader className="flex flex-row items-start justify-between gap-3">
+      <CardHeader>
         <div className="flex min-w-0 items-center gap-3">
           <TeamLogo
             name={team.name}
@@ -30,13 +38,13 @@ export function TeamHeader({ team }: TeamHeaderProps) {
             </CardTitle>
             <CardDescription className="flex flex-wrap items-center gap-2">
               {team.country?.name ? <span>{team.country.name}</span> : null}
+              {standingLabel ? <span>{standingLabel}</span> : null}
               <Badge variant="outline">
                 {team.isNational ? "National team" : "Club"}
               </Badge>
             </CardDescription>
           </div>
         </div>
-        <FollowComingSoonButton />
       </CardHeader>
       {team.code ? (
         <CardContent>

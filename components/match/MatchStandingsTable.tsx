@@ -10,26 +10,42 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { selectRelevantStandingsGroup } from "@/lib/standings/select-relevant-group";
+import { selectStandingsGroupForTeam } from "@/lib/standings/select-team-group";
 import type { StandingsGroup } from "@/types/domain";
 
 type MatchStandingsTableProps = {
   leagueName: string;
   standings: StandingsGroup[];
-  homeTeamExternalId: number;
-  awayTeamExternalId: number;
+  homeTeamExternalId?: number;
+  awayTeamExternalId?: number;
+  highlightTeamExternalId?: number;
 };
 
-export function MatchStandingsTable({
-  leagueName,
-  standings,
-  homeTeamExternalId,
-  awayTeamExternalId,
-}: MatchStandingsTableProps) {
-  const primaryGroup = selectRelevantStandingsGroup(
-    standings,
-    homeTeamExternalId,
-    awayTeamExternalId
+function isHighlightedRow(
+  teamExternalId: number,
+  props: MatchStandingsTableProps
+): boolean {
+  if (props.highlightTeamExternalId != null) {
+    return teamExternalId === props.highlightTeamExternalId;
+  }
+
+  return (
+    teamExternalId === props.homeTeamExternalId ||
+    teamExternalId === props.awayTeamExternalId
   );
+}
+
+export function MatchStandingsTable(props: MatchStandingsTableProps) {
+  const { leagueName, standings } = props;
+
+  const primaryGroup =
+    props.highlightTeamExternalId != null
+      ? selectStandingsGroupForTeam(standings, props.highlightTeamExternalId)
+      : selectRelevantStandingsGroup(
+          standings,
+          props.homeTeamExternalId ?? 0,
+          props.awayTeamExternalId ?? 0
+        );
 
   if (!primaryGroup || primaryGroup.rows.length === 0) {
     return (
@@ -72,16 +88,14 @@ export function MatchStandingsTable({
           </thead>
           <tbody>
             {primaryGroup.rows.map((row) => {
-              const isHighlighted =
-                row.team.externalId === homeTeamExternalId ||
-                row.team.externalId === awayTeamExternalId;
+              const highlighted = isHighlightedRow(row.team.externalId, props);
 
               return (
                 <tr
                   key={row.team.externalId}
                   className={cn(
                     "border-border/50 border-b last:border-b-0",
-                    isHighlighted && "bg-primary/10"
+                    highlighted && "bg-primary/10"
                   )}
                 >
                   <td className="px-2 py-2 font-mono tabular-nums">
