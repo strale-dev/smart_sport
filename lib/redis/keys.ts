@@ -26,6 +26,10 @@ export const CACHE_TTL = {
   searchStale: 86_400,
   seasonsFresh: 86_400,
   seasonsStale: 604_800,
+  leagueFixturesFresh: 900,
+  leagueFixturesStale: 86_400,
+  leagueTopScorersFresh: 3_600,
+  leagueTopScorersStale: 86_400,
 } as const;
 
 const LIVE_STATUSES = new Set<FixtureStatus>([
@@ -141,6 +145,27 @@ export function providerSearchPlayersKey(query: string): string {
 
 export function providerSeasonsKey(leagueId: number): string {
   return `provider:league:${leagueId}:seasons`;
+}
+
+export function providerLeagueFixturesKey(
+  leagueId: number,
+  season: number
+): string {
+  return `provider:league:${leagueId}:fixtures:${season}`;
+}
+
+export function providerLeagueTopScorersKey(
+  leagueId: number,
+  season: number
+): string {
+  return `provider:league:${leagueId}:top-scorers:${season}`;
+}
+
+export function providerLeagueTopAssistsKey(
+  leagueId: number,
+  season: number
+): string {
+  return `provider:league:${leagueId}:top-assists:${season}`;
 }
 
 export function analyticsFormKey(

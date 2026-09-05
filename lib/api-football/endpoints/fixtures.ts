@@ -96,6 +96,20 @@ export async function getFixturePlayers(
   return response.flatMap(mapFixturePlayerPerformance);
 }
 
+export async function listFixturesByLeagueSeason(
+  leagueId: number,
+  season: number
+): Promise<Fixture[]> {
+  const response = await apiFootballFetchResponse<RawApiFootballFixture>(
+    "/fixtures",
+    { league: leagueId, season }
+  );
+
+  return response
+    .map(mapFixture)
+    .sort((left, right) => left.kickoffAt.localeCompare(right.kickoffAt));
+}
+
 export async function getFixtureByIdWithRaw(id: number) {
   const response = await apiFootballFetchResponse<RawApiFootballFixture>(
     "/fixtures",

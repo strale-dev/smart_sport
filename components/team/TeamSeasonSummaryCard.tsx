@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { EmptyState } from "@/components/common/EmptyState";
+import { LeagueLink } from "@/components/common/LeagueLink";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,9 +62,14 @@ export function TeamSeasonSummaryCard({
     <Card className="w-full">
       <CardHeader className="gap-2">
         <CardTitle className="font-heading text-base">Season summary</CardTitle>
-        <CardDescription>
-          {primaryContext.leagueName}
-          {primaryContext.seasonYear ? ` · ${primaryContext.seasonYear}` : ""}
+        <CardDescription className="flex flex-wrap items-center gap-1">
+          <LeagueLink
+            leagueExternalId={primaryContext.leagueExternalId}
+            leagueName={primaryContext.leagueName}
+          />
+          {primaryContext.seasonYear ? (
+            <span>· {primaryContext.seasonYear}</span>
+          ) : null}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

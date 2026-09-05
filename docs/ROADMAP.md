@@ -375,9 +375,9 @@ Match Details is fully populated: stats, timeline, lineups, form, H2H. Analytics
 
 **Player profile**
 
-- [ ] Overview: header, attribute overview (position-aware summary; basic sliders/bars via `recharts`).
-- [ ] Matches tab with goals/assists/cards badges.
-- [ ] Statistics tab (season).
+- [x] Overview: header, attribute overview (position-aware summary; basic sliders/bars via `recharts`).
+- [x] Matches tab with goals/assists/cards badges.
+- [x] Statistics tab (season).
 
 **League page**
 

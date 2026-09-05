@@ -19,6 +19,7 @@ import {
   type LiveStatusFilter,
 } from "@/lib/live/constants";
 import { buildLiveCenterHref } from "@/lib/live/url";
+import { buildLeagueHref } from "@/lib/leagues/url";
 import { cn } from "@/lib/utils";
 
 type LiveCenterFiltersProps = {
@@ -58,12 +59,46 @@ function FilterTab({
   );
 }
 
-function LeagueTabLabel({ tab }: { tab: LiveLeagueTab }) {
+function LeagueFilterTab({
+  filterHref,
+  active,
+  label,
+  tab,
+}: {
+  filterHref: string;
+  active: boolean;
+  label: string;
+  tab: LiveLeagueTab;
+}) {
   return (
-    <>
-      <LeagueFilterLogo providerId={tab.providerId} label={tab.label} />
-      <span className="hidden sm:inline">{tab.shortLabel ?? tab.label}</span>
-    </>
+    <div
+      className={cn(
+        "inline-flex h-9 shrink-0 snap-start items-center rounded-md border border-transparent sm:h-8",
+        active
+          ? "bg-background text-foreground dark:bg-input/30 shadow-sm"
+          : "text-muted-foreground"
+      )}
+    >
+      <Link
+        href={buildLeagueHref(tab.providerId)}
+        aria-label={`View ${label} league page`}
+        title={`View ${label}`}
+        className="hover:bg-muted/60 inline-flex h-full items-center rounded-l-md px-1.5 transition-colors"
+      >
+        <LeagueFilterLogo providerId={tab.providerId} label={tab.label} />
+      </Link>
+      <Link
+        href={filterHref}
+        aria-label={label}
+        title={label}
+        className={cn(
+          "inline-flex h-full items-center gap-1.5 rounded-r-md px-2 transition-colors",
+          !active && "hover:text-foreground hover:bg-muted/60"
+        )}
+      >
+        <span className="hidden sm:inline">{tab.shortLabel ?? tab.label}</span>
+      </Link>
+    </div>
   );
 }
 
@@ -100,17 +135,16 @@ export function LiveCenterFilters({
             </FilterTab>
 
             {LIVE_LEAGUE_TABS.map((tab) => (
-              <FilterTab
+              <LeagueFilterTab
                 key={tab.providerId}
-                href={buildLiveCenterHref(currentParams, {
+                filterHref={buildLiveCenterHref(currentParams, {
                   league: tab.providerId,
                   page: 1,
                 })}
                 active={league === tab.providerId}
                 label={tab.label}
-              >
-                <LeagueTabLabel tab={tab} />
-              </FilterTab>
+                tab={tab}
+              />
             ))}
 
             <DropdownMenu>

@@ -6,6 +6,7 @@ import {
   mapFixturePlayerPerformance,
   mapFixtureStatistics,
   mapLeagueDetail,
+  mapLeaguePlayerLeaderboardRow,
   mapLineup,
   mapPlayer,
   mapPlayerCareerFromTransfers,
@@ -329,5 +330,21 @@ describe("mapSquadPlayer", () => {
     });
 
     expect(player.position).toBeNull();
+  });
+});
+
+describe("mapLeaguePlayerLeaderboardRow", () => {
+  it("maps top scorer entries", () => {
+    const envelope =
+      loadApiFootballFixture<RawApiFootballPlayer[]>("top-scorers.json");
+    const row = mapLeaguePlayerLeaderboardRow(envelope.response[0]!, 1);
+
+    expect(row.rank).toBe(1);
+    expect(row.player.externalId).toBe(909);
+    expect(row.player.fullName).toBe("Bruno Fernandes");
+    expect(row.team.name).toBe("Manchester United");
+    expect(row.goals).toBe(12);
+    expect(row.assists).toBe(8);
+    expect(row.appearances).toBe(30);
   });
 });

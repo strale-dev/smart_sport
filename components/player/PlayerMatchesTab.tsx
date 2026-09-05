@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarDaysIcon } from "lucide-react";
 
 import { EmptyState } from "@/components/common/EmptyState";
+import { LeagueLink } from "@/components/common/LeagueLink";
 import { TeamLogo } from "@/components/match/TeamLogo";
 import { PlayerContributionBadges } from "@/components/player/PlayerContributionBadges";
 import { PlayerMatchesPagination } from "@/components/player/PlayerMatchesPagination";
@@ -42,27 +43,21 @@ export function PlayerMatchesTab({ playerId, history }: PlayerMatchesTabProps) {
             appearance.rating != null ? appearance.rating.toFixed(1) : "—";
 
           return (
-            <Link
+            <div
               key={appearance.fixtureExternalId}
-              href={`/matches/${appearance.fixtureExternalId}`}
-              className={cn(
-                "border-border/70 hover:bg-muted/40 focus-visible:ring-ring/50 block rounded-xl border p-3 transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
-              )}
+              className="border-border/70 rounded-xl border"
             >
-              <div className="text-muted-foreground mb-2 flex items-center justify-between gap-3 text-xs">
-                <span className="flex min-w-0 items-center gap-2">
-                  {appearance.leagueLogoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={appearance.leagueLogoUrl}
-                      alt=""
-                      className="size-4 shrink-0 object-contain"
-                      loading="lazy"
-                    />
-                  ) : null}
-                  <span className="truncate">{appearance.leagueName}</span>
-                </span>
-                <time dateTime={appearance.kickoffAt} className="shrink-0">
+              <div className="flex items-center justify-between gap-3 px-3 pt-3">
+                <LeagueLink
+                  leagueExternalId={appearance.leagueExternalId}
+                  leagueName={appearance.leagueName}
+                  leagueLogoUrl={appearance.leagueLogoUrl}
+                  className="text-muted-foreground min-w-0 text-xs"
+                />
+                <time
+                  dateTime={appearance.kickoffAt}
+                  className="text-muted-foreground shrink-0 text-xs"
+                >
                   {new Date(appearance.kickoffAt).toLocaleDateString(
                     undefined,
                     {
@@ -73,36 +68,44 @@ export function PlayerMatchesTab({ playerId, history }: PlayerMatchesTabProps) {
                 </time>
               </div>
 
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <TeamLogo
-                    name={appearance.opponent.name}
-                    logoUrl={appearance.opponent.logoUrl}
-                    className="size-6"
-                  />
-                  <span className="truncate text-sm font-medium">
-                    {appearance.isHome ? "vs" : "@"} {appearance.opponent.name}
-                  </span>
+              <Link
+                href={`/matches/${appearance.fixtureExternalId}`}
+                className={cn(
+                  "hover:bg-muted/40 focus-visible:ring-ring/50 block rounded-xl p-3 transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
+                )}
+              >
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <TeamLogo
+                      name={appearance.opponent.name}
+                      logoUrl={appearance.opponent.logoUrl}
+                      className="size-6"
+                    />
+                    <span className="truncate text-sm font-medium">
+                      {appearance.isHome ? "vs" : "@"}{" "}
+                      {appearance.opponent.name}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 text-right">
+                    <span className="font-mono text-sm font-semibold tabular-nums">
+                      {scoreLabel}
+                    </span>
+                    <span className="text-muted-foreground w-10 font-mono text-xs tabular-nums">
+                      {minutesLabel}
+                    </span>
+                    <span className="text-muted-foreground w-8 font-mono text-xs tabular-nums">
+                      {ratingLabel}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-3 text-right">
-                  <span className="font-mono text-sm font-semibold tabular-nums">
-                    {scoreLabel}
-                  </span>
-                  <span className="text-muted-foreground w-10 font-mono text-xs tabular-nums">
-                    {minutesLabel}
-                  </span>
-                  <span className="text-muted-foreground w-8 font-mono text-xs tabular-nums">
-                    {ratingLabel}
-                  </span>
-                </div>
-              </div>
 
-              {appearance.badges.length > 0 ? (
-                <div className="mt-2">
-                  <PlayerContributionBadges badges={appearance.badges} />
-                </div>
-              ) : null}
-            </Link>
+                {appearance.badges.length > 0 ? (
+                  <div className="mt-2">
+                    <PlayerContributionBadges badges={appearance.badges} />
+                  </div>
+                ) : null}
+              </Link>
+            </div>
           );
         })}
       </div>

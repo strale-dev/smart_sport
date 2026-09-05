@@ -1,6 +1,7 @@
 import { BarChart3Icon } from "lucide-react";
 
 import { EmptyState } from "@/components/common/EmptyState";
+import { LeagueLink } from "@/components/common/LeagueLink";
 import {
   Card,
   CardContent,
@@ -11,6 +12,7 @@ import {
 import type { PlayerPosition, PlayerSeasonStatistics } from "@/types/domain";
 
 type PlayerStatisticsTabProps = {
+  leagueExternalId: number | null;
   leagueName: string;
   seasonYear: number | null;
   position: PlayerPosition | null;
@@ -56,6 +58,7 @@ function StatSection({ title, rows }: { title: string; rows: StatRow[] }) {
 }
 
 export function PlayerStatisticsTab({
+  leagueExternalId,
   leagueName,
   seasonYear,
   position,
@@ -78,9 +81,16 @@ export function PlayerStatisticsTab({
           <CardTitle className="font-heading text-base">
             Season statistics
           </CardTitle>
-          <CardDescription>
-            {leagueName}
-            {seasonYear ? ` · ${seasonYear}` : ""}
+          <CardDescription className="flex flex-wrap items-center gap-1">
+            {leagueExternalId != null ? (
+              <LeagueLink
+                leagueExternalId={leagueExternalId}
+                leagueName={leagueName}
+              />
+            ) : (
+              <span>{leagueName}</span>
+            )}
+            {seasonYear ? <span>· {seasonYear}</span> : null}
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MapPinIcon, UserIcon } from "lucide-react";
 
 import { LiveDot } from "@/components/common/LiveDot";
+import { LeagueLink } from "@/components/common/LeagueLink";
 import { TeamLogo } from "@/components/match/TeamLogo";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -59,19 +60,11 @@ export function MatchHeader({ fixture }: MatchHeaderProps) {
     <Card className="w-full">
       <CardHeader className="gap-3 pb-3">
         <CardDescription className="flex flex-wrap items-center gap-2">
-          {fixture.league.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={fixture.league.logoUrl}
-              alt=""
-              className="size-4 object-contain"
-              loading="lazy"
-            />
-          ) : null}
-          <span>
-            {fixture.league.name}
-            {fixture.round ? ` · ${fixture.round}` : ""}
-          </span>
+          <LeagueLink
+            leagueExternalId={fixture.league.externalId}
+            leagueName={`${fixture.league.name}${fixture.round ? ` · ${fixture.round}` : ""}`}
+            leagueLogoUrl={fixture.league.logoUrl}
+          />
           <span aria-hidden="true">·</span>
           <span className="inline-flex items-center gap-1.5">
             {isLive ? <LiveDot /> : null}

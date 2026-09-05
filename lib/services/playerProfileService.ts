@@ -319,6 +319,7 @@ function mapFixtureToPlayerAppearance(
     fixtureExternalId: fixture.externalId,
     kickoffAt: fixture.kickoffAt,
     leagueName: fixture.league.name,
+    leagueExternalId: fixture.league.externalId,
     leagueLogoUrl: fixture.league.logoUrl,
     homeTeam: fixture.homeTeam,
     awayTeam: fixture.awayTeam,

@@ -11,6 +11,7 @@ export const POSTHOG_EVENTS = {
   matchMomentumViewed: "match_momentum_viewed",
   teamViewed: "team_viewed",
   playerViewed: "player_viewed",
+  leagueViewed: "league_viewed",
 } as const;
 
 export type PostHogEventName =

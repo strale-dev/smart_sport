@@ -743,6 +743,7 @@ export async function readPlayerMatchHistoryFromDb(
           is_national
         ),
         league:leagues!fixtures_league_id_fkey (
+          provider_id,
           name,
           logo_url
         )
@@ -801,6 +802,7 @@ export async function readPlayerMatchHistoryFromDb(
       {
         fixtureExternalId: row.fixture.provider_id,
         kickoffAt: row.fixture.kickoff_at,
+        leagueExternalId: row.fixture.league?.provider_id ?? 0,
         leagueName: row.fixture.league?.name ?? "Unknown",
         leagueLogoUrl: row.fixture.league?.logo_url ?? null,
         homeTeam,
@@ -1177,6 +1179,49 @@ export async function readSeasonsByLeagueFromDb(
 ): Promise<Season[]> {
   const detail = await readLeagueDetailFromDb(leagueProviderId);
   return detail?.seasons ?? [];
+}
+
+export async function readFixturesForLeagueSeasonFromDb(
+  leagueProviderId: number,
+  seasonYear: number
+): Promise<Fixture[]> {
+  const client = createAdminClient();
+
+  const { data: league } = await client
+    .from("leagues")
+    .select("id")
+    .eq("provider_id", leagueProviderId)
+    .maybeSingle();
+
+  if (!league) {
+    return [];
+  }
+
+  const { data: season } = await client
+    .from("seasons")
+    .select("id")
+    .eq("league_id", league.id)
+    .eq("year", seasonYear)
+    .maybeSingle();
+
+  if (!season) {
+    return [];
+  }
+
+  const { data, error } = await client
+    .from("fixtures")
+    .select(FIXTURE_SELECT)
+    .eq("league_id", league.id)
+    .eq("season_id", season.id)
+    .order("kickoff_at", { ascending: true });
+
+  if (error) {
+    throw new Error(
+      `Failed to read fixtures for league ${leagueProviderId}/${seasonYear}: ${error.message}`
+    );
+  }
+
+  return (data ?? []).map(mapFixtureRow);
 }
 
 export type FixtureStandingsInfo = {

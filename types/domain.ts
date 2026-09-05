@@ -59,6 +59,12 @@ export type TeamRef = {
   isNational: boolean;
 };
 
+export type PlayerRef = {
+  externalId: number;
+  fullName: string;
+  photoUrl: string | null;
+};
+
 export type ScoreSnapshot = {
   home: number | null;
   away: number | null;
@@ -235,6 +241,7 @@ export type PlayerContributionBadge = {
 export type PlayerMatchAppearance = {
   fixtureExternalId: number;
   kickoffAt: string;
+  leagueExternalId: number;
   leagueName: string;
   leagueLogoUrl: string | null;
   homeTeam: TeamRef;
@@ -281,6 +288,21 @@ export type League = {
   country: CountryRef | null;
   logoUrl: string | null;
   isActive: boolean;
+};
+
+export type LeagueDetail = {
+  league: League;
+  seasons: Season[];
+};
+
+export type LeaguePlayerLeaderboardRow = {
+  rank: number;
+  player: PlayerRef;
+  team: TeamRef;
+  goals: number | null;
+  assists: number | null;
+  appearances: number | null;
+  minutes: number | null;
 };
 
 export type Season = {

@@ -1,10 +1,19 @@
-import { mapLeagueDetail, mapStandingsGroup } from "@/lib/api-football/adapter";
+import {
+  mapLeagueDetail,
+  mapLeaguePlayerLeaderboardRow,
+  mapStandingsGroup,
+} from "@/lib/api-football/adapter";
 import { apiFootballFetchResponse } from "@/lib/api-football/client";
 import type {
   RawApiFootballLeagueDetail,
+  RawApiFootballPlayer,
   RawApiFootballStandingsGroup,
 } from "@/lib/api-football/types";
-import type { Season, StandingsGroup } from "@/types/domain";
+import type {
+  LeaguePlayerLeaderboardRow,
+  Season,
+  StandingsGroup,
+} from "@/types/domain";
 
 export async function getLeagueById(id: number) {
   const response = await apiFootballFetchResponse<RawApiFootballLeagueDetail>(
@@ -29,6 +38,34 @@ export async function getStandings(
     { league: leagueId, season }
   );
   return response.flatMap(mapStandingsGroup);
+}
+
+export async function getTopScorers(
+  leagueId: number,
+  season: number
+): Promise<LeaguePlayerLeaderboardRow[]> {
+  const response = await apiFootballFetchResponse<RawApiFootballPlayer>(
+    "/players/topscorers",
+    { league: leagueId, season }
+  );
+
+  return response.map((raw, index) =>
+    mapLeaguePlayerLeaderboardRow(raw, index + 1)
+  );
+}
+
+export async function getTopAssists(
+  leagueId: number,
+  season: number
+): Promise<LeaguePlayerLeaderboardRow[]> {
+  const response = await apiFootballFetchResponse<RawApiFootballPlayer>(
+    "/players/topassists",
+    { league: leagueId, season }
+  );
+
+  return response.map((raw, index) =>
+    mapLeaguePlayerLeaderboardRow(raw, index + 1)
+  );
 }
 
 export async function getLeagueByIdWithRaw(id: number) {

@@ -28,6 +28,7 @@ export {
 } from "@/lib/api-football/adapter/entities";
 export {
   mapLeagueDetail,
+  mapLeaguePlayerLeaderboardRow,
   mapSeason,
   mapStandingsGroup,
 } from "@/lib/api-football/adapter/league";

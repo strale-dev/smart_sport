@@ -133,6 +133,7 @@ export function TeamDetailsTabs({
 
       <TabsContent value="statistics">
         <TeamStatisticsTab
+          leagueExternalId={primaryContext?.leagueExternalId ?? null}
           leagueName={primaryContext?.leagueName ?? "League"}
           seasonYear={primaryContext?.seasonYear ?? null}
           stats={seasonStats}

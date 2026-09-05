@@ -1,0 +1,61 @@
+{
+  "get": "players/topscorers",
+  "parameters": { "league": "39", "season": "2024" },
+  "errors": [],
+  "results": 1,
+  "paging": { "current": 1, "total": 1 },
+  "response": [
+    {
+      "player": {
+        "id": 909,
+        "name": "Bruno Fernandes",
+        "firstname": "Bruno",
+        "lastname": "Fernandes",
+        "age": 29,
+        "birth": {
+          "date": "1994-09-08",
+          "place": "Maia",
+          "country": "Portugal"
+        },
+        "nationality": "Portugal",
+        "height": "179 cm",
+        "weight": "69 kg",
+        "injured": false,
+        "photo": "https://media.api-sports.io/football/players/909.png"
+      },
+      "statistics": [
+        {
+          "team": {
+            "id": 33,
+            "name": "Manchester United",
+            "logo": "https://media.api-sports.io/football/teams/33.png"
+          },
+          "league": {
+            "id": 39,
+            "name": "Premier League",
+            "country": "England",
+            "logo": "https://media.api-sports.io/football/leagues/39.png",
+            "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+            "season": 2024,
+            "type": "League"
+          },
+          "games": {
+            "appearences": 30,
+            "lineups": 28,
+            "minutes": 2500,
+            "number": 8,
+            "position": "M",
+            "rating": "7.80",
+            "captain": true
+          },
+          "goals": {
+            "total": 12,
+            "conceded": null,
+            "assists": 8,
+            "saves": null
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -5,11 +5,14 @@ import {
   getFixturePlayers as getFixturePlayersEndpoint,
   getFixtureStatistics as getFixtureStatisticsEndpoint,
   listFixturesByDate as listFixturesByDateEndpoint,
+  listFixturesByLeagueSeason as listFixturesByLeagueSeasonEndpoint,
   listLiveFixtures as listLiveFixturesEndpoint,
 } from "@/lib/api-football/endpoints/fixtures";
 import {
   getLeagueById as getLeagueByIdEndpoint,
   getStandings as getStandingsEndpoint,
+  getTopAssists as getTopAssistsEndpoint,
+  getTopScorers as getTopScorersEndpoint,
   listSeasonsByLeague as listSeasonsByLeagueEndpoint,
 } from "@/lib/api-football/endpoints/leagues";
 import {
@@ -36,6 +39,7 @@ import {
   readFixtureEventsFromDb,
   readFixtureStatisticsFromDb,
   readFixturesForDateFromDb,
+  readFixturesForLeagueSeasonFromDb,
   readFixturesForTeamsInRangeFromDb,
   readFixturesInRangeFromDb,
   readLeagueDetailFromDb,
@@ -64,7 +68,10 @@ import {
   providerFixturesLiveKey,
   providerFixturesRangeKey,
   providerFixtureStatsKey,
+  providerLeagueFixturesKey,
   providerLeagueKey,
+  providerLeagueTopAssistsKey,
+  providerLeagueTopScorersKey,
   providerPlayerKey,
   providerSearchPlayersKey,
   providerSearchTeamsKey,
@@ -85,6 +92,8 @@ import type {
   FixtureEvent,
   FixturePlayerPerformance,
   FixtureTeamStatistics,
+  LeagueDetail,
+  LeaguePlayerLeaderboardRow,
   Lineup,
   Player,
   Season,
@@ -523,22 +532,97 @@ export async function getStandings(
   leagueId: number,
   season: number
 ): Promise<ServiceResult<StandingsGroup[]>> {
-  if (isApiFootballIngestOnly()) {
-    const result = await cached({
-      key: providerStandingsKey(leagueId, season),
-      freshTtlSeconds: CACHE_TTL.standingsFresh,
-      staleTtlSeconds: CACHE_TTL.standingsStale,
-      fn: () => readStandingsFromDb(leagueId, season),
-    });
-
-    return toServiceResult(result);
-  }
-
   const result = await cached({
     key: providerStandingsKey(leagueId, season),
     freshTtlSeconds: CACHE_TTL.standingsFresh,
     staleTtlSeconds: CACHE_TTL.standingsStale,
-    fn: () => getStandingsEndpoint(leagueId, season),
+    fn: async () => {
+      if (isApiFootballIngestOnly()) {
+        const fromDb = await readStandingsFromDb(leagueId, season);
+        if (fromDb.length > 0) {
+          return fromDb;
+        }
+      }
+
+      return getStandingsEndpoint(leagueId, season);
+    },
+  });
+
+  return toServiceResult(result);
+}
+
+export async function getLeagueDetail(
+  id: number
+): Promise<ServiceResult<LeagueDetail | null>> {
+  const result = await cached({
+    key: providerLeagueKey(id),
+    freshTtlSeconds: CACHE_TTL.leagueFresh,
+    staleTtlSeconds: CACHE_TTL.leagueStale,
+    fn: async () => {
+      if (isApiFootballIngestOnly()) {
+        const fromDb = await readLeagueDetailFromDb(id);
+        if (fromDb) {
+          return fromDb;
+        }
+      }
+
+      return getLeagueByIdEndpoint(id);
+    },
+  });
+
+  return toServiceResult(result);
+}
+
+export async function getFixturesForLeagueSeason(
+  leagueProviderId: number,
+  seasonYear: number
+): Promise<ServiceResult<Fixture[]>> {
+  const result = await cached({
+    key: providerLeagueFixturesKey(leagueProviderId, seasonYear),
+    freshTtlSeconds: CACHE_TTL.leagueFixturesFresh,
+    staleTtlSeconds: CACHE_TTL.leagueFixturesStale,
+    fn: async () => {
+      if (isApiFootballIngestOnly()) {
+        const fromDb = await readFixturesForLeagueSeasonFromDb(
+          leagueProviderId,
+          seasonYear
+        );
+
+        if (fromDb.length > 0) {
+          return fromDb;
+        }
+      }
+
+      return listFixturesByLeagueSeasonEndpoint(leagueProviderId, seasonYear);
+    },
+  });
+
+  return toServiceResult(result);
+}
+
+export async function getLeagueTopScorers(
+  leagueProviderId: number,
+  seasonYear: number
+): Promise<ServiceResult<LeaguePlayerLeaderboardRow[]>> {
+  const result = await cached({
+    key: providerLeagueTopScorersKey(leagueProviderId, seasonYear),
+    freshTtlSeconds: CACHE_TTL.leagueTopScorersFresh,
+    staleTtlSeconds: CACHE_TTL.leagueTopScorersStale,
+    fn: () => getTopScorersEndpoint(leagueProviderId, seasonYear),
+  });
+
+  return toServiceResult(result);
+}
+
+export async function getLeagueTopAssists(
+  leagueProviderId: number,
+  seasonYear: number
+): Promise<ServiceResult<LeaguePlayerLeaderboardRow[]>> {
+  const result = await cached({
+    key: providerLeagueTopAssistsKey(leagueProviderId, seasonYear),
+    freshTtlSeconds: CACHE_TTL.leagueTopScorersFresh,
+    staleTtlSeconds: CACHE_TTL.leagueTopScorersStale,
+    fn: () => getTopAssistsEndpoint(leagueProviderId, seasonYear),
   });
 
   return toServiceResult(result);

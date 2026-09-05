@@ -93,6 +93,7 @@ export function PlayerDetailsTabs({
 
       <TabsContent value="statistics">
         <PlayerStatisticsTab
+          leagueExternalId={seasonStats?.leagueExternalId ?? null}
           leagueName={seasonStats?.leagueName ?? "League"}
           seasonYear={seasonStats?.seasonYear ?? null}
           position={player.position}
