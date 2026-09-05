@@ -5,13 +5,14 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LeagueFixturesTab } from "@/components/league/LeagueFixturesTab";
 import { LeagueOverviewTab } from "@/components/league/LeagueOverviewTab";
 import { LeagueStandingsTab } from "@/components/league/LeagueStandingsTab";
-import { LeagueTopScorersTab } from "@/components/league/LeagueTopScorersTab";
+import { LeagueTopStatsTab } from "@/components/league/LeagueTopStatsTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseLeagueTab } from "@/lib/leagues/url";
 import type {
   Fixture,
   League,
   LeaguePlayerLeaderboardRow,
+  LeagueStatLeaderboard,
   Season,
   StandingsGroup,
 } from "@/types/domain";
@@ -23,7 +24,7 @@ type LeagueDetailsTabsProps = {
   standings: StandingsGroup[];
   fixtures: Fixture[];
   topScorers: LeaguePlayerLeaderboardRow[];
-  topAssists: LeaguePlayerLeaderboardRow[];
+  topStats: LeagueStatLeaderboard[];
 };
 
 export function LeagueDetailsTabs({
@@ -33,7 +34,7 @@ export function LeagueDetailsTabs({
   standings,
   fixtures,
   topScorers,
-  topAssists,
+  topStats,
 }: LeagueDetailsTabsProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -72,7 +73,7 @@ export function LeagueDetailsTabs({
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="standings">Standings</TabsTrigger>
         <TabsTrigger value="fixtures">Fixtures</TabsTrigger>
-        <TabsTrigger value="top-scorers">Top scorers</TabsTrigger>
+        <TabsTrigger value="top-stats">Top stats</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-4">
@@ -94,8 +95,8 @@ export function LeagueDetailsTabs({
         <LeagueFixturesTab fixtures={fixtures} />
       </TabsContent>
 
-      <TabsContent value="top-scorers">
-        <LeagueTopScorersTab topScorers={topScorers} topAssists={topAssists} />
+      <TabsContent value="top-stats">
+        <LeagueTopStatsTab leaderboards={topStats} />
       </TabsContent>
     </Tabs>
   );

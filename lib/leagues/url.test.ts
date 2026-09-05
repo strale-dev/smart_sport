@@ -14,7 +14,8 @@ describe("parseLeagueTab", () => {
 
   it("parses valid tabs", () => {
     expect(parseLeagueTab("standings")).toBe("standings");
-    expect(parseLeagueTab("top-scorers")).toBe("top-scorers");
+    expect(parseLeagueTab("top-stats")).toBe("top-stats");
+    expect(parseLeagueTab("top-scorers")).toBe("top-stats");
   });
 });
 

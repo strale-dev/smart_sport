@@ -381,19 +381,40 @@ Match Details is fully populated: stats, timeline, lineups, form, H2H. Analytics
 
 **League page**
 
-- [ ] Overview + Standings + Fixtures + Top scorers/assists.
+- [x] Overview + Standings + Fixtures + Top scorers/assists.
 
 ### Definition of Done
 
-- [ ] A random real fixture page on desktop shows every card populated with real data or a clean partial state.
-- [ ] Mobile match page is scrollable, cards stack, no layout break.
-- [ ] Lighthouse mobile performance ≥ 80.
-- [ ] All new services have unit tests for core logic.
+Run automated gates first: `npm.cmd run phase3:check`. Then complete the manual QA checklist below.
 
-### Risks / watch-outs
+#### Automated gates (`npm run phase3:check`)
 
-- xG data is not universal — cards must gracefully hide if provider omits.
-- Predicted lineups often missing for lower leagues — show "not yet published" state.
+- [x] `npm.cmd run typecheck`, `lint`, `test:ci`, and `build` pass.
+- [x] `verify:ingestion` — fixtures for UTC today in Postgres.
+- [x] `phase3:match-smoke` — match analytics + match-details data path (FT fixture with stats/events/lineups when bootstrapped).
+- [x] `phase2:dashboard-smoke` — regression pass.
+- [x] `phase3:risks-verify` — xG partial + lineups empty states on real fixture IDs.
+- [x] Unit tests: `lib/analytics/compute-form.test.ts`, `compute-h2h.test.ts`, `lib/services/analyticsService.test.ts`, `lib/players/attributes.test.ts`.
+
+#### Manual QA (test-in-hand)
+
+- [x] **Desktop FT fixture** — `/matches/1552750` (stats, events, lineups) + `/matches/1570355` (with xG) → Overview cards populated; Lineups tab pitch SVG; Matches tab Form + H2H. _(SSR verified 200 + content checks.)_
+- [x] **Desktop NS fixture** — `/matches/1552754` → Comparison + PlayersToWatch placeholder; Form/H2H; Lineups empty state.
+- [x] **Mobile 375px** — Match page uses `max-w-3xl` + stacked `space-y-4` cards; tab bar horizontal scroll; no full-page horizontal overflow in layout classes. _(Automated SSR class check; founder device tap QA ~5 min optional.)_
+- [ ] **Lighthouse mobile ≥ 80** — Local production (`npm run build && npm run start`): **~70** on `/matches/1570355` after streaming + lazy chart splits (LCP ~4.3s vs 7.3s baseline). **Re-verify on Vercel preview** (closer to Supabase, CDN) before public launch.
+- [ ] **PostHog Live Events** — With analytics consent → toggle Form 5/10, H2H scope, view FT momentum → confirm `match_form_scope_changed`, `match_h2h_scope_changed`, `match_momentum_viewed`. _(Capture wired; confirm in PostHog dashboard.)_
+
+#### Data prerequisites verified
+
+- [x] `bootstrap:match-details` — 6+ FT fixtures with stats/events/lineups in Postgres.
+- [ ] `sync:standings` — **blocked on Free API plan** (current season 2026 unavailable); standings tabs show empty state until Pro key cutover (see Phase 5 gate).
+
+#### Risks / watch-outs — verified
+
+- [x] **xG not universal** — `/matches/1553856` omits xG row; `DataQualityChip` "Partial data" when applicable.
+- [x] **Predicted lineups missing** — `/matches/1552754` → "Lineups not confirmed yet" empty state.
+
+**Founder sign-off (~10 min):** Lighthouse on Vercel preview, PostHog Live Events, optional mobile device tap pass.
 
 ---
 

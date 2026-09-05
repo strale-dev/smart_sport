@@ -13,14 +13,15 @@ import { parseLeagueSeason, parseLeagueTab } from "@/lib/leagues/url";
 import {
   getFixturesForLeagueSeason,
   getLeagueDetail,
-  getLeagueTopAssists,
   getLeagueTopScorers,
+  getLeagueTopStats,
   getStandings,
 } from "@/lib/services/footballService";
 import { getCurrentUser } from "@/lib/supabase/user";
 import type {
   Fixture,
   LeaguePlayerLeaderboardRow,
+  LeagueStatLeaderboard,
   StandingsGroup,
 } from "@/types/domain";
 
@@ -77,8 +78,9 @@ export default async function LeaguePage({
   const emptyStandings: StandingsGroup[] = [];
   const emptyFixtures: Fixture[] = [];
   const emptyLeaderboard: LeaguePlayerLeaderboardRow[] = [];
+  const emptyTopStats: LeagueStatLeaderboard[] = [];
 
-  const [standingsResult, fixturesResult, topScorersResult, topAssistsResult] =
+  const [standingsResult, fixturesResult, topScorersResult, topStatsResult] =
     await Promise.all([
       seasonYear != null
         ? getStandings(id, seasonYear).catch((error: unknown) => {
@@ -117,15 +119,15 @@ export default async function LeaguePage({
             meta: { cached: false, stale: false },
           }),
       seasonYear != null
-        ? getLeagueTopAssists(id, seasonYear).catch((error: unknown) => {
-            console.warn("[league] top assists unavailable", error);
+        ? getLeagueTopStats(id, seasonYear).catch((error: unknown) => {
+            console.warn("[league] top stats unavailable", error);
             return {
-              data: emptyLeaderboard,
+              data: emptyTopStats,
               meta: { cached: false, stale: false },
             };
           })
         : Promise.resolve({
-            data: emptyLeaderboard,
+            data: emptyTopStats,
             meta: { cached: false, stale: false },
           }),
     ]);
@@ -146,7 +148,7 @@ export default async function LeaguePage({
         standings={standingsResult.data}
         fixtures={fixturesResult.data}
         topScorers={topScorersResult.data}
-        topAssists={topAssistsResult.data}
+        topStats={topStatsResult.data}
       />
       <LeagueViewAnalytics
         leagueExternalId={league.externalId}

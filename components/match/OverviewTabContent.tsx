@@ -1,7 +1,9 @@
 import { LiveStatsCard } from "@/components/match/LiveStatsCard";
-import { MatchMomentumCard } from "@/components/match/MatchMomentumCard";
+import {
+  MatchMomentumCardLazy,
+  TeamComparisonCardLazy,
+} from "@/components/match/overview-chart-cards";
 import { PlayersToWatchCard } from "@/components/match/PlayersToWatchCard";
-import { TeamComparisonCard } from "@/components/match/TeamComparisonCard";
 import { TimelineCard } from "@/components/match/TimelineCard";
 import {
   getOverviewCardOrder,
@@ -41,8 +43,10 @@ export function OverviewTabContent({
       <TimelineCard key="timeline" events={events} />
     ) : null,
     momentum: isOverviewCardVisible("momentum", mode) ? (
-      <MatchMomentumCard
+      <MatchMomentumCardLazy
         key="momentum"
+        fixtureId={fixture.externalId}
+        status={fixture.status}
         homeTeamName={fixture.homeTeam.name}
         awayTeamName={fixture.awayTeam.name}
         buckets={momentumBuckets}
@@ -52,7 +56,7 @@ export function OverviewTabContent({
       <LiveStatsCard key="liveStats" fixture={fixture} stats={stats} />
     ) : null,
     comparison: isOverviewCardVisible("comparison", mode) ? (
-      <TeamComparisonCard
+      <TeamComparisonCardLazy
         key="comparison"
         fixture={fixture}
         stats={stats}

@@ -1,10 +1,11 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { SparklesIcon } from "lucide-react";
 
-import { ComingSoonCard } from "@/components/common/ComingSoonCard";
+import { ChartCardSkeleton } from "@/components/match/ChartCardSkeleton";
 import { PlayerCareerTab } from "@/components/player/PlayerCareerTab";
 import { PlayerMatchesTab } from "@/components/player/PlayerMatchesTab";
 import { PlayerOverviewFacts } from "@/components/player/PlayerOverviewFacts";
@@ -24,6 +25,16 @@ import type {
   PlayerMatchHistoryPage,
   PlayerSeasonStatistics,
 } from "@/types/domain";
+
+const PlayerAttributeOverviewCardLazy = dynamic(
+  () =>
+    import("@/components/player/PlayerAttributeOverviewCard").then(
+      (module) => module.PlayerAttributeOverviewCard
+    ),
+  {
+    loading: () => <ChartCardSkeleton title="Attribute overview" />,
+  }
+);
 
 type PlayerDetailsTabsProps = {
   player: Player;
@@ -81,9 +92,9 @@ export function PlayerDetailsTabs({
 
       <TabsContent value="overview" className="space-y-4">
         <PlayerOverviewFacts player={player} seasonStats={seasonStats} />
-        <ComingSoonCard
-          title="Attribute overview"
-          description="Position-aware attributes will appear here in a later update."
+        <PlayerAttributeOverviewCardLazy
+          position={player.position}
+          stats={seasonStats}
         />
       </TabsContent>
 

@@ -303,6 +303,24 @@ export type LeaguePlayerLeaderboardRow = {
   assists: number | null;
   appearances: number | null;
   minutes: number | null;
+  rating: number | null;
+  shotsTotal: number | null;
+  shotsOnTarget: number | null;
+  keyPasses: number | null;
+  passesTotal: number | null;
+  tacklesTotal: number | null;
+  interceptions: number | null;
+  dribblesSuccess: number | null;
+  yellowCards: number | null;
+  redCards: number | null;
+  saves: number | null;
+  foulsCommitted: number | null;
+};
+
+export type LeagueStatLeaderboard = {
+  id: string;
+  label: string;
+  rows: LeaguePlayerLeaderboardRow[];
 };
 
 export type Season = {

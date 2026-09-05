@@ -123,13 +123,13 @@ export function LeagueOverviewTab({
             render={
               <Link
                 href={buildLeagueHref(league.externalId, {
-                  tab: "top-scorers",
+                  tab: "top-stats",
                   season: seasonYear,
                 })}
               />
             }
           >
-            Top scorers
+            Top stats
           </Button>
         </CardContent>
       </Card>

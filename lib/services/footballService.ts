@@ -12,7 +12,9 @@ import {
   getLeagueById as getLeagueByIdEndpoint,
   getStandings as getStandingsEndpoint,
   getTopAssists as getTopAssistsEndpoint,
+  getTopRedCards as getTopRedCardsEndpoint,
   getTopScorers as getTopScorersEndpoint,
+  getTopYellowCards as getTopYellowCardsEndpoint,
   listSeasonsByLeague as listSeasonsByLeagueEndpoint,
 } from "@/lib/api-football/endpoints/leagues";
 import {
@@ -72,6 +74,9 @@ import {
   providerLeagueKey,
   providerLeagueTopAssistsKey,
   providerLeagueTopScorersKey,
+  providerLeagueTopStatsKey,
+  providerLeagueTopYellowCardsKey,
+  providerLeagueTopRedCardsKey,
   providerPlayerKey,
   providerSearchPlayersKey,
   providerSearchTeamsKey,
@@ -86,6 +91,7 @@ import {
   TEAM_MATCHES_FUTURE_DAYS,
   TEAM_MATCHES_PAST_DAYS,
 } from "@/lib/teams/constants";
+import { buildLeagueStatLeaderboards } from "@/lib/leagues/top-stats";
 import { footballSeasonCandidates } from "@/lib/players/season";
 import type {
   Fixture,
@@ -94,6 +100,7 @@ import type {
   FixtureTeamStatistics,
   LeagueDetail,
   LeaguePlayerLeaderboardRow,
+  LeagueStatLeaderboard,
   Lineup,
   Player,
   Season,
@@ -544,7 +551,11 @@ export async function getStandings(
         }
       }
 
-      return getStandingsEndpoint(leagueId, season);
+      return safeOptionalProviderFetch(
+        `standings ${leagueId}/${season}`,
+        () => getStandingsEndpoint(leagueId, season),
+        []
+      );
     },
   });
 
@@ -608,7 +619,12 @@ export async function getLeagueTopScorers(
     key: providerLeagueTopScorersKey(leagueProviderId, seasonYear),
     freshTtlSeconds: CACHE_TTL.leagueTopScorersFresh,
     staleTtlSeconds: CACHE_TTL.leagueTopScorersStale,
-    fn: () => getTopScorersEndpoint(leagueProviderId, seasonYear),
+    fn: () =>
+      safeOptionalProviderFetch(
+        `top scorers ${leagueProviderId}/${seasonYear}`,
+        () => getTopScorersEndpoint(leagueProviderId, seasonYear),
+        []
+      ),
   });
 
   return toServiceResult(result);
@@ -622,7 +638,57 @@ export async function getLeagueTopAssists(
     key: providerLeagueTopAssistsKey(leagueProviderId, seasonYear),
     freshTtlSeconds: CACHE_TTL.leagueTopScorersFresh,
     staleTtlSeconds: CACHE_TTL.leagueTopScorersStale,
-    fn: () => getTopAssistsEndpoint(leagueProviderId, seasonYear),
+    fn: () =>
+      safeOptionalProviderFetch(
+        `top assists ${leagueProviderId}/${seasonYear}`,
+        () => getTopAssistsEndpoint(leagueProviderId, seasonYear),
+        []
+      ),
+  });
+
+  return toServiceResult(result);
+}
+
+export async function getLeagueTopStats(
+  leagueProviderId: number,
+  seasonYear: number
+): Promise<ServiceResult<LeagueStatLeaderboard[]>> {
+  const result = await cached({
+    key: providerLeagueTopStatsKey(leagueProviderId, seasonYear),
+    freshTtlSeconds: CACHE_TTL.leagueTopScorersFresh,
+    staleTtlSeconds: CACHE_TTL.leagueTopScorersStale,
+    fn: async () => {
+      const [topScorers, topAssists, topYellowCards, topRedCards] =
+        await Promise.all([
+          safeOptionalProviderFetch(
+            `top scorers ${leagueProviderId}/${seasonYear}`,
+            () => getTopScorersEndpoint(leagueProviderId, seasonYear),
+            []
+          ),
+          safeOptionalProviderFetch(
+            `top assists ${leagueProviderId}/${seasonYear}`,
+            () => getTopAssistsEndpoint(leagueProviderId, seasonYear),
+            []
+          ),
+          safeOptionalProviderFetch(
+            `top yellow cards ${leagueProviderId}/${seasonYear}`,
+            () => getTopYellowCardsEndpoint(leagueProviderId, seasonYear),
+            []
+          ),
+          safeOptionalProviderFetch(
+            `top red cards ${leagueProviderId}/${seasonYear}`,
+            () => getTopRedCardsEndpoint(leagueProviderId, seasonYear),
+            []
+          ),
+        ]);
+
+      return buildLeagueStatLeaderboards({
+        topScorers,
+        topAssists,
+        topYellowCards,
+        topRedCards,
+      });
+    },
   });
 
   return toServiceResult(result);

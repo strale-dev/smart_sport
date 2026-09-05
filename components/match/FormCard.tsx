@@ -11,9 +11,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { captureClientEvent } from "@/lib/posthog/client";
+import { POSTHOG_EVENTS } from "@/lib/posthog/events";
 import type { FormSnapshot } from "@/types/domain";
 
 type FormCardProps = {
+  fixtureId: number;
   homeTeamName: string;
   awayTeamName: string;
   homeForm5: FormSnapshot;
@@ -23,6 +26,7 @@ type FormCardProps = {
 };
 
 export function FormCard({
+  fixtureId,
   homeTeamName,
   awayTeamName,
   homeForm5,
@@ -32,6 +36,16 @@ export function FormCard({
 }: FormCardProps) {
   const [matchCount, setMatchCount] = useState<5 | 10>(10);
 
+  function handleMatchCountChange(value: string) {
+    const matches = Number(value) as 5 | 10;
+    setMatchCount(matches);
+    void captureClientEvent(POSTHOG_EVENTS.matchFormScopeChanged, {
+      fixture_id: fixtureId,
+      scope: "ALL",
+      matches,
+    });
+  }
+
   return (
     <Card className="w-full">
       <CardHeader className="gap-3">
@@ -39,7 +53,7 @@ export function FormCard({
           <CardTitle className="font-heading text-base">Recent form</CardTitle>
           <Tabs
             value={String(matchCount)}
-            onValueChange={(value) => setMatchCount(Number(value) as 5 | 10)}
+            onValueChange={handleMatchCountChange}
           >
             <TabsList>
               <TabsTrigger value="5">Last 5</TabsTrigger>

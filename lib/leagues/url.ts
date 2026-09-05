@@ -2,12 +2,16 @@ export const LEAGUE_TABS = [
   "overview",
   "standings",
   "fixtures",
-  "top-scorers",
+  "top-stats",
 ] as const;
 
 export type LeagueTab = (typeof LEAGUE_TABS)[number];
 
 export function parseLeagueTab(value: string | undefined): LeagueTab {
+  if (value === "top-scorers") {
+    return "top-stats";
+  }
+
   if (value && LEAGUE_TABS.includes(value as LeagueTab)) {
     return value as LeagueTab;
   }

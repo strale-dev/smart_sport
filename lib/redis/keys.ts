@@ -168,6 +168,27 @@ export function providerLeagueTopAssistsKey(
   return `provider:league:${leagueId}:top-assists:${season}`;
 }
 
+export function providerLeagueTopYellowCardsKey(
+  leagueId: number,
+  season: number
+): string {
+  return `provider:league:${leagueId}:top-yellow-cards:${season}`;
+}
+
+export function providerLeagueTopRedCardsKey(
+  leagueId: number,
+  season: number
+): string {
+  return `provider:league:${leagueId}:top-red-cards:${season}`;
+}
+
+export function providerLeagueTopStatsKey(
+  leagueId: number,
+  season: number
+): string {
+  return `provider:league:${leagueId}:top-stats:${season}`;
+}
+
 export function analyticsFormKey(
   teamProviderId: number,
   scope: string,

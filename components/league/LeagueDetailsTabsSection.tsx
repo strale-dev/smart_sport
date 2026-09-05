@@ -6,6 +6,7 @@ import type {
   Fixture,
   League,
   LeaguePlayerLeaderboardRow,
+  LeagueStatLeaderboard,
   Season,
   StandingsGroup,
 } from "@/types/domain";
@@ -17,7 +18,7 @@ type LeagueDetailsTabsSectionProps = {
   standings: StandingsGroup[];
   fixtures: Fixture[];
   topScorers: LeaguePlayerLeaderboardRow[];
-  topAssists: LeaguePlayerLeaderboardRow[];
+  topStats: LeagueStatLeaderboard[];
 };
 
 function LeagueDetailsTabsFallback() {

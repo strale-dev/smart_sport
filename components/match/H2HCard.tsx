@@ -12,10 +12,13 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatFixtureKickoffDateTime } from "@/lib/fixtures/display";
+import { captureClientEvent } from "@/lib/posthog/client";
+import { POSTHOG_EVENTS } from "@/lib/posthog/events";
 import type { H2HScope, H2HSummary } from "@/types/domain";
 import { SwordsIcon } from "lucide-react";
 
 type H2HCardProps = {
+  fixtureId: number;
   homeTeamName: string;
   awayTeamName: string;
   h2hAll: H2HSummary;
@@ -23,6 +26,7 @@ type H2HCardProps = {
 };
 
 export function H2HCard({
+  fixtureId,
   homeTeamName,
   awayTeamName,
   h2hAll,
@@ -31,15 +35,21 @@ export function H2HCard({
   const [scope, setScope] = useState<H2HScope>("ALL");
   const summary = scope === "ALL" ? h2hAll : h2hSameComp;
 
+  function handleScopeChange(value: string) {
+    const nextScope = value as H2HScope;
+    setScope(nextScope);
+    void captureClientEvent(POSTHOG_EVENTS.matchH2hScopeChanged, {
+      fixture_id: fixtureId,
+      scope: nextScope,
+    });
+  }
+
   return (
     <Card className="w-full">
       <CardHeader className="gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="font-heading text-base">Head to head</CardTitle>
-          <Tabs
-            value={scope}
-            onValueChange={(value) => setScope(value as H2HScope)}
-          >
+          <Tabs value={scope} onValueChange={handleScopeChange}>
             <TabsList>
               <TabsTrigger value="ALL">All comps</TabsTrigger>
               <TabsTrigger value="SAME_COMP">Same league</TabsTrigger>

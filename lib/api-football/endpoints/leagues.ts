@@ -68,6 +68,34 @@ export async function getTopAssists(
   );
 }
 
+export async function getTopYellowCards(
+  leagueId: number,
+  season: number
+): Promise<LeaguePlayerLeaderboardRow[]> {
+  const response = await apiFootballFetchResponse<RawApiFootballPlayer>(
+    "/players/topyellowcards",
+    { league: leagueId, season }
+  );
+
+  return response.map((raw, index) =>
+    mapLeaguePlayerLeaderboardRow(raw, index + 1)
+  );
+}
+
+export async function getTopRedCards(
+  leagueId: number,
+  season: number
+): Promise<LeaguePlayerLeaderboardRow[]> {
+  const response = await apiFootballFetchResponse<RawApiFootballPlayer>(
+    "/players/topredcards",
+    { league: leagueId, season }
+  );
+
+  return response.map((raw, index) =>
+    mapLeaguePlayerLeaderboardRow(raw, index + 1)
+  );
+}
+
 export async function getLeagueByIdWithRaw(id: number) {
   const response = await apiFootballFetchResponse<RawApiFootballLeagueDetail>(
     "/leagues",

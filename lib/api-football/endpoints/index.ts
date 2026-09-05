@@ -15,7 +15,9 @@ export {
   getLeagueByIdWithRaw,
   getStandings,
   getTopAssists,
+  getTopRedCards,
   getTopScorers,
+  getTopYellowCards,
   listLeagues,
   listSeasonsByLeague,
 } from "@/lib/api-football/endpoints/leagues";
