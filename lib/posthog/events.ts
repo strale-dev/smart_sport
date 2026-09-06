@@ -9,6 +9,8 @@ export const POSTHOG_EVENTS = {
   matchFormScopeChanged: "match_form_scope_changed",
   matchH2hScopeChanged: "match_h2h_scope_changed",
   matchMomentumViewed: "match_momentum_viewed",
+  aiInsightGenerated: "ai_insight_generated",
+  aiLimitReached: "ai_limit_reached",
   teamViewed: "team_viewed",
   playerViewed: "player_viewed",
   leagueViewed: "league_viewed",

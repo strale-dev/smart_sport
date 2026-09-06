@@ -54,3 +54,38 @@ export async function captureWaitlistSignup(
 
   await posthog.shutdown();
 }
+
+export type AiInsightGeneratedEventInput = {
+  userId: string;
+  fixtureId: number;
+  cached: boolean;
+  model: string;
+};
+
+export async function captureAiInsightGenerated(
+  input: AiInsightGeneratedEventInput
+): Promise<void> {
+  const posthogKey = getServerEnv().NEXT_PUBLIC_POSTHOG_KEY;
+
+  if (!isPostHogProjectKey(posthogKey)) {
+    console.warn(
+      "[posthog] NEXT_PUBLIC_POSTHOG_KEY must be a Project API key (phc_...) for server capture"
+    );
+    return;
+  }
+
+  const posthog = getPostHog();
+
+  posthog.capture({
+    distinctId: input.userId,
+    event: "ai_insight_generated",
+    properties: {
+      fixture_id: input.fixtureId,
+      cached: input.cached,
+      model: input.model,
+      app_env: env.NEXT_PUBLIC_APP_ENV,
+    },
+  });
+
+  await posthog.shutdown();
+}

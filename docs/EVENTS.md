@@ -25,6 +25,13 @@
 | `match_momentum_viewed`    | Momentum card renders on live/finished Overview  | `fixture_id`, `status`, `bucket_count`   | `components/match/MatchMomentumCard.tsx`    | Live match engagement   |
 | `league_viewed`            | League detail page loads (once per visit)        | `league_id`, `season`, `tab`, `is_guest` | `components/league/LeagueViewAnalytics.tsx` | Competition discovery   |
 
+## Phase 4 — AI service (backend)
+
+| Event                  | Trigger                                                 | Properties                                 | Source                                                                 | Funnel         |
+| ---------------------- | ------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------- | -------------- |
+| `ai_insight_generated` | Server generates a fresh pre-match insight (cache miss) | `fixture_id`, `cached`, `model`, `app_env` | `app/api/ai/prematch/[fixtureId]/route.ts` via `lib/posthog/server.ts` | AI consumption |
+| `ai_limit_reached`     | _(planned — UI/API client)_                             | `fixture_id`, `limit`, `used`              | Planned for AI hero UI                                                 | Upgrade funnel |
+
 ### Notes
 
 - **Identify:** `signup_completed` and `login_completed` call `posthog.identify(userId)` before capture.
@@ -49,6 +56,6 @@
 From [Tech.md §21.1](./Tech.md#211-posthog) — not yet implemented:
 
 - `trial_started`, `trial_converted`, `subscription_cancelled`
-- `live_match_viewed`, `ai_insight_generated`
+- `live_match_viewed`, `ai_insight_generated` _(server wired; UI pending)_
 - `follow_added`, `favorite_added`
 - `ai_limit_reached`, `paywall_shown`

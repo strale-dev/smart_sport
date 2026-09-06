@@ -217,6 +217,25 @@ export function cacheLockKey(cacheKey: string): string {
   return `lock:cache:${cacheKey}`;
 }
 
+export function predictionPrematchLockKey(fixtureExternalId: number): string {
+  return `lock:prediction:prematch:${fixtureExternalId}`;
+}
+
+export function aiPrematchInsightKey(
+  fixtureExternalId: number,
+  contextHash: string
+): string {
+  return `ai:insight:prematch:${fixtureExternalId}:${contextHash}`;
+}
+
+export function aiPrematchLockKey(fixtureExternalId: number): string {
+  return `lock:ai:prematch:${fixtureExternalId}`;
+}
+
+export function aiUserDailyLimitKey(userId: string): string {
+  return `ratelimit:user:${userId}:ai:day`;
+}
+
 export function fixtureFreshTtlSeconds(status?: FixtureStatus): number {
   if (status && isLiveFixtureStatus(status)) {
     return CACHE_TTL.fixtureLiveFresh;

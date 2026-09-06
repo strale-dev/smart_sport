@@ -17,6 +17,10 @@
     {
       "path": "/api/cron/refresh-analytics",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/warm-ai-prematch",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

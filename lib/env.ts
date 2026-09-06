@@ -20,6 +20,15 @@ export const serverEnvSchema = publicEnvSchema.extend({
   API_FOOTBALL_DAILY_LIMIT: z.coerce.number().int().positive().optional(),
   API_FOOTBALL_INGEST_ONLY: z.enum(["true", "false", "1", "0"]).optional(),
   CRON_SECRET: z.string().min(1).optional(),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  OPENAI_MODEL_DEFAULT: z.string().min(1).optional(),
+  FREE_TIER_AI_PREDICTIONS_PER_DAY: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional(),
+  AI_PREMATCH_CACHE_TTL_SEC: z.coerce.number().int().positive().optional(),
+  AI_PROMPT_VERSION: z.string().min(1).optional(),
   RESEND_API_KEY: z.string().min(1),
   RESEND_FROM: z.string().min(1),
   SENTRY_DSN: z.string().url(),
@@ -73,6 +82,15 @@ function readServerEnvSource(
     API_FOOTBALL_DAILY_LIMIT: emptyToUndefined(source.API_FOOTBALL_DAILY_LIMIT),
     API_FOOTBALL_INGEST_ONLY: emptyToUndefined(source.API_FOOTBALL_INGEST_ONLY),
     CRON_SECRET: emptyToUndefined(source.CRON_SECRET),
+    OPENAI_API_KEY: emptyToUndefined(source.OPENAI_API_KEY),
+    OPENAI_MODEL_DEFAULT: emptyToUndefined(source.OPENAI_MODEL_DEFAULT),
+    FREE_TIER_AI_PREDICTIONS_PER_DAY: emptyToUndefined(
+      source.FREE_TIER_AI_PREDICTIONS_PER_DAY
+    ),
+    AI_PREMATCH_CACHE_TTL_SEC: emptyToUndefined(
+      source.AI_PREMATCH_CACHE_TTL_SEC
+    ),
+    AI_PROMPT_VERSION: emptyToUndefined(source.AI_PROMPT_VERSION),
     RESEND_API_KEY: source.RESEND_API_KEY,
     RESEND_FROM: source.RESEND_FROM,
     SENTRY_DSN: source.SENTRY_DSN,
@@ -161,4 +179,57 @@ export function isApiFootballIngestOnly(
   }
 
   return parsePublicEnv(source).NEXT_PUBLIC_APP_ENV === "development";
+}
+
+export function hasOpenAiConfig(
+  source: Record<string, string | undefined> = process.env
+): boolean {
+  return Boolean(emptyToUndefined(source.OPENAI_API_KEY));
+}
+
+export function getOpenAiModelDefault(
+  source: Record<string, string | undefined> = process.env
+): string {
+  return emptyToUndefined(source.OPENAI_MODEL_DEFAULT) ?? "gpt-4o-mini";
+}
+
+export function getFreeTierAiPredictionsPerDay(
+  source: Record<string, string | undefined> = process.env
+): number {
+  const raw = emptyToUndefined(source.FREE_TIER_AI_PREDICTIONS_PER_DAY);
+  if (!raw) {
+    return 5;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+}
+
+export function getAiPrematchCacheTtlSec(
+  source: Record<string, string | undefined> = process.env
+): number {
+  const raw = emptyToUndefined(source.AI_PREMATCH_CACHE_TTL_SEC);
+  if (!raw) {
+    return 86_400;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 86_400;
+}
+
+export function getAiPromptVersion(
+  source: Record<string, string | undefined> = process.env
+): string {
+  return emptyToUndefined(source.AI_PROMPT_VERSION) ?? "1.0.0";
+}
+
+export function assertOpenAiConfiguredInProduction(
+  source: Record<string, string | undefined> = process.env
+): void {
+  const { NEXT_PUBLIC_APP_ENV } = parsePublicEnv(source);
+  if (NEXT_PUBLIC_APP_ENV === "production" && !hasOpenAiConfig(source)) {
+    throw new Error(
+      "OPENAI_API_KEY is required in production when AI generation is enabled."
+    );
+  }
 }
