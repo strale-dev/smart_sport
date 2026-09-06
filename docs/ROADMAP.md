@@ -428,27 +428,27 @@ Pre-match probabilities are computed by the deterministic engine. The LLM wraps 
 
 **Prediction engine**
 
-- [ ] `lib/models/elo.ts` — Elo update (historical fixture backfill script for MVP leagues).
-- [ ] `lib/models/features.ts` — feature vector builder (pre-match).
-- [ ] `lib/models/logistic.ts` — logistic regression with initial coefficients (from public research + cold-start heuristics).
-- [ ] `lib/models/poisson.ts` — Bivariate Poisson for goal expectation.
-- [ ] `lib/services/predictionService.ts` — orchestrates model call, stores `predictions` row (with `model_version_id`, `input_snapshot`).
-- [ ] `model_versions` seed with `1.0.0`.
-- [ ] Confidence bucketing per PRD §8.2.
+- [x] `lib/models/elo.ts` — Elo update (historical fixture backfill script for MVP leagues).
+- [x] `lib/models/features.ts` — feature vector builder (pre-match).
+- [x] `lib/models/logistic.ts` — logistic regression with initial coefficients (from public research + cold-start heuristics).
+- [x] `lib/models/poisson.ts` — Bivariate Poisson for goal expectation.
+- [x] `lib/services/predictionService.ts` — orchestrates model call, stores `predictions` row (with `model_version_id`, `input_snapshot`).
+- [x] `model_versions` seed with `1.0.0`.
+- [x] Confidence bucketing per PRD §8.2.
 
 **AI service**
 
-- [ ] `lib/ai/schemas.ts` — Zod `AIInsightSchema` (from Tech.md §14.1).
-- [ ] `lib/ai/prompts.ts` — system + user prompt templates. Version tag stored.
-- [ ] `lib/ai/cache.ts` — `context_hash` computation + lookup.
-- [ ] `lib/services/aiContextService.ts` — trims features into LLM-safe context.
-- [ ] `lib/services/aiService.ts`:
+- [x] `lib/ai/schemas.ts` — Zod `AIInsightSchema` (from Tech.md §14.1).
+- [x] `lib/ai/prompts.ts` — system + user prompt templates. Version tag stored.
+- [x] `lib/ai/cache.ts` — `context_hash` computation + lookup.
+- [x] `lib/services/aiContextService.ts` — trims features into LLM-safe context.
+- [x] `lib/services/aiService.ts`:
   - `generatePrematchInsight(fixtureId, {userId?, tier})`.
   - Structured Outputs call to OpenAI (`gpt-4o-mini` default; `gpt-4o` for deep tier).
   - Zod re-validation post-response.
   - Persist to `ai_insights` with cost + token counts.
   - Return cached result on subsequent hits.
-- [ ] `app/api/ai/prematch/[fixtureId]/route.ts` — server route (rate-limited, tier-checked).
+- [x] `app/api/ai/prematch/[fixtureId]/route.ts` — server route (rate-limited, tier-checked).
 
 **Guardrails**
 
