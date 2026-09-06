@@ -452,10 +452,10 @@ Pre-match probabilities are computed by the deterministic engine. The LLM wraps 
 
 **Guardrails**
 
-- [ ] System prompt states injection resistance.
-- [ ] Structured input only; raw provider text is filtered before being fed.
-- [ ] Per-user rate limiter (Upstash Ratelimit).
-- [ ] `AI_LIMIT_REACHED` typed response contract.
+- [x] System prompt states injection resistance.
+- [x] Structured input only; raw provider text is filtered before being fed.
+- [x] Per-user rate limiter (Upstash Ratelimit).
+- [x] `AI_LIMIT_REACHED` typed response contract.
 
 **UI**
 

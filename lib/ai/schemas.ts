@@ -201,3 +201,12 @@ export type PrematchInsightResponse =
       fixtureExternalId: number;
       fixtureStatus: string;
     };
+
+export function isAiLimitReachedResponse(
+  response: PrematchInsightResponse
+): response is Extract<
+  PrematchInsightResponse,
+  { status: "AI_LIMIT_REACHED" }
+> {
+  return response.status === "AI_LIMIT_REACHED";
+}

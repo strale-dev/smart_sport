@@ -7,6 +7,8 @@ import {
   generatePrematchInsight,
   readPrematchInsight,
 } from "@/lib/services/aiService";
+import { AiRateLimitUnavailableError } from "@/lib/ai/usage-gate";
+import { isAiLimitReachedResponse } from "@/lib/ai/schemas";
 import { createClient } from "@/lib/supabase/server";
 import { captureAiInsightGenerated } from "@/lib/posthog/server";
 
@@ -56,6 +58,13 @@ export async function GET(
     const result = await readPrematchInsight(fixtureId);
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
+    if (error instanceof AiRateLimitUnavailableError) {
+      return NextResponse.json(
+        { ok: false, error: "RATE_LIMIT_UNAVAILABLE" },
+        { status: 503 }
+      );
+    }
+
     Sentry.captureException(error);
     console.error("[api/ai/prematch GET]", error);
     return NextResponse.json(
@@ -90,7 +99,7 @@ export async function POST(
       trigger: "user",
     });
 
-    if (result.status === "AI_LIMIT_REACHED") {
+    if (isAiLimitReachedResponse(result)) {
       return NextResponse.json(result, { status: 429 });
     }
 
@@ -105,6 +114,13 @@ export async function POST(
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
+    if (error instanceof AiRateLimitUnavailableError) {
+      return NextResponse.json(
+        { ok: false, error: "RATE_LIMIT_UNAVAILABLE" },
+        { status: 503 }
+      );
+    }
+
     Sentry.captureException(error);
     console.error("[api/ai/prematch POST]", error);
     return NextResponse.json(

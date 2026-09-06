@@ -1,5 +1,6 @@
 import { getAiPromptVersion } from "@/lib/env";
 import { computeContextHash } from "@/lib/ai/hash";
+import { sanitizeProviderText } from "@/lib/ai/sanitize";
 import {
   readFixtureByProviderIdFromDb,
   readLineupsFromDb,
@@ -75,18 +76,18 @@ export async function buildPrematchContext(
     fixtureExternalId,
     kickoffAt: fixture.kickoffAt,
     status: fixture.status,
-    venue: fixture.venue?.name ?? null,
+    venue: sanitizeProviderText(fixture.venue?.name ?? null),
     league: {
       externalId: fixture.league.externalId,
-      name: fixture.league.name,
+      name: sanitizeProviderText(fixture.league.name) ?? "Unknown league",
     },
     homeTeam: {
       externalId: fixture.homeTeam.externalId,
-      name: fixture.homeTeam.name,
+      name: sanitizeProviderText(fixture.homeTeam.name) ?? "Home team",
     },
     awayTeam: {
       externalId: fixture.awayTeam.externalId,
-      name: fixture.awayTeam.name,
+      name: sanitizeProviderText(fixture.awayTeam.name) ?? "Away team",
     },
     lineupsState,
     modelVersion: prediction.modelVersion,

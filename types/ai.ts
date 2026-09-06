@@ -4,6 +4,8 @@ export type {
   StoredAIInsight,
 } from "@/lib/ai/schemas";
 
+export { isAiLimitReachedResponse } from "@/lib/ai/schemas";
+
 export type LineupsContextState = "CONFIRMED" | "PREDICTED" | "MISSING";
 
 export type PrematchAiContext = {
