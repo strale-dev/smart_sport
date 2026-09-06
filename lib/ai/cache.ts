@@ -45,7 +45,7 @@ export function mapAiInsightRowToStored(
     weakerTeamScoringChance:
       row.weaker_team_scoring_chance != null
         ? Number(row.weaker_team_scoring_chance)
-        : undefined,
+        : null,
     confidence: row.confidence,
     keyFactors,
     scenarios,
