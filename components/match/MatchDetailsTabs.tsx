@@ -3,17 +3,17 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { AIHeroComingSoonCard } from "@/components/ai/AIHeroComingSoonCard";
-import { AIHeroLockedCard } from "@/components/ai/AIHeroLockedCard";
+import { AIHeroDetailedPanel } from "@/components/ai/AIHeroDetailedPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseMatchTab } from "@/lib/fixtures/match-url";
 import { captureClientEvent } from "@/lib/posthog/client";
 import { POSTHOG_EVENTS } from "@/lib/posthog/events";
+import type { TeamRef } from "@/types/domain";
 
 type MatchDetailsTabsProps = {
-  isGuest: boolean;
-  returnTo: string;
   fixtureId: number;
+  homeTeam: Pick<TeamRef, "name" | "code">;
+  awayTeam: Pick<TeamRef, "name" | "code">;
   overview: ReactNode;
   lineups: ReactNode;
   standings: ReactNode;
@@ -21,9 +21,9 @@ type MatchDetailsTabsProps = {
 };
 
 export function MatchDetailsTabs({
-  isGuest,
-  returnTo,
   fixtureId,
+  homeTeam,
+  awayTeam,
   overview,
   lineups,
   standings,
@@ -76,11 +76,7 @@ export function MatchDetailsTabs({
       </TabsContent>
 
       <TabsContent value="ai">
-        {isGuest ? (
-          <AIHeroLockedCard returnTo={returnTo} />
-        ) : (
-          <AIHeroComingSoonCard />
-        )}
+        <AIHeroDetailedPanel homeTeam={homeTeam} awayTeam={awayTeam} />
       </TabsContent>
 
       <TabsContent value="lineups">{lineups}</TabsContent>

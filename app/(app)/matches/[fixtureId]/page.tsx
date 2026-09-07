@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { AIHeroSection } from "@/components/ai/AIHeroSection";
+import { AIInsightProvider } from "@/components/ai/AIInsightProvider";
 import { MatchDetailsTabsSection } from "@/components/match/MatchDetailsTabsSection";
 import { MatchHeader } from "@/components/match/MatchHeader";
 import { MatchViewAnalytics } from "@/components/match/MatchViewAnalytics";
@@ -57,38 +59,52 @@ export default async function MatchPage({ params }: MatchPageProps) {
   }
 
   const returnTo = `/matches/${id}`;
+  const isGuest = !user;
 
   return (
-    <div className="flex w-full max-w-3xl flex-col gap-6">
-      <MatchHeader fixture={fixture} />
+    <AIInsightProvider
+      key={`${fixture.externalId}-${fixture.status}-${isGuest ? "guest" : "user"}`}
+      fixtureId={fixture.externalId}
+      fixtureStatus={fixture.status}
+      isGuest={isGuest}
+    >
+      <div className="flex w-full max-w-3xl flex-col gap-6">
+        <MatchHeader fixture={fixture} />
 
-      <MatchDetailsTabsSection
-        isGuest={!user}
-        returnTo={returnTo}
-        fixtureId={fixture.externalId}
-        overview={
-          <Suspense fallback={<MatchTabPanelFallback />}>
-            <MatchOverviewPanel fixture={fixture} />
-          </Suspense>
-        }
-        lineups={
-          <Suspense fallback={<MatchTabPanelFallback />}>
-            <MatchLineupsPanel fixture={fixture} />
-          </Suspense>
-        }
-        standings={
-          <Suspense fallback={<MatchTabPanelFallback />}>
-            <MatchStandingsPanel fixture={fixture} />
-          </Suspense>
-        }
-        matches={
-          <Suspense fallback={<MatchTabPanelFallback />}>
-            <MatchMatchesPanel fixture={fixture} />
-          </Suspense>
-        }
-      />
+        <AIHeroSection
+          homeTeam={fixture.homeTeam}
+          awayTeam={fixture.awayTeam}
+          returnTo={returnTo}
+        />
 
-      <MatchViewAnalytics fixture={fixture} isGuest={!user} />
-    </div>
+        <MatchDetailsTabsSection
+          fixtureId={fixture.externalId}
+          homeTeam={fixture.homeTeam}
+          awayTeam={fixture.awayTeam}
+          overview={
+            <Suspense fallback={<MatchTabPanelFallback />}>
+              <MatchOverviewPanel fixture={fixture} />
+            </Suspense>
+          }
+          lineups={
+            <Suspense fallback={<MatchTabPanelFallback />}>
+              <MatchLineupsPanel fixture={fixture} />
+            </Suspense>
+          }
+          standings={
+            <Suspense fallback={<MatchTabPanelFallback />}>
+              <MatchStandingsPanel fixture={fixture} />
+            </Suspense>
+          }
+          matches={
+            <Suspense fallback={<MatchTabPanelFallback />}>
+              <MatchMatchesPanel fixture={fixture} />
+            </Suspense>
+          }
+        />
+
+        <MatchViewAnalytics fixture={fixture} isGuest={isGuest} />
+      </div>
+    </AIInsightProvider>
   );
 }

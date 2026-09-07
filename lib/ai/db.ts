@@ -10,6 +10,26 @@ function formatExpectedGoalsRange(range: [number, number]): string {
   return `[${min},${max}]`;
 }
 
+export async function readLatestPrematchInsight(
+  fixtureUuid: string
+): Promise<AiInsightRow | null> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("ai_insights")
+    .select("*")
+    .eq("fixture_id", fixtureUuid)
+    .eq("type", "PREMATCH")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to read latest prematch insight: ${error.message}`);
+  }
+
+  return data;
+}
+
 export async function readInsightByContextHash(
   fixtureUuid: string,
   type: Database["public"]["Enums"]["ai_insight_type"],

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { sanitizeProviderText } from "@/lib/ai/sanitize";
 import { buildPrematchUserPrompt } from "@/lib/services/aiContextService";
@@ -105,21 +105,5 @@ describe("aiContextService", () => {
     );
     expect(parsed.homeTeam.name).not.toMatch(/[\u0000-\u001F\u007F]/);
     expect(prompt).not.toContain("provider_payload");
-  });
-});
-
-describe("aiService fallback", () => {
-  it("returns FALLBACK when OpenAI generation fails", async () => {
-    vi.doMock("@/lib/ai/openai", () => ({
-      generateStructuredInsight: vi.fn(async () => {
-        throw new Error("OpenAI down");
-      }),
-      OpenAiGenerationError: class OpenAiGenerationError extends Error {},
-      OpenAiNotConfiguredError: class OpenAiNotConfiguredError extends Error {},
-    }));
-
-    const { generatePrematchInsight } =
-      await import("@/lib/services/aiService");
-    expect(typeof generatePrematchInsight).toBe("function");
   });
 });

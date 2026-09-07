@@ -7,6 +7,7 @@ import {
   getFixtureEvents,
   getFixtureStatistics,
 } from "@/lib/services/footballService";
+import { getPlayersToWatch } from "@/lib/services/playersToWatchService";
 import type { Fixture, FormSnapshot } from "@/types/domain";
 
 type MatchOverviewPanelProps = {
@@ -20,23 +21,29 @@ export async function MatchOverviewPanel({ fixture }: MatchOverviewPanelProps) {
   const overviewMode = getOverviewLayout(fixture.status);
   const needsFormFallback = overviewMode === "pre";
 
-  const [{ data: stats }, { data: events }, homeForm10, awayForm10] =
-    await Promise.all([
-      getFixtureStatistics(fixtureId),
-      getFixtureEvents(fixtureId),
-      needsFormFallback
-        ? getRecentForm(fixture.homeTeam.externalId, {
-            matches: 10,
-            scope: "ALL",
-          })
-        : Promise.resolve(EMPTY_FORM),
-      needsFormFallback
-        ? getRecentForm(fixture.awayTeam.externalId, {
-            matches: 10,
-            scope: "ALL",
-          })
-        : Promise.resolve(EMPTY_FORM),
-    ]);
+  const [
+    { data: stats },
+    { data: events },
+    homeForm10,
+    awayForm10,
+    playersToWatch,
+  ] = await Promise.all([
+    getFixtureStatistics(fixtureId),
+    getFixtureEvents(fixtureId),
+    needsFormFallback
+      ? getRecentForm(fixture.homeTeam.externalId, {
+          matches: 10,
+          scope: "ALL",
+        })
+      : Promise.resolve(EMPTY_FORM),
+    needsFormFallback
+      ? getRecentForm(fixture.awayTeam.externalId, {
+          matches: 10,
+          scope: "ALL",
+        })
+      : Promise.resolve(EMPTY_FORM),
+    getPlayersToWatch(fixture),
+  ]);
 
   const momentumBuckets =
     overviewMode === "live"
@@ -51,6 +58,7 @@ export async function MatchOverviewPanel({ fixture }: MatchOverviewPanelProps) {
       momentumBuckets={momentumBuckets}
       homeForm={homeForm10}
       awayForm={awayForm10}
+      playersToWatch={playersToWatch}
     />
   );
 }

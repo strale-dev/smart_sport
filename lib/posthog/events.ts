@@ -11,6 +11,7 @@ export const POSTHOG_EVENTS = {
   matchMomentumViewed: "match_momentum_viewed",
   aiInsightGenerated: "ai_insight_generated",
   aiLimitReached: "ai_limit_reached",
+  aiGenerateClicked: "ai_generate_clicked",
   teamViewed: "team_viewed",
   playerViewed: "player_viewed",
   leagueViewed: "league_viewed",

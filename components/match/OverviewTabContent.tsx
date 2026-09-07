@@ -11,6 +11,7 @@ import {
   isOverviewCardVisible,
 } from "@/lib/fixtures/overview-layout";
 import type { MomentumBucket } from "@/lib/momentum/computeMatchMomentum";
+import type { PlayersToWatchResult } from "@/lib/services/playersToWatchService";
 import type {
   Fixture,
   FixtureEvent,
@@ -25,6 +26,7 @@ type OverviewTabContentProps = {
   momentumBuckets: MomentumBucket[];
   homeForm: FormSnapshot;
   awayForm: FormSnapshot;
+  playersToWatch: PlayersToWatchResult;
 };
 
 export function OverviewTabContent({
@@ -34,6 +36,7 @@ export function OverviewTabContent({
   momentumBuckets,
   homeForm,
   awayForm,
+  playersToWatch,
 }: OverviewTabContentProps) {
   const mode = getOverviewLayout(fixture.status);
   const order = getOverviewCardOrder(mode);
@@ -65,7 +68,11 @@ export function OverviewTabContent({
       />
     ) : null,
     playersToWatch: isOverviewCardVisible("playersToWatch", mode) ? (
-      <PlayersToWatchCard key="playersToWatch" fixture={fixture} />
+      <PlayersToWatchCard
+        key="playersToWatch"
+        fixture={fixture}
+        data={playersToWatch}
+      />
     ) : null,
   };
 

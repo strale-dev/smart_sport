@@ -54,14 +54,14 @@ export function AIHeroLockedCard({ returnTo }: AIHeroLockedCardProps) {
           </CardTitle>
         </div>
         <CardDescription className="max-w-lg">
-          AI-powered predictions and explanations are launching soon. Create a
-          free account to get early access when they go live.
+          Sign up free to unlock AI predictions, win probabilities, and
+          analyst-style explanations for every upcoming match.
         </CardDescription>
       </CardHeader>
 
       <CardContent className="relative z-10 flex flex-wrap items-center gap-3 pt-0">
         <Button nativeButton={false} render={<Link href={signupHref} />}>
-          Create a free account to be notified when AI predictions go live
+          Sign up free to unlock AI predictions
         </Button>
         <Button
           variant="ghost"

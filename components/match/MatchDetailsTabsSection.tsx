@@ -3,11 +3,12 @@ import type { ReactNode } from "react";
 
 import { MatchDetailsTabs } from "@/components/match/MatchDetailsTabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { TeamRef } from "@/types/domain";
 
 type MatchDetailsTabsSectionProps = {
-  isGuest: boolean;
-  returnTo: string;
   fixtureId: number;
+  homeTeam: Pick<TeamRef, "name" | "code">;
+  awayTeam: Pick<TeamRef, "name" | "code">;
   overview: ReactNode;
   lineups: ReactNode;
   standings: ReactNode;
@@ -29,9 +30,9 @@ function MatchDetailsTabsFallback() {
 }
 
 export function MatchDetailsTabsSection({
-  isGuest,
-  returnTo,
   fixtureId,
+  homeTeam,
+  awayTeam,
   overview,
   lineups,
   standings,
@@ -40,9 +41,9 @@ export function MatchDetailsTabsSection({
   return (
     <Suspense fallback={<MatchDetailsTabsFallback />}>
       <MatchDetailsTabs
-        isGuest={isGuest}
-        returnTo={returnTo}
         fixtureId={fixtureId}
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
         overview={overview}
         lineups={lineups}
         standings={standings}

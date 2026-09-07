@@ -15,6 +15,12 @@ export function MarketingFooter({ className }: { className?: string }) {
         </p>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
           <Link
+            href="/methodology"
+            className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+          >
+            How our model works
+          </Link>
+          <Link
             href="/privacy"
             className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
           >

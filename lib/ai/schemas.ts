@@ -172,15 +172,23 @@ export type StoredAIInsight = AIInsightPayload & {
   cached: boolean;
 };
 
+export type PrematchInsightMode = "prematch" | "historical";
+
 export type PrematchInsightResponse =
   | {
       status: "OK";
       insight: StoredAIInsight;
       cached: boolean;
+      insightMode: PrematchInsightMode;
     }
   | {
       status: "MISS";
       fixtureExternalId: number;
+    }
+  | {
+      status: "UNAVAILABLE";
+      fixtureExternalId: number;
+      reason?: "NO_STORED_INSIGHT" | "FIXTURE_NOT_ANALYZABLE";
     }
   | {
       status: "FALLBACK";
@@ -195,11 +203,6 @@ export type PrematchInsightResponse =
     }
   | {
       status: "GUEST_FORBIDDEN";
-    }
-  | {
-      status: "NOT_PREMATCH";
-      fixtureExternalId: number;
-      fixtureStatus: string;
     };
 
 export function isAiLimitReachedResponse(

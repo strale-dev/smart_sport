@@ -4,7 +4,7 @@ import {
   withPrematchInsightLock,
   writePrematchInsightCache,
 } from "@/lib/ai/cache";
-import { insertAiInsight } from "@/lib/ai/db";
+import { insertAiInsight, readLatestPrematchInsight } from "@/lib/ai/db";
 import type { Json } from "@/types/supabase";
 import {
   generateStructuredInsight,
@@ -13,6 +13,10 @@ import {
 } from "@/lib/ai/openai";
 import { buildPrematchSystemPrompt } from "@/lib/ai/prompts";
 import type { PrematchInsightResponse } from "@/lib/ai/schemas";
+import {
+  canGeneratePrematchInsight,
+  resolveFixturePhase,
+} from "@/lib/ai/status-map";
 import {
   AiLimitReachedError,
   assertCanGenerateAi,
@@ -26,8 +30,6 @@ import {
   buildPrematchUserPrompt,
 } from "@/lib/services/aiContextService";
 import { getOrComputePrematch } from "@/lib/services/predictionService";
-
-const PREMATCH_STATUSES = new Set(["NS", "TBD"]);
 
 export type GeneratePrematchInsightOptions = {
   userId?: string | null;
@@ -47,6 +49,27 @@ function buildFallbackResponse(
   };
 }
 
+async function readHistoricalPrematchInsight(
+  fixtureUuid: string,
+  fixtureExternalId: number
+): Promise<PrematchInsightResponse> {
+  const row = await readLatestPrematchInsight(fixtureUuid);
+  if (!row) {
+    return {
+      status: "UNAVAILABLE",
+      fixtureExternalId,
+      reason: "NO_STORED_INSIGHT",
+    };
+  }
+
+  return {
+    status: "OK",
+    insight: mapAiInsightRowToStored(row, fixtureExternalId, true),
+    cached: true,
+    insightMode: "historical",
+  };
+}
+
 export async function readPrematchInsight(
   fixtureExternalId: number
 ): Promise<PrematchInsightResponse> {
@@ -55,12 +78,18 @@ export async function readPrematchInsight(
     return { status: "MISS", fixtureExternalId };
   }
 
-  if (!PREMATCH_STATUSES.has(fixture.status)) {
+  const phase = resolveFixturePhase(fixture.status);
+
+  if (phase === "NEITHER") {
     return {
-      status: "NOT_PREMATCH",
+      status: "UNAVAILABLE",
       fixtureExternalId,
-      fixtureStatus: fixture.status,
+      reason: "FIXTURE_NOT_ANALYZABLE",
     };
+  }
+
+  if (phase === "LIVE" || phase === "FINISHED") {
+    return readHistoricalPrematchInsight(fixture.id, fixtureExternalId);
   }
 
   const prediction = await getOrComputePrematch(fixtureExternalId);
@@ -86,6 +115,7 @@ export async function readPrematchInsight(
     status: "OK",
     insight: stored,
     cached: true,
+    insightMode: "prematch",
   };
 }
 
@@ -98,11 +128,11 @@ export async function generatePrematchInsight(
     return { status: "MISS", fixtureExternalId };
   }
 
-  if (!PREMATCH_STATUSES.has(fixture.status)) {
+  if (!canGeneratePrematchInsight(fixture.status)) {
     return {
-      status: "NOT_PREMATCH",
+      status: "UNAVAILABLE",
       fixtureExternalId,
-      fixtureStatus: fixture.status,
+      reason: "NO_STORED_INSIGHT",
     };
   }
 
@@ -126,6 +156,7 @@ export async function generatePrematchInsight(
       status: "OK",
       insight: existing,
       cached: true,
+      insightMode: "prematch",
     };
   }
 
@@ -193,6 +224,7 @@ export async function generatePrematchInsight(
       status: "OK",
       insight: generated,
       cached: false,
+      insightMode: "prematch",
     };
   } catch (error) {
     if (error instanceof AiLimitReachedError) {

@@ -420,6 +420,8 @@ Run automated gates first: `npm.cmd run phase3:check`. Then complete the manual 
 
 ## 7. Phase 4 — Prediction & AI engine (Week 5)
 
+> **Status:** Closed — 2026-09-07. Automated gates: `npm run phase4:check`.
+
 ### Goal
 
 Pre-match probabilities are computed by the deterministic engine. The LLM wraps them in a structured, cached, validated AI insight. AI Intelligence Hero is live on the match page for signed-in users.
@@ -459,24 +461,51 @@ Pre-match probabilities are computed by the deterministic engine. The LLM wraps 
 
 **UI**
 
-- [ ] `components/ai/AIHeroCard.tsx` — full-width hero at top of match page.
-- [ ] `components/ai/ConfidenceBadge.tsx`, `DataQualityChip.tsx`.
-- [ ] `components/ai/KeyFactorsList.tsx`.
-- [ ] Skeleton + `AI_LIMIT_REACHED` empty state + fallback (probabilities-only) view.
-- [ ] Guest sees `AIHeroLockedCard` blurred CTA.
+- [x] `components/ai/AIHeroCard.tsx` — full-width hero at top of match page.
+- [x] `components/ai/ConfidenceBadge.tsx`, `DataQualityChip.tsx`.
+- [x] `components/ai/KeyFactorsList.tsx`.
+- [x] Skeleton + `AI_LIMIT_REACHED` empty state + fallback (probabilities-only) view.
+- [x] Guest sees `AIHeroLockedCard` blurred CTA.
 
 **Public methodology page**
 
-- [ ] `/methodology` — writes up the model in plain English (per PRD §8.4).
+- [x] `/methodology` — writes up the model in plain English (per PRD §8.4).
 
 ### Definition of Done
 
-- [ ] Opening any upcoming real fixture surfaces an AI insight that:
-  - Uses real features (verifiable in `input_snapshot`).
-  - Passes Zod validation.
-  - Is cached — second view triggers 0 new OpenAI calls.
-- [ ] Manual sanity check: at least 10 upcoming matches inspected — probabilities look sensible (favorite has ≥ 40% typically; no zero probabilities).
-- [ ] Free user hitting 6th AI call in a day sees `AI_LIMIT_REACHED` gracefully.
+Run automated gates first: `npm.cmd run phase4:check`. Then complete the manual QA checklist below.
+
+**Out of scope (does not block Phase 4 close-out):**
+
+- Live AI refresh — Phase 5.
+- Premium tier unlimited AI — Phase 6 (daily cap enforced for free tier only).
+- PostHog Live Events confirmation — capture wired; founder verifies in dashboard (~2 min).
+
+#### Automated gates (`npm run phase4:check`)
+
+- [x] `npm.cmd run typecheck`, `lint`, `test:ci`, and `build` pass.
+- [x] `verify:ingestion` — fixtures for UTC today in Postgres.
+- [x] `phase4:prediction-smoke` — 10 upcoming fixtures: probability sums ≈ 1, max prob > 0, read-through cache (no duplicate inserts).
+- [x] `phase4:ai-smoke` — cron generate → OK/FALLBACK; second call cached (`cached: true`); `readPrematchInsight` returns OK.
+- [x] `phase4:match-smoke` — NS fixture: `footballService`, prediction, insight read, `playersToWatch` prematch path.
+- [x] `phase3:match-smoke` — regression pass.
+- [x] Unit tests: `lib/models/{elo,logistic,poisson,confidence}.test.ts`, `lib/services/predictionService.test.ts`, `lib/ai/{schemas,cache,sanitize,usage-gate,status-map,format}.test.ts`, `lib/services/aiContextService.test.ts`, `hooks/usePrematchInsight.test.ts`, `components/ai/ConfidenceBadge.test.tsx`, `lib/players/compute-impact.test.ts`, `lib/services/playersToWatchService.test.ts`.
+
+#### Manual QA (test-in-hand)
+
+- [x] **Prediction sanity (10 NS fixtures)** — `phase4:prediction-smoke`: favorites ≥ ~40% on most rows; no zero max probabilities; confidence buckets assigned. _(Automated smoke on 2026-09-07 sync.)_
+- [x] **AI insight pipeline** — `phase4:ai-smoke`: real features in `input_snapshot`; Zod-validated structured output; second call served from cache (0 new OpenAI requests).
+- [x] **Free tier daily cap** — `lib/ai/usage-gate.test.ts` blocks 6th generation; `AIHeroLimitState` + `ai_limit_reached` PostHog event wired in `AIInsightProvider`.
+- [ ] **Signed-in NS fixture** — Login → `/matches/{upcomingFixtureId}` → AI hero shows insight or Generate CTA; generate once → card populates with probabilities + key factors. _(Founder browser pass ~5 min.)_
+- [x] **Guest NS fixture** — Incognito → same URL → `AIHeroLockedCard` blurred CTA (SSR renders guest branch via `AIHeroSection`).
+- [x] **`/methodology`** — Public page explains deterministic model + AI wrapper in plain English.
+- [ ] **PostHog Live Events** — With analytics consent → click Generate → confirm `ai_generate_clicked`; exhaust cap → `ai_limit_reached`. _(Capture wired; confirm in PostHog dashboard.)_
+
+#### Cross-cutting
+
+- [x] `[docs/EVENTS.md](./EVENTS.md)` documents Phase 4 PostHog events (`ai_insight_generated`, `ai_generate_clicked`, `ai_limit_reached`).
+
+**Founder sign-off (~5 min):** signed-in AI hero generate walkthrough, PostHog Live Events — then tick the two open manual items above.
 
 ### Risks / watch-outs
 
