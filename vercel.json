@@ -20,7 +20,7 @@
     },
     {
       "path": "/api/cron/warm-ai-prematch",
-      "schedule": "*/15 * * * *"
+      "schedule": "15 5 * * *"
     }
   ]
 }
