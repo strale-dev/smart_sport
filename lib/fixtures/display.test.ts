@@ -8,6 +8,8 @@ import { mergeTeamFixtures } from "@/lib/match/merge-team-fixtures";
 import { selectRelevantStandingsGroup } from "@/lib/standings/select-relevant-group";
 import type { Fixture, StandingsGroup } from "@/types/domain";
 
+const BELGRADE = "Europe/Belgrade";
+
 function buildFixture(externalId: number, kickoffAt: string): Fixture {
   return {
     externalId,
@@ -56,16 +58,37 @@ function buildFixture(externalId: number, kickoffAt: string): Fixture {
 
 describe("formatFixtureKickoffTime", () => {
   it("uses 24-hour clock", () => {
-    const formatted = formatFixtureKickoffTime("2026-03-03T18:30:00.000Z");
+    const formatted = formatFixtureKickoffTime(
+      "2026-03-03T18:30:00.000Z",
+      BELGRADE
+    );
     expect(formatted).not.toMatch(/am|pm/i);
     expect(formatted).toMatch(/^\d{2}:\d{2}$/);
+  });
+
+  it("formats kickoff in the requested timezone", () => {
+    expect(formatFixtureKickoffTime("2026-09-08T16:45:00.000Z", "UTC")).toBe(
+      "16:45"
+    );
+    expect(formatFixtureKickoffTime("2026-09-08T16:45:00.000Z", BELGRADE)).toBe(
+      "18:45"
+    );
   });
 });
 
 describe("formatFixtureKickoffDateTime", () => {
   it("uses 24-hour clock in datetime strings", () => {
-    const formatted = formatFixtureKickoffDateTime("2026-03-03T18:30:00.000Z");
+    const formatted = formatFixtureKickoffDateTime(
+      "2026-03-03T18:30:00.000Z",
+      BELGRADE
+    );
     expect(formatted).not.toMatch(/am|pm/i);
+  });
+
+  it("formats kickoff date and time in the requested timezone", () => {
+    expect(
+      formatFixtureKickoffDateTime("2026-09-08T16:45:00.000Z", BELGRADE)
+    ).toContain("18:45");
   });
 });
 

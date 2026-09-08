@@ -2,10 +2,11 @@ import {
   collectActiveLeagueIds,
   collectLiveLeagueIds,
   findNowAnchorFixtureId,
-  groupFixturesByDayAndLeague,
+  groupFixturesByDayAndLeagueInTimezone,
   type FixturesDayGroup,
 } from "@/lib/fixtures/grouping";
-import { buildFixturesWindow, utcDateString } from "@/lib/fixtures/window";
+import { FIXTURES_WINDOW_DAYS } from "@/lib/fixtures/constants";
+import { buildTimezoneWindow } from "@/lib/datetime/timezone";
 import {
   parseFixturesParams,
   type FixturesSearchParams,
@@ -35,19 +36,30 @@ export { parseFixturesParams };
 
 export async function getFixturesData(
   params: FixturesSearchParams = {},
+  timeZone: string,
   now = new Date()
 ): Promise<FixturesData> {
-  const { fromDate, toDateExclusive } = buildFixturesWindow(now);
-  const result = await getMatchesInRange(fromDate, toDateExclusive);
+  const { fromUtc, toUtcExclusive, todayDateKey } = buildTimezoneWindow(
+    now,
+    timeZone,
+    0,
+    FIXTURES_WINDOW_DAYS
+  );
+  const result = await getMatchesInRange(fromUtc, toUtcExclusive);
   const allFixtures = result.data;
   const filtered = filterByLeague(allFixtures, params.league);
 
   return {
-    dayGroups: groupFixturesByDayAndLeague(filtered, params.league, now),
+    dayGroups: groupFixturesByDayAndLeagueInTimezone(
+      filtered,
+      now,
+      timeZone,
+      params.league
+    ),
     liveLeagueIds: collectLiveLeagueIds(allFixtures),
     activeLeagueIds: collectActiveLeagueIds(allFixtures),
     nowAnchorFixtureId: findNowAnchorFixtureId(filtered),
-    todayDateKey: utcDateString(now),
+    todayDateKey,
     filters: { league: params.league },
     isEmpty: filtered.length === 0,
   };

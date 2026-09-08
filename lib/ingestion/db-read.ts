@@ -231,6 +231,10 @@ export async function readFixturesForDateFromDb(
   return ((data ?? []) as FixtureRow[]).map(mapFixtureRow);
 }
 
+function normalizeRangeBound(value: string): string {
+  return value.includes("T") ? value : `${value}T00:00:00.000Z`;
+}
+
 export async function readFixturesInRangeFromDb(
   fromDate: string,
   toDateExclusive: string
@@ -253,8 +257,8 @@ export async function readFixturesInRangeFromDb(
       "league_id",
       leagues.map((league) => league.id)
     )
-    .gte("kickoff_at", `${fromDate}T00:00:00.000Z`)
-    .lt("kickoff_at", `${toDateExclusive}T00:00:00.000Z`)
+    .gte("kickoff_at", normalizeRangeBound(fromDate))
+    .lt("kickoff_at", normalizeRangeBound(toDateExclusive))
     .order("kickoff_at", { ascending: true });
 
   if (error) {

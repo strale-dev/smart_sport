@@ -1,5 +1,6 @@
-import type { Fixture, FixtureStatus } from "@/types/domain";
+import { sanitizeTimezone } from "@/lib/datetime/timezone";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
+import type { Fixture, FixtureStatus } from "@/types/domain";
 
 const KICKOFF_TIME_FORMAT: Intl.DateTimeFormatOptions = {
   hour: "2-digit",
@@ -16,19 +17,27 @@ const KICKOFF_DATE_TIME_FORMAT: Intl.DateTimeFormatOptions = {
   hourCycle: "h23",
 };
 
-export function formatFixtureKickoffTime(kickoffAt: string): string {
-  return new Intl.DateTimeFormat(undefined, KICKOFF_TIME_FORMAT).format(
-    new Date(kickoffAt)
-  );
+export function formatFixtureKickoffTime(
+  kickoffAt: string,
+  timeZone: string
+): string {
+  return new Intl.DateTimeFormat(undefined, {
+    ...KICKOFF_TIME_FORMAT,
+    timeZone: sanitizeTimezone(timeZone),
+  }).format(new Date(kickoffAt));
 }
 
-export function formatFixtureKickoffDateTime(kickoffAt: string): string {
-  return new Intl.DateTimeFormat(undefined, KICKOFF_DATE_TIME_FORMAT).format(
-    new Date(kickoffAt)
-  );
+export function formatFixtureKickoffDateTime(
+  kickoffAt: string,
+  timeZone: string
+): string {
+  return new Intl.DateTimeFormat(undefined, {
+    ...KICKOFF_DATE_TIME_FORMAT,
+    timeZone: sanitizeTimezone(timeZone),
+  }).format(new Date(kickoffAt));
 }
 
-export function formatFixtureScore(fixture: Fixture): string {
+export function formatFixtureScore(fixture: Fixture, timeZone: string): string {
   if (
     isLiveFixtureStatus(fixture.status) ||
     isFinishedFixtureStatus(fixture.status)
@@ -38,7 +47,7 @@ export function formatFixtureScore(fixture: Fixture): string {
     return `${home} – ${away}`;
   }
 
-  return formatFixtureKickoffTime(fixture.kickoffAt);
+  return formatFixtureKickoffTime(fixture.kickoffAt, timeZone);
 }
 
 export function formatFixtureStatusLabel(

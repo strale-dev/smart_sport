@@ -1,6 +1,7 @@
 "use client";
 
 import { EmptyState } from "@/components/common/EmptyState";
+import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider";
 import { Badge } from "@/components/ui/badge";
 import { formatFixtureKickoffDateTime } from "@/lib/fixtures/display";
 import type { FormSnapshot } from "@/types/domain";
@@ -30,6 +31,7 @@ export function TeamFormPanel({
   form10,
   matchCount,
 }: TeamFormPanelProps) {
+  const timeZone = useViewerTimezone();
   const form = matchCount === 5 ? form5 : form10;
 
   if (form.results.length === 0) {
@@ -84,7 +86,7 @@ export function TeamFormPanel({
               {entry.isHome ? "vs" : "@"} {entry.opponentName}
             </span>
             <span className="text-muted-foreground shrink-0 text-xs">
-              {formatFixtureKickoffDateTime(entry.kickoffAt)}
+              {formatFixtureKickoffDateTime(entry.kickoffAt, timeZone)}
             </span>
             <span className="font-mono tabular-nums">
               {entry.goalsFor}-{entry.goalsAgainst}

@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { MapPinIcon, UserIcon } from "lucide-react";
 
 import { LiveDot } from "@/components/common/LiveDot";
 import { LeagueLink } from "@/components/common/LeagueLink";
 import { TeamLogo } from "@/components/match/TeamLogo";
+import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -25,7 +28,7 @@ type MatchHeaderProps = {
   fixture: Fixture;
 };
 
-function matchStatusLabel(fixture: Fixture): string {
+function matchStatusLabel(fixture: Fixture, timeZone: string): string {
   if (isLiveFixtureStatus(fixture.status)) {
     return formatFixtureMinute(fixture) ?? "Live";
   }
@@ -34,7 +37,7 @@ function matchStatusLabel(fixture: Fixture): string {
     return "Full time";
   }
 
-  return formatFixtureKickoffDateTime(fixture.kickoffAt);
+  return formatFixtureKickoffDateTime(fixture.kickoffAt, timeZone);
 }
 
 function formatVenue(fixture: Fixture): string | null {
@@ -50,11 +53,12 @@ function formatVenue(fixture: Fixture): string | null {
 }
 
 export function MatchHeader({ fixture }: MatchHeaderProps) {
+  const timeZone = useViewerTimezone();
   const isLive = isLiveFixtureStatus(fixture.status);
   const isFinished = isFinishedFixtureStatus(fixture.status);
   const showScore = isLive || isFinished;
   const venueLabel = formatVenue(fixture);
-  const statusLabel = matchStatusLabel(fixture);
+  const statusLabel = matchStatusLabel(fixture, timeZone);
 
   return (
     <Card className="w-full">
@@ -96,7 +100,7 @@ export function MatchHeader({ fixture }: MatchHeaderProps) {
                 <p
                   className={`font-mono text-4xl font-semibold tabular-nums ${isLive ? "text-live" : ""}`}
                 >
-                  {formatFixtureScore(fixture)}
+                  {formatFixtureScore(fixture, timeZone)}
                 </p>
                 {isFinished &&
                 fixture.score.halftimeHome != null &&
@@ -114,7 +118,7 @@ export function MatchHeader({ fixture }: MatchHeaderProps) {
               </div>
             ) : (
               <p className="font-mono text-2xl font-semibold tabular-nums">
-                {formatFixtureScore(fixture)}
+                {formatFixtureScore(fixture, timeZone)}
               </p>
             )}
           </div>

@@ -3,10 +3,12 @@ import type { Metadata } from "next";
 import { FixturesLeagueTabs } from "@/components/fixtures/FixturesLeagueTabs";
 import { FixturesList } from "@/components/fixtures/FixturesList";
 import { FixturesNotice } from "@/components/fixtures/FixturesNotice";
+import { resolveViewerTimezone } from "@/lib/datetime/viewer-timezone.server";
 import {
   getFixturesData,
   parseFixturesParams,
 } from "@/lib/services/fixturesService";
+import { getCurrentUser } from "@/lib/supabase/user";
 
 export const metadata: Metadata = {
   title: "Fixtures",
@@ -19,7 +21,9 @@ export default async function FixturesPage({
 }) {
   const rawParams = await searchParams;
   const params = parseFixturesParams(rawParams);
-  const data = await getFixturesData(params);
+  const user = await getCurrentUser();
+  const timeZone = await resolveViewerTimezone(user?.id ?? null);
+  const data = await getFixturesData(params, timeZone);
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">

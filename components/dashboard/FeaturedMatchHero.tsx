@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRightIcon } from "lucide-react";
 
 import { TeamLogo } from "@/components/match/TeamLogo";
+import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +30,7 @@ type FeaturedMatchHeroProps = {
   fixture: Fixture;
 };
 
-function featuredStatusLabel(fixture: Fixture): string {
+function featuredStatusLabel(fixture: Fixture, timeZone: string): string {
   if (isLiveFixtureStatus(fixture.status)) {
     return formatFixtureMinute(fixture) ?? "Live";
   }
@@ -36,10 +39,11 @@ function featuredStatusLabel(fixture: Fixture): string {
     return "Full time";
   }
 
-  return formatFixtureKickoffTime(fixture.kickoffAt);
+  return formatFixtureKickoffTime(fixture.kickoffAt, timeZone);
 }
 
 export function FeaturedMatchHero({ fixture }: FeaturedMatchHeroProps) {
+  const timeZone = useViewerTimezone();
   const isLive = isLiveFixtureStatus(fixture.status);
   const isFinished = isFinishedFixtureStatus(fixture.status);
   const showScore = isLive || isFinished;
@@ -58,7 +62,7 @@ export function FeaturedMatchHero({ fixture }: FeaturedMatchHeroProps) {
             leagueLogoUrl={fixture.league.logoUrl}
           />
           <span aria-hidden="true">·</span>
-          <span>{featuredStatusLabel(fixture)}</span>
+          <span>{featuredStatusLabel(fixture, timeZone)}</span>
         </CardDescription>
         <CardTitle className="font-heading text-xl sm:text-2xl">
           {fixture.homeTeam.name} vs {fixture.awayTeam.name}
@@ -79,11 +83,11 @@ export function FeaturedMatchHero({ fixture }: FeaturedMatchHeroProps) {
           <div className="text-center">
             {showScore ? (
               <p className="font-mono text-4xl font-semibold tabular-nums">
-                {formatFixtureScore(fixture)}
+                {formatFixtureScore(fixture, timeZone)}
               </p>
             ) : (
               <p className="font-mono text-2xl font-semibold tabular-nums">
-                {formatFixtureKickoffTime(fixture.kickoffAt)}
+                {formatFixtureKickoffTime(fixture.kickoffAt, timeZone)}
               </p>
             )}
           </div>

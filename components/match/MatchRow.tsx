@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 
 import { LiveDot } from "@/components/common/LiveDot";
 import { LeagueLink } from "@/components/common/LeagueLink";
 import { TeamLogo } from "@/components/match/TeamLogo";
+import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider";
 import { Badge } from "@/components/ui/badge";
 import {
   formatFixtureMinute,
@@ -28,6 +31,7 @@ export function MatchRow({
   showLeague = true,
   anchorId,
 }: MatchRowProps) {
+  const timeZone = useViewerTimezone();
   const isLive = isLiveFixtureStatus(fixture.status);
   const isFinished = isFinishedFixtureStatus(fixture.status);
   const minuteLabel = formatFixtureMinute(fixture);
@@ -78,7 +82,7 @@ export function MatchRow({
                     isLive && "text-live"
                   )}
                 >
-                  {formatFixtureScore(fixture)}
+                  {formatFixtureScore(fixture, timeZone)}
                 </p>
                 {minuteLabel ? (
                   <Badge variant="live" className="font-mono tabular-nums">
@@ -88,7 +92,7 @@ export function MatchRow({
               </div>
             ) : (
               <Badge variant="outline" className="font-mono tabular-nums">
-                {formatFixtureScore(fixture)}
+                {formatFixtureScore(fixture, timeZone)}
               </Badge>
             )}
           </div>

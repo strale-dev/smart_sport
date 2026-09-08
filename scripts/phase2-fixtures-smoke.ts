@@ -2,7 +2,7 @@ import { daySectionAnchorId } from "@/lib/fixtures/ids";
 import { getFixturesData } from "@/lib/services/fixturesService";
 
 async function main() {
-  const data = await getFixturesData();
+  const data = await getFixturesData({}, "UTC");
 
   console.log("Fixtures window:", {
     dayGroups: data.dayGroups.length,

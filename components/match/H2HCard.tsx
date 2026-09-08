@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { EmptyState } from "@/components/common/EmptyState";
+import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider";
 import {
   Card,
   CardContent,
@@ -32,6 +33,7 @@ export function H2HCard({
   h2hAll,
   h2hSameComp,
 }: H2HCardProps) {
+  const timeZone = useViewerTimezone();
   const [scope, setScope] = useState<H2HScope>("ALL");
   const summary = scope === "ALL" ? h2hAll : h2hSameComp;
 
@@ -105,7 +107,10 @@ export function H2HCard({
                       {meeting.homeTeamName} vs {meeting.awayTeamName}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      {formatFixtureKickoffDateTime(meeting.kickoffAt)}
+                      {formatFixtureKickoffDateTime(
+                        meeting.kickoffAt,
+                        timeZone
+                      )}
                       {meeting.leagueName ? ` · ${meeting.leagueName}` : ""}
                     </p>
                   </div>
