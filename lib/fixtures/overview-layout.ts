@@ -5,11 +5,17 @@ import { isLiveFixtureStatus } from "@/lib/redis/keys";
 export type OverviewLayoutMode = "pre" | "live";
 
 export type OverviewCardId =
-  "timeline" | "momentum" | "liveStats" | "comparison" | "playersToWatch";
+  | "probabilityDelta"
+  | "timeline"
+  | "momentum"
+  | "liveStats"
+  | "comparison"
+  | "playersToWatch";
 
 const PRE_MATCH_ORDER: OverviewCardId[] = ["comparison", "playersToWatch"];
 
 const LIVE_MATCH_ORDER: OverviewCardId[] = [
+  "probabilityDelta",
   "timeline",
   "momentum",
   "liveStats",

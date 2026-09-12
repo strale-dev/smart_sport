@@ -1,4 +1,5 @@
 import type { LiveStatusFilter } from "@/lib/live/constants";
+import type { LiveFixtureRow } from "@/lib/live/live-fixture-row";
 import type { Fixture } from "@/types/domain";
 
 export type LiveCenterParams = {
@@ -8,7 +9,7 @@ export type LiveCenterParams = {
 };
 
 export type LiveCenterData = {
-  fixtures: Fixture[];
+  fixtures: LiveFixtureRow[];
   totalCount: number;
   page: number;
   totalPages: number;

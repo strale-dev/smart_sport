@@ -46,6 +46,9 @@
     "cache:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/cache-smoke.ts",
     "live:verify-rls": "tsx ./scripts/verify-realtime-live-rls.ts",
     "live:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/live-polling-smoke.ts",
+    "phase5:check": "node scripts/phase5-dod-check.mjs",
+    "phase5:match-smoke": "tsx ./scripts/phase5-match-smoke.ts",
+    "phase5:live-center-smoke": "tsx ./scripts/phase5-live-center-smoke.ts",
     "quota:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/quota-smoke.ts",
     "auth:configure-supabase": "tsx --import ./scripts/preload-env.ts ./scripts/configure-supabase-auth.ts",
     "auth:push-config": "supabase config push --yes"

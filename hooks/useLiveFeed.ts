@@ -1,9 +1,10 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import { useDocumentVisible } from "@/hooks/useDocumentVisible";
+import { useDebouncedQueryInvalidator } from "@/lib/live/debounced-invalidate";
 import {
   LIVE_FALLBACK_REFETCH_MS,
   LIVE_POLL_INTERVAL_MS,
@@ -16,7 +17,7 @@ import type {
   LiveCenterData,
   LiveCenterParams,
 } from "@/lib/live/live-center-types";
-import type { Fixture } from "@/types/domain";
+import type { LiveFixtureRow } from "@/lib/live/live-fixture-row";
 
 type UseLiveCenterQueryOptions = {
   params: LiveCenterParams;
@@ -27,8 +28,8 @@ export function useLiveCenterQuery({
   params,
   initialData,
 }: UseLiveCenterQueryOptions) {
-  const queryClient = useQueryClient();
   const documentVisible = useDocumentVisible();
+  const debouncedInvalidate = useDebouncedQueryInvalidator();
 
   const query = useQuery({
     queryKey: liveKeys.center(params),
@@ -42,27 +43,27 @@ export function useLiveCenterQuery({
     const stopWatch = startLiveWatchSession({ surface: "live-center" });
 
     const stopBroadcast = subscribeLiveFeedBroadcast(() => {
-      void queryClient.invalidateQueries({ queryKey: liveKeys.all });
+      debouncedInvalidate([liveKeys.all]);
     });
 
     return () => {
       stopBroadcast();
       stopWatch();
     };
-  }, [queryClient]);
+  }, [debouncedInvalidate]);
 
   return query;
 }
 
 type UseDashboardLiveQueryOptions = {
-  initialLive: Fixture[];
+  initialLive: LiveFixtureRow[];
 };
 
 export function useDashboardLiveQuery({
   initialLive,
 }: UseDashboardLiveQueryOptions) {
-  const queryClient = useQueryClient();
   const documentVisible = useDocumentVisible();
+  const debouncedInvalidate = useDebouncedQueryInvalidator();
 
   const query = useQuery({
     queryKey: liveKeys.dashboardLive(),
@@ -79,16 +80,14 @@ export function useDashboardLiveQuery({
     const stopWatch = startLiveWatchSession({ surface: "live-center" });
 
     const stopBroadcast = subscribeLiveFeedBroadcast(() => {
-      void queryClient.invalidateQueries({
-        queryKey: liveKeys.dashboardLive(),
-      });
+      debouncedInvalidate([liveKeys.dashboardLive()]);
     });
 
     return () => {
       stopBroadcast();
       stopWatch();
     };
-  }, [queryClient]);
+  }, [debouncedInvalidate]);
 
   return query;
 }

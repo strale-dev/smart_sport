@@ -1,5 +1,6 @@
 "use client";
 
+import { LiveProbabilityDeltaClient } from "@/components/match/LiveProbabilityDeltaClient";
 import { OverviewTabContent } from "@/components/match/OverviewTabContent";
 import { useMatchLiveContext } from "@/components/match/MatchLiveSession";
 import { computeMatchMomentum } from "@/lib/momentum/computeMatchMomentum";
@@ -39,6 +40,13 @@ export function MatchOverviewLiveClient({
       homeForm={homeForm}
       awayForm={awayForm}
       playersToWatch={playersToWatch}
+      probabilityDelta={
+        <LiveProbabilityDeltaClient
+          key="probabilityDelta"
+          fixtureProviderId={fixture.externalId}
+          fixtureStatus={fixture.status}
+        />
+      }
     />
   );
 }

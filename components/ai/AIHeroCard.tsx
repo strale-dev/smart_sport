@@ -1,18 +1,22 @@
+"use client";
+
 import Link from "next/link";
 import { SparklesIcon } from "lucide-react";
+import { motion } from "motion/react";
 
+import { AiUpdatedIndicator } from "@/components/ai/AiUpdatedIndicator";
 import { ConfidenceBadge } from "@/components/ai/ConfidenceBadge";
 import { DataQualityChip } from "@/components/ai/DataQualityChip";
 import { KeyFactorsList } from "@/components/ai/KeyFactorsList";
 import { WinProbabilitiesBar } from "@/components/ai/WinProbabilitiesBar";
 import {
   formatExpectedGoalsRange,
-  formatRelativeTime,
   formatWinProbability,
   outcomeLabel,
 } from "@/lib/ai/format";
 import type { StoredAIInsight } from "@/lib/ai/schemas";
 import type { PrematchInsightMode } from "@/lib/ai/schemas";
+import { motionTransition, usePrefersReducedMotion } from "@/lib/motion";
 import type { TeamRef } from "@/types/domain";
 import { AI_DISCLAIMER } from "@/lib/marketing/copy";
 
@@ -39,6 +43,8 @@ export function AIHeroCard({
   homeTeam,
   awayTeam,
 }: AIHeroCardProps) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+
   return (
     <Card className="border-primary/20 from-card/90 to-card/60 ring-primary/10 min-h-[min(28vh,14rem)] w-full bg-gradient-to-br ring-1">
       <CardHeader className="gap-3">
@@ -53,25 +59,46 @@ export function AIHeroCard({
           {insightMode === "historical" ? (
             <Badge variant="outline">Pre-match analysis</Badge>
           ) : null}
+          {insightMode === "live" ? (
+            <Badge variant="live">Live analysis</Badge>
+          ) : null}
           <ConfidenceBadge confidence={insight.confidence} />
           <DataQualityChip quality={insight.dataQuality} />
+          <AiUpdatedIndicator
+            createdAt={insight.createdAt}
+            insightMode={insightMode}
+            insightId={insight.id}
+          />
         </div>
-        <CardDescription className="text-foreground/90 max-w-3xl text-base">
-          {insight.summary}
-        </CardDescription>
-        <p className="text-muted-foreground text-xs">
-          {outcomeLabel(insight.winOutcome, homeTeam, awayTeam)} ·{" "}
-          {formatRelativeTime(insight.createdAt)}
-        </p>
+        <motion.div
+          key={insight.id}
+          initial={prefersReducedMotion ? false : { opacity: 0.45 }}
+          animate={{ opacity: 1 }}
+          transition={motionTransition(prefersReducedMotion, { duration: 0.3 })}
+        >
+          <CardDescription className="text-foreground/90 max-w-3xl text-base">
+            {insight.summary}
+          </CardDescription>
+          <p className="text-muted-foreground mt-2 text-xs">
+            {outcomeLabel(insight.winOutcome, homeTeam, awayTeam)}
+          </p>
+        </motion.div>
       </CardHeader>
 
       <CardContent className="space-y-5">
-        <WinProbabilitiesBar
-          probabilities={insight.winProbabilities}
-          winOutcome={insight.winOutcome}
-          homeTeam={homeTeam}
-          awayTeam={awayTeam}
-        />
+        <motion.div
+          key={`${insight.id}-probs`}
+          initial={prefersReducedMotion ? false : { opacity: 0.45 }}
+          animate={{ opacity: 1 }}
+          transition={motionTransition(prefersReducedMotion, { duration: 0.3 })}
+        >
+          <WinProbabilitiesBar
+            probabilities={insight.winProbabilities}
+            winOutcome={insight.winOutcome}
+            homeTeam={homeTeam}
+            awayTeam={awayTeam}
+          />
+        </motion.div>
 
         <div className="text-muted-foreground grid gap-2 text-sm sm:grid-cols-3">
           <p>
@@ -88,7 +115,16 @@ export function AIHeroCard({
 
         <div>
           <h3 className="mb-3 text-sm font-medium">Key factors</h3>
-          <KeyFactorsList factors={insight.keyFactors} limit={3} />
+          <motion.div
+            key={`${insight.id}-factors`}
+            initial={prefersReducedMotion ? false : { opacity: 0.45 }}
+            animate={{ opacity: 1 }}
+            transition={motionTransition(prefersReducedMotion, {
+              duration: 0.3,
+            })}
+          >
+            <KeyFactorsList factors={insight.keyFactors} limit={3} />
+          </motion.div>
         </div>
       </CardContent>
 

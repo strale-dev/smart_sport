@@ -8,6 +8,11 @@ import {
   readStandingsRanksForFixtures,
 } from "@/lib/ingestion/db-read";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
+import {
+  attachAiUpdatedAtToFixtures,
+  isAiUpdatedMarkerFresh,
+  type LiveFixtureRow,
+} from "@/lib/live/live-fixture-meta";
 import { listLiveFixtures } from "@/lib/services/footballService";
 import type { Fixture } from "@/types/domain";
 
@@ -35,7 +40,7 @@ async function buildImportanceContext(
 /** Live fixtures for dashboard "Live now" (same ranking as getDashboardData). */
 export async function getDashboardLiveFixtures(
   now = new Date()
-): Promise<Fixture[]> {
+): Promise<LiveFixtureRow[]> {
   const { data: liveFixtures } = await listLiveFixtures();
   const candidates = liveFixtures.filter((fixture) =>
     isLiveFixtureStatus(fixture.status)
@@ -45,8 +50,28 @@ export async function getDashboardLiveFixtures(
     return [];
   }
 
-  const context = await buildImportanceContext(candidates, now);
-  return rankFixturesByImportance(candidates, context)
+  const withAi = await attachAiUpdatedAtToFixtures(candidates, now);
+  const context = await buildImportanceContext(withAi, now);
+  return rankFixturesByImportance(withAi, context)
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+
+      const leftRow = left.fixture as LiveFixtureRow;
+      const rightRow = right.fixture as LiveFixtureRow;
+      const leftFresh = isAiUpdatedMarkerFresh(leftRow.aiUpdatedAt, now);
+      const rightFresh = isAiUpdatedMarkerFresh(rightRow.aiUpdatedAt, now);
+
+      if (leftFresh !== rightFresh) {
+        return leftFresh ? -1 : 1;
+      }
+
+      return (
+        new Date(left.fixture.kickoffAt).getTime() -
+        new Date(right.fixture.kickoffAt).getTime()
+      );
+    })
     .slice(0, LIVE_LIMIT)
-    .map(({ fixture }) => fixture);
+    .map(({ fixture }) => fixture as LiveFixtureRow);
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   createContext,
   useCallback,
@@ -10,6 +11,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { fetchLiveInsight } from "@/lib/ai/live-insight-fetch";
+import { mapLiveInsightResponseToViewModel } from "@/lib/ai/live-insight-state";
 import {
   fetchPrematchInsightGet,
   fetchPrematchInsightPost,
@@ -20,7 +23,11 @@ import {
   resolveInitialPrematchInsightState,
   type PrematchInsightViewModel,
 } from "@/lib/ai/prematch-insight-state";
-import { canGeneratePrematchInsight } from "@/lib/ai/status-map";
+import {
+  canGeneratePrematchInsight,
+  resolveFixturePhase,
+} from "@/lib/ai/status-map";
+import { liveKeys } from "@/lib/live/query-keys";
 import { captureClientEvent } from "@/lib/posthog/client";
 import { POSTHOG_EVENTS } from "@/lib/posthog/events";
 
@@ -60,21 +67,83 @@ export function AIInsightProvider({
   isGuest,
   children,
 }: AIInsightProviderProps) {
-  const [viewModel, setViewModel] = useState<PrematchInsightViewModel>(() =>
-    createInitialViewModel(fixtureStatus, isGuest)
-  );
+  const fixturePhase = resolveFixturePhase(fixtureStatus);
+  const isLivePhase = fixturePhase === "LIVE";
+
+  const [prematchViewModel, setPrematchViewModel] =
+    useState<PrematchInsightViewModel>(() =>
+      createInitialViewModel(fixtureStatus, isGuest)
+    );
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const shouldFetchOnMount = viewModel.state === "loading";
+  const liveInsightQuery = useQuery({
+    queryKey: liveKeys.liveInsight(fixtureId),
+    queryFn: () => fetchLiveInsight(fixtureId),
+    enabled: !isGuest && isLivePhase,
+  });
 
-  const applyResponse = useCallback(
+  const liveViewModel = useMemo((): PrematchInsightViewModel | null => {
+    if (!isLivePhase || isGuest) {
+      return null;
+    }
+
+    if (liveInsightQuery.isLoading && !liveInsightQuery.data) {
+      return {
+        ...createEmptyPrematchInsightViewModel(fixtureStatus),
+        state: "loading",
+      };
+    }
+
+    if (liveInsightQuery.isError) {
+      return {
+        ...createEmptyPrematchInsightViewModel(fixtureStatus),
+        state: "error",
+        errorMessage:
+          liveInsightQuery.error instanceof Error
+            ? liveInsightQuery.error.message
+            : "Failed to load live AI insight",
+      };
+    }
+
+    if (liveInsightQuery.data) {
+      const mapped = mapLiveInsightResponseToViewModel(
+        liveInsightQuery.data,
+        fixtureStatus
+      );
+      return {
+        ...createEmptyPrematchInsightViewModel(fixtureStatus),
+        ...mapped,
+        prediction: null,
+        limit: null,
+        used: null,
+        fallbackMessage: null,
+      };
+    }
+
+    return null;
+  }, [
+    fixtureStatus,
+    isGuest,
+    isLivePhase,
+    liveInsightQuery.data,
+    liveInsightQuery.error,
+    liveInsightQuery.isError,
+    liveInsightQuery.isLoading,
+  ]);
+
+  const viewModel = liveViewModel ?? prematchViewModel;
+
+  const applyPrematchResponse = useCallback(
     (response: Parameters<typeof mapPrematchInsightResponseToViewModel>[0]) => {
-      setViewModel(
+      setPrematchViewModel(
         mapPrematchInsightResponseToViewModel(response, fixtureStatus)
       );
     },
     [fixtureStatus]
   );
+
+  const shouldFetchPrematchOnMount =
+    prematchViewModel.state === "loading" && !isLivePhase && !isGuest;
 
   const refetch = useCallback(async () => {
     const phaseInitial = resolveInitialPrematchInsightState({
@@ -83,16 +152,21 @@ export function AIInsightProvider({
     });
 
     if (phaseInitial === "guest") {
-      setViewModel(createInitialViewModel(fixtureStatus, true));
+      setPrematchViewModel(createInitialViewModel(fixtureStatus, true));
       return;
     }
 
     if (phaseInitial === "neither") {
-      setViewModel(createInitialViewModel(fixtureStatus, false));
+      setPrematchViewModel(createInitialViewModel(fixtureStatus, false));
       return;
     }
 
-    setViewModel((current) => ({
+    if (isLivePhase) {
+      await liveInsightQuery.refetch();
+      return;
+    }
+
+    setPrematchViewModel((current) => ({
       ...current,
       state: "loading",
       errorMessage: null,
@@ -100,19 +174,26 @@ export function AIInsightProvider({
 
     try {
       const response = await fetchPrematchInsightGet(fixtureId);
-      applyResponse(response);
+      applyPrematchResponse(response);
     } catch (error) {
-      setViewModel({
+      setPrematchViewModel({
         ...createEmptyPrematchInsightViewModel(fixtureStatus),
         state: "error",
         errorMessage:
           error instanceof Error ? error.message : "Failed to load AI insight",
       });
     }
-  }, [applyResponse, fixtureId, fixtureStatus, isGuest]);
+  }, [
+    applyPrematchResponse,
+    fixtureId,
+    fixtureStatus,
+    isGuest,
+    isLivePhase,
+    liveInsightQuery,
+  ]);
 
   useEffect(() => {
-    if (!shouldFetchOnMount) {
+    if (!shouldFetchPrematchOnMount) {
       return;
     }
 
@@ -122,11 +203,11 @@ export function AIInsightProvider({
       try {
         const response = await fetchPrematchInsightGet(fixtureId);
         if (!cancelled) {
-          applyResponse(response);
+          applyPrematchResponse(response);
         }
       } catch (error) {
         if (!cancelled) {
-          setViewModel({
+          setPrematchViewModel({
             ...createEmptyPrematchInsightViewModel(fixtureStatus),
             state: "error",
             errorMessage:
@@ -141,7 +222,12 @@ export function AIInsightProvider({
     return () => {
       cancelled = true;
     };
-  }, [applyResponse, fixtureId, fixtureStatus, shouldFetchOnMount]);
+  }, [
+    applyPrematchResponse,
+    fixtureId,
+    fixtureStatus,
+    shouldFetchPrematchOnMount,
+  ]);
 
   const generate = useCallback(async () => {
     if (isGuest || !canGeneratePrematchInsight(fixtureStatus)) {
@@ -155,7 +241,7 @@ export function AIInsightProvider({
 
     try {
       const response = await fetchPrematchInsightPost(fixtureId);
-      applyResponse(response);
+      applyPrematchResponse(response);
 
       if (response.status === "AI_LIMIT_REACHED") {
         void captureClientEvent(POSTHOG_EVENTS.aiLimitReached, {
@@ -165,7 +251,7 @@ export function AIInsightProvider({
         });
       }
     } catch (error) {
-      setViewModel({
+      setPrematchViewModel({
         ...createEmptyPrematchInsightViewModel(fixtureStatus),
         state: "error",
         errorMessage:
@@ -174,7 +260,7 @@ export function AIInsightProvider({
     } finally {
       setIsGenerating(false);
     }
-  }, [applyResponse, fixtureId, fixtureStatus, isGuest]);
+  }, [applyPrematchResponse, fixtureId, fixtureStatus, isGuest]);
 
   const value = useMemo<AIInsightContextValue>(
     () => ({

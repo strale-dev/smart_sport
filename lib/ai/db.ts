@@ -10,6 +10,66 @@ function formatExpectedGoalsRange(range: [number, number]): string {
   return `[${min},${max}]`;
 }
 
+export async function readLatestLiveInsight(
+  fixtureUuid: string
+): Promise<AiInsightRow | null> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("ai_insights")
+    .select("*")
+    .eq("fixture_id", fixtureUuid)
+    .eq("type", "LIVE")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to read latest live insight: ${error.message}`);
+  }
+
+  return data;
+}
+
+const LIVE_AI_FRESHNESS_MS = 15 * 60 * 1000;
+
+/** Latest LIVE insight `created_at` per fixture within the last 15 minutes. */
+export async function readRecentLiveInsightTimestamps(
+  fixtureUuids: string[],
+  now = new Date()
+): Promise<Map<string, string>> {
+  if (fixtureUuids.length === 0) {
+    return new Map();
+  }
+
+  const since = new Date(now.getTime() - LIVE_AI_FRESHNESS_MS).toISOString();
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("ai_insights")
+    .select("fixture_id, created_at")
+    .eq("type", "LIVE")
+    .in("fixture_id", fixtureUuids)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(
+      `Failed to read recent live insight timestamps: ${error.message}`
+    );
+  }
+
+  const map = new Map<string, string>();
+  for (const row of data ?? []) {
+    if (row.fixture_id == null) {
+      continue;
+    }
+    if (!map.has(row.fixture_id)) {
+      map.set(row.fixture_id, row.created_at);
+    }
+  }
+
+  return map;
+}
+
 export async function readLatestPrematchInsight(
   fixtureUuid: string
 ): Promise<AiInsightRow | null> {

@@ -1,3 +1,5 @@
+import { Fragment, type ReactNode } from "react";
+
 import { LiveStatsCard } from "@/components/match/LiveStatsCard";
 import {
   MatchMomentumCardLazy,
@@ -27,6 +29,7 @@ type OverviewTabContentProps = {
   homeForm: FormSnapshot;
   awayForm: FormSnapshot;
   playersToWatch: PlayersToWatchResult;
+  probabilityDelta?: ReactNode;
 };
 
 export function OverviewTabContent({
@@ -37,11 +40,15 @@ export function OverviewTabContent({
   homeForm,
   awayForm,
   playersToWatch,
+  probabilityDelta,
 }: OverviewTabContentProps) {
   const mode = getOverviewLayout(fixture.status);
   const order = getOverviewCardOrder(mode);
 
   const cards = {
+    probabilityDelta: isOverviewCardVisible("probabilityDelta", mode)
+      ? probabilityDelta
+      : null,
     timeline: isOverviewCardVisible("timeline", mode) ? (
       <TimelineCard key="timeline" events={events} />
     ) : null,
@@ -77,6 +84,10 @@ export function OverviewTabContent({
   };
 
   return (
-    <div className="space-y-4">{order.map((cardId) => cards[cardId])}</div>
+    <div className="space-y-4">
+      {order.map((cardId) => (
+        <Fragment key={cardId}>{cards[cardId]}</Fragment>
+      ))}
+    </div>
   );
 }

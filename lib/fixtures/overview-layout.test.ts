@@ -28,9 +28,10 @@ describe("overview card visibility", () => {
     expect(isOverviewCardVisible("comparison", "pre")).toBe(true);
   });
 
-  it("prioritizes timeline and momentum after kickoff", () => {
-    expect(getOverviewCardOrder("live")[0]).toBe("timeline");
-    expect(getOverviewCardOrder("live")[1]).toBe("momentum");
+  it("prioritizes probability delta, timeline, and momentum after kickoff", () => {
+    expect(getOverviewCardOrder("live")[0]).toBe("probabilityDelta");
+    expect(getOverviewCardOrder("live")[1]).toBe("timeline");
+    expect(getOverviewCardOrder("live")[2]).toBe("momentum");
   });
 });
 

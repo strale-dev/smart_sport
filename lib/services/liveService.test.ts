@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import * as liveFixtureMeta from "@/lib/live/live-fixture-meta";
 import * as dbRead from "@/lib/ingestion/db-read";
 import * as footballService from "@/lib/services/footballService";
 import {
@@ -56,6 +57,10 @@ function makeFixture(overrides: Partial<Fixture> = {}): Fixture {
 }
 
 function mockImportanceContext() {
+  vi.spyOn(liveFixtureMeta, "attachAiUpdatedAtToFixtures").mockImplementation(
+    async (fixtures) =>
+      fixtures.map((fixture) => ({ ...fixture, aiUpdatedAt: null }))
+  );
   vi.spyOn(dbRead, "readLeaguePrestigeMap").mockResolvedValue(
     new Map([
       [39, 95],

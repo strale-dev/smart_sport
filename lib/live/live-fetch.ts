@@ -3,6 +3,7 @@ import type {
   LiveCenterData,
   LiveCenterParams,
 } from "@/lib/live/live-center-types";
+import type { LiveFixtureRow } from "@/lib/live/live-fixture-row";
 import type {
   Fixture,
   FixtureEvent,
@@ -16,7 +17,7 @@ export type MatchLiveSnapshot = {
 };
 
 export type DashboardLiveResponse = {
-  live: Fixture[];
+  live: LiveFixtureRow[];
 };
 
 export async function fetchMatchSnapshot(

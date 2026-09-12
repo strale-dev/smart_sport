@@ -23,6 +23,11 @@ import type {
   LiveCenterData,
   LiveCenterParams,
 } from "@/lib/live/live-center-types";
+import {
+  attachAiUpdatedAtToFixtures,
+  isAiUpdatedMarkerFresh,
+  type LiveFixtureRow,
+} from "@/lib/live/live-fixture-meta";
 import type { Fixture, FixtureStatus } from "@/types/domain";
 
 export type {
@@ -69,14 +74,24 @@ async function buildImportanceContext(
   };
 }
 
-function sortFixturesByImportance(
-  fixtures: Fixture[],
-  context: ImportanceContext
-): Fixture[] {
+function sortLiveFixturesByImportance(
+  fixtures: LiveFixtureRow[],
+  context: ImportanceContext,
+  now: Date
+): LiveFixtureRow[] {
   return rankFixturesByImportance(fixtures, context)
     .sort((left, right) => {
       if (right.score !== left.score) {
         return right.score - left.score;
+      }
+
+      const leftRow = left.fixture as LiveFixtureRow;
+      const rightRow = right.fixture as LiveFixtureRow;
+      const leftFresh = isAiUpdatedMarkerFresh(leftRow.aiUpdatedAt, now);
+      const rightFresh = isAiUpdatedMarkerFresh(rightRow.aiUpdatedAt, now);
+
+      if (leftFresh !== rightFresh) {
+        return leftFresh ? -1 : 1;
       }
 
       return (
@@ -84,7 +99,7 @@ function sortFixturesByImportance(
         new Date(right.fixture.kickoffAt).getTime()
       );
     })
-    .map(({ fixture }) => fixture);
+    .map(({ fixture }) => fixture as LiveFixtureRow);
 }
 
 function filterLiveFixtures(
@@ -109,10 +124,10 @@ function filterLiveFixtures(
 }
 
 function paginateFixtures(
-  fixtures: Fixture[],
+  fixtures: LiveFixtureRow[],
   page: number
 ): {
-  fixtures: Fixture[];
+  fixtures: LiveFixtureRow[];
   totalCount: number;
   page: number;
   totalPages: number;
@@ -186,8 +201,9 @@ export async function getLiveCenterData(
 
   const liveCandidates = dedupeFixtures(liveResult.data);
   const filtered = filterLiveFixtures(liveCandidates, params);
-  const context = await buildImportanceContext(filtered, now);
-  const sorted = sortFixturesByImportance(filtered, context);
+  const withAi = await attachAiUpdatedAtToFixtures(filtered, now);
+  const context = await buildImportanceContext(withAi, now);
+  const sorted = sortLiveFixturesByImportance(withAi, context, now);
   const paginated = paginateFixtures(sorted, params.page ?? 1);
   const upcomingSoon = getUpcomingSoonFixtures(todayResult.data, now);
 

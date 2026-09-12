@@ -33,6 +33,17 @@
 | `ai_generate_clicked`  | User clicks Generate analysis on match page             | `fixture_id`                               | `components/ai/AIInsightProvider.tsx`                                  | AI consumption |
 | `ai_limit_reached`     | Client receives `AI_LIMIT_REACHED` from POST            | `fixture_id`, `limit`, `used`              | `components/ai/AIInsightProvider.tsx`                                  | Upgrade funnel |
 
+## Phase 5 — Live engine UI
+
+| Event                                    | Trigger                                           | Properties                 | Source                                          | Funnel              |
+| ---------------------------------------- | ------------------------------------------------- | -------------------------- | ----------------------------------------------- | ------------------- |
+| `ai_live_insight_viewed`                 | Live AI hero shows a cached or fresh LIVE insight | `fixture_id`, `insight_id` | `components/ai/AIInsightProvider.tsx` (planned) | Live AI consumption |
+| `match_score_flipped`                    | Live score string changes on match header/row     | `fixture_id`               | `components/match/AnimatedScore.tsx` (planned)  | Live engagement     |
+| `live_meaningful_event_received`         | Client receives broadcast with `meaningfulEvents` | `fixture_id`, `kind`       | `hooks/useLiveMatch.ts` (planned)               | Live loop health    |
+| `live_center_ai_updated_marker_rendered` | Live Center row renders fresh AI updated chip     | `fixture_id`               | `components/match/MatchRow.tsx` (planned)       | Live Center depth   |
+
+Event names are registered in `lib/posthog/events.ts`; wire capture when manual PostHog QA begins.
+
 ### Notes
 
 - **Identify:** `signup_completed` and `login_completed` call `posthog.identify(userId)` before capture.

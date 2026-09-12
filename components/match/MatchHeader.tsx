@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { MapPinIcon, UserIcon } from "lucide-react";
 
-import { LiveDot } from "@/components/common/LiveDot";
+import { AnimatedScore } from "@/components/match/AnimatedScore";
+import { LiveStatusChip } from "@/components/match/LiveStatusChip";
 import { useMatchLiveContext } from "@/components/match/MatchLiveSession";
 import { LeagueLink } from "@/components/common/LeagueLink";
 import { TeamLogo } from "@/components/match/TeamLogo";
 import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -74,8 +74,14 @@ export function MatchHeader({ fixture: fixtureProp }: MatchHeaderProps) {
           />
           <span aria-hidden="true">·</span>
           <span className="inline-flex items-center gap-1.5">
-            {isLive ? <LiveDot /> : null}
-            {statusLabel}
+            {isLive ? (
+              <LiveStatusChip
+                minuteLabel={formatFixtureMinute(fixture)}
+                animate
+              />
+            ) : (
+              statusLabel
+            )}
           </span>
         </CardDescription>
         <CardTitle className="font-heading text-xl sm:text-2xl">
@@ -100,11 +106,12 @@ export function MatchHeader({ fixture: fixtureProp }: MatchHeaderProps) {
           <div className="text-center">
             {showScore ? (
               <div className="space-y-1">
-                <p
-                  className={`font-mono text-4xl font-semibold tabular-nums ${isLive ? "text-live" : ""}`}
-                >
-                  {formatFixtureScore(fixture, timeZone)}
-                </p>
+                <AnimatedScore
+                  score={formatFixtureScore(fixture, timeZone)}
+                  isLive={isLive}
+                  className="text-4xl"
+                  animate
+                />
                 {isFinished &&
                 fixture.score.halftimeHome != null &&
                 fixture.score.halftimeAway != null ? (
@@ -112,11 +119,6 @@ export function MatchHeader({ fixture: fixtureProp }: MatchHeaderProps) {
                     HT {fixture.score.halftimeHome} –{" "}
                     {fixture.score.halftimeAway}
                   </p>
-                ) : null}
-                {isLive && formatFixtureMinute(fixture) ? (
-                  <Badge variant="live" className="font-mono tabular-nums">
-                    {formatFixtureMinute(fixture)}
-                  </Badge>
                 ) : null}
               </div>
             ) : (

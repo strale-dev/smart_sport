@@ -3,10 +3,10 @@
 import { MatchRow } from "@/components/match/MatchRow";
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
 import { useDashboardLiveQuery } from "@/hooks/useLiveFeed";
-import type { Fixture } from "@/types/domain";
+import type { LiveFixtureRow } from "@/lib/live/live-fixture-row";
 
 type DashboardLiveSectionProps = {
-  initialLive: Fixture[];
+  initialLive: LiveFixtureRow[];
 };
 
 export function DashboardLiveSection({

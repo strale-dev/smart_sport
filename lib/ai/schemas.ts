@@ -172,7 +172,24 @@ export type StoredAIInsight = AIInsightPayload & {
   cached: boolean;
 };
 
-export type PrematchInsightMode = "prematch" | "historical";
+export type PrematchInsightMode = "prematch" | "historical" | "live";
+
+export type LiveInsightResponse =
+  | {
+      status: "OK";
+      insight: StoredAIInsight;
+      cached: boolean;
+      insightMode: "live";
+    }
+  | {
+      status: "MISS";
+      fixtureExternalId: number;
+    }
+  | {
+      status: "UNAVAILABLE";
+      fixtureExternalId: number;
+      reason?: "NOT_LIVE" | "FIXTURE_NOT_ANALYZABLE";
+    };
 
 export type PrematchInsightResponse =
   | {

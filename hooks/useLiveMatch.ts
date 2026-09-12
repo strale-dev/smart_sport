@@ -1,10 +1,12 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 
 import { useDocumentVisible } from "@/hooks/useDocumentVisible";
+import { useDebouncedQueryInvalidator } from "@/lib/live/debounced-invalidate";
 import { LIVE_FALLBACK_REFETCH_MS } from "@/lib/live/constants";
+import type { MeaningfulEventBroadcastPayload } from "@/lib/live/event-detector-types";
 import {
   fetchMatchSnapshot,
   type MatchLiveSnapshot,
@@ -23,8 +25,11 @@ export function useLiveMatch(
   fixtureStatus: string,
   options: UseLiveMatchOptions = {}
 ) {
-  const queryClient = useQueryClient();
   const documentVisible = useDocumentVisible();
+  const debouncedInvalidate = useDebouncedQueryInvalidator();
+  const [lastMeaningfulEvent, setLastMeaningfulEvent] =
+    useState<MeaningfulEventBroadcastPayload | null>(null);
+
   const isLive = isLiveFixtureStatus(
     fixtureStatus as Parameters<typeof isLiveFixtureStatus>[0]
   );
@@ -49,32 +54,53 @@ export function useLiveMatch(
       fixtureProviderId,
     });
 
-    const stopBroadcast = subscribeMatchBroadcast(fixtureProviderId, () => {
-      void queryClient.invalidateQueries({
-        queryKey: liveKeys.fixture(fixtureProviderId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: liveKeys.fixtureSnapshot(fixtureProviderId),
-      });
-    });
+    const stopBroadcast = subscribeMatchBroadcast(
+      fixtureProviderId,
+      (payload) => {
+        const events = payload.meaningfulEvents;
+        if (events && events.length > 0) {
+          setLastMeaningfulEvent(events[events.length - 1] ?? null);
+        }
+
+        debouncedInvalidate([
+          liveKeys.fixtureSnapshot(fixtureProviderId),
+          liveKeys.liveInsight(fixtureProviderId),
+          liveKeys.probabilityDelta(fixtureProviderId),
+        ]);
+      }
+    );
 
     return () => {
       stopBroadcast();
       stopWatch();
     };
-  }, [fixtureProviderId, isLive, queryClient]);
+  }, [debouncedInvalidate, fixtureProviderId, isLive]);
 
   const fixture =
     snapshotQuery.data?.fixture ?? options.initialSnapshot?.fixture ?? null;
 
-  return {
-    fixture,
-    events: snapshotQuery.data?.events ?? options.initialSnapshot?.events ?? [],
-    statistics:
-      snapshotQuery.data?.statistics ??
-      options.initialSnapshot?.statistics ??
-      [],
-    isFetching: snapshotQuery.isFetching,
-    isLive,
-  };
+  return useMemo(
+    () => ({
+      fixture,
+      events:
+        snapshotQuery.data?.events ?? options.initialSnapshot?.events ?? [],
+      statistics:
+        snapshotQuery.data?.statistics ??
+        options.initialSnapshot?.statistics ??
+        [],
+      isFetching: snapshotQuery.isFetching,
+      isLive,
+      lastMeaningfulEvent,
+    }),
+    [
+      fixture,
+      isLive,
+      lastMeaningfulEvent,
+      options.initialSnapshot?.events,
+      options.initialSnapshot?.statistics,
+      snapshotQuery.data?.events,
+      snapshotQuery.data?.statistics,
+      snapshotQuery.isFetching,
+    ]
+  );
 }

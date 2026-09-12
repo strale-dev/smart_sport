@@ -547,16 +547,16 @@ Live matches update automatically. When a user opens a live fixture, a shared po
 
 **UI**
 
-- [ ] Live status chip pulses on match header.
-- [ ] Score-flip animation via Framer Motion on goal.
-- [ ] Timeline appends new events with soft animation.
-- [ ] AI Hero shows "AI updated Xs ago" and refreshes commentary in place (no full page reflow).
-- [ ] Live probability chart placeholder (full chart in post-MVP).
+- [x] Live status chip pulses on match header.
+- [x] Score-flip animation via Framer Motion on goal.
+- [x] Timeline appends new events with soft animation.
+- [x] AI Hero shows "AI updated Xs ago" and refreshes commentary in place (no full page reflow).
+- [x] Live probability delta strip (full time-series chart post-MVP).
 
 **Live Center enhancements**
 
-- [ ] "AI updated" marker on rows with fresh insights.
-- [ ] Sort factor: recently updated matches float slightly higher.
+- [x] "AI updated" marker on rows with fresh insights.
+- [x] Sort factor: recently updated matches float slightly higher.
 
 ### Definition of Done
 

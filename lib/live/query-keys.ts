@@ -9,4 +9,8 @@ export const liveKeys = {
   center: (params: LiveCenterParams) =>
     [...liveKeys.all, "center", params] as const,
   dashboardLive: () => [...liveKeys.all, "dashboard-live"] as const,
+  liveInsight: (providerId: number) =>
+    [...liveKeys.all, "live-insight", providerId] as const,
+  probabilityDelta: (providerId: number) =>
+    [...liveKeys.all, "probability-delta", providerId] as const,
 };

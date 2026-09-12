@@ -7,7 +7,11 @@ import {
   writeLiveInsightCache,
   writePrematchInsightCache,
 } from "@/lib/ai/cache";
-import { insertAiInsight, readLatestPrematchInsight } from "@/lib/ai/db";
+import {
+  insertAiInsight,
+  readLatestLiveInsight,
+  readLatestPrematchInsight,
+} from "@/lib/ai/db";
 import type { Json } from "@/types/supabase";
 import {
   generateStructuredInsight,
@@ -18,7 +22,10 @@ import {
   buildPrematchSystemPrompt,
   buildLiveSystemPrompt,
 } from "@/lib/ai/prompts";
-import type { PrematchInsightResponse } from "@/lib/ai/schemas";
+import type {
+  LiveInsightResponse,
+  PrematchInsightResponse,
+} from "@/lib/ai/schemas";
 import {
   canGeneratePrematchInsight,
   resolveFixturePhase,
@@ -77,6 +84,39 @@ async function readHistoricalPrematchInsight(
     insight: mapAiInsightRowToStored(row, fixtureExternalId, true),
     cached: true,
     insightMode: "historical",
+  };
+}
+
+export async function readLiveInsight(
+  fixtureExternalId: number
+): Promise<LiveInsightResponse> {
+  const fixture = await resolveFixtureUuidByExternalId(fixtureExternalId);
+  if (!fixture) {
+    return { status: "MISS", fixtureExternalId };
+  }
+
+  const phase = resolveFixturePhase(fixture.status);
+  if (phase !== "LIVE") {
+    return {
+      status: "UNAVAILABLE",
+      fixtureExternalId,
+      reason: "NOT_LIVE",
+    };
+  }
+
+  const row = await readLatestLiveInsight(fixture.id);
+  if (!row) {
+    return { status: "MISS", fixtureExternalId };
+  }
+
+  const stored = mapAiInsightRowToStored(row, fixtureExternalId, true);
+  await writeLiveInsightCache(fixtureExternalId, row.context_hash, stored);
+
+  return {
+    status: "OK",
+    insight: stored,
+    cached: true,
+    insightMode: "live",
   };
 }
 
@@ -299,6 +339,7 @@ export type GenerateLiveInsightResult =
   | { ok: true; contextHash: string; cached: boolean }
   | { ok: false; reason: string };
 
+/** LIVE insights are append-only: one new row per distinct context_hash. */
 export async function generateLiveInsight(
   input: GenerateLiveInsightInput
 ): Promise<GenerateLiveInsightResult> {

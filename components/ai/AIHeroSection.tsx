@@ -27,6 +27,7 @@ export function AIHeroSection({
     insight,
     prediction,
     insightMode,
+    fixturePhase,
     limit,
     used,
     errorMessage,
@@ -54,6 +55,15 @@ export function AIHeroSection({
   }
 
   if (state === "miss") {
+    if (fixturePhase === "LIVE") {
+      return (
+        <AIHeroUnavailableState
+          title="Live AI warming up"
+          description="Analysis refreshes automatically after goals, cards, and other meaningful match events."
+        />
+      );
+    }
+
     return (
       <AIHeroMissState
         onGenerate={() => void generate()}

@@ -4,6 +4,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 
 import { useLiveMatch } from "@/hooks/useLiveMatch";
 import type { MatchLiveSnapshot } from "@/lib/live/live-fetch";
+import type { MeaningfulEventBroadcastPayload } from "@/lib/live/event-detector-types";
 import type {
   Fixture,
   FixtureEvent,
@@ -16,6 +17,7 @@ type MatchLiveContextValue = {
   statistics: FixtureTeamStatistics[];
   isLive: boolean;
   isFetching: boolean;
+  lastMeaningfulEvent: MeaningfulEventBroadcastPayload | null;
 };
 
 const MatchLiveContext = createContext<MatchLiveContextValue | null>(null);
@@ -42,6 +44,7 @@ export function MatchLiveSession({
       statistics: live.statistics,
       isLive: live.isLive,
       isFetching: live.isFetching,
+      lastMeaningfulEvent: live.lastMeaningfulEvent,
     }),
     [
       fixture,
@@ -49,6 +52,7 @@ export function MatchLiveSession({
       live.fixture,
       live.isFetching,
       live.isLive,
+      live.lastMeaningfulEvent,
       live.statistics,
     ]
   );
