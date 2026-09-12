@@ -4,6 +4,9 @@ import { isLiveFixtureStatus } from "@/lib/redis/keys";
 
 export type OverviewLayoutMode = "pre" | "live";
 
+/** Which Overview panel implementation to render (SSR vs live client). */
+export type MatchOverviewRenderMode = "pre" | "finished" | "live";
+
 export type OverviewCardId =
   | "probabilityDelta"
   | "timeline"
@@ -26,6 +29,20 @@ const LIVE_MATCH_ORDER: OverviewCardId[] = [
 export function getOverviewLayout(status: FixtureStatus): OverviewLayoutMode {
   if (isLiveFixtureStatus(status) || isFinishedFixtureStatus(status)) {
     return "live";
+  }
+
+  return "pre";
+}
+
+export function getMatchOverviewRenderMode(
+  status: FixtureStatus
+): MatchOverviewRenderMode {
+  if (isLiveFixtureStatus(status)) {
+    return "live";
+  }
+
+  if (isFinishedFixtureStatus(status)) {
+    return "finished";
   }
 
   return "pre";

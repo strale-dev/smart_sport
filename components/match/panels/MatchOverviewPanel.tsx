@@ -1,7 +1,12 @@
+import { LiveProbabilityDeltaClient } from "@/components/match/LiveProbabilityDeltaClient";
 import { MatchOverviewLiveClient } from "@/components/match/MatchOverviewLiveClient";
 import { OverviewTabContent } from "@/components/match/OverviewTabContent";
 import { aggregateForm } from "@/lib/analytics/compute-form";
-import { getOverviewLayout } from "@/lib/fixtures/overview-layout";
+import {
+  getMatchOverviewRenderMode,
+  getOverviewLayout,
+} from "@/lib/fixtures/overview-layout";
+import { computeMatchMomentum } from "@/lib/momentum/computeMatchMomentum";
 import { getRecentForm } from "@/lib/services/analyticsService";
 import {
   getFixtureEvents,
@@ -19,6 +24,7 @@ const EMPTY_FORM: FormSnapshot = aggregateForm([], "ALL", 10);
 export async function MatchOverviewPanel({ fixture }: MatchOverviewPanelProps) {
   const fixtureId = fixture.externalId;
   const overviewMode = getOverviewLayout(fixture.status);
+  const renderMode = getMatchOverviewRenderMode(fixture.status);
   const needsFormFallback = overviewMode === "pre";
 
   const [
@@ -45,7 +51,7 @@ export async function MatchOverviewPanel({ fixture }: MatchOverviewPanelProps) {
     getPlayersToWatch(fixture),
   ]);
 
-  if (overviewMode === "live") {
+  if (renderMode === "live") {
     return (
       <MatchOverviewLiveClient
         fixture={fixture}
@@ -56,15 +62,29 @@ export async function MatchOverviewPanel({ fixture }: MatchOverviewPanelProps) {
     );
   }
 
+  const momentumBuckets =
+    renderMode === "finished"
+      ? computeMatchMomentum(events, stats, fixture.minute ?? 90)
+      : [];
+
   return (
     <OverviewTabContent
       fixture={fixture}
       stats={stats}
       events={events}
-      momentumBuckets={[]}
+      momentumBuckets={momentumBuckets}
       homeForm={homeForm10}
       awayForm={awayForm10}
       playersToWatch={playersToWatch}
+      probabilityDelta={
+        renderMode === "finished" ? (
+          <LiveProbabilityDeltaClient
+            key="probabilityDelta"
+            fixtureProviderId={fixture.externalId}
+            fixtureStatus={fixture.status}
+          />
+        ) : undefined
+      }
     />
   );
 }

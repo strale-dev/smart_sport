@@ -24,7 +24,7 @@ import type {
   LiveCenterParams,
 } from "@/lib/live/live-center-types";
 import {
-  attachAiUpdatedAtToFixtures,
+  attachAiUpdatedAtToFixturesSafe,
   isAiUpdatedMarkerFresh,
   type LiveFixtureRow,
 } from "@/lib/live/live-fixture-meta";
@@ -201,7 +201,7 @@ export async function getLiveCenterData(
 
   const liveCandidates = dedupeFixtures(liveResult.data);
   const filtered = filterLiveFixtures(liveCandidates, params);
-  const withAi = await attachAiUpdatedAtToFixtures(filtered, now);
+  const withAi = await attachAiUpdatedAtToFixturesSafe(filtered, now);
   const context = await buildImportanceContext(withAi, now);
   const sorted = sortLiveFixturesByImportance(withAi, context, now);
   const paginated = paginateFixtures(sorted, params.page ?? 1);

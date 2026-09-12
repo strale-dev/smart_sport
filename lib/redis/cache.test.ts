@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiFootballQuotaError } from "@/lib/api-football/errors";
+import {
+  ApiFootballError,
+  ApiFootballQuotaError,
+} from "@/lib/api-football/errors";
 import {
   cached,
   readCacheEnvelopeForTests,
@@ -135,6 +138,34 @@ describe("cached", () => {
 
     expect(result.value).toEqual({ id: "stale" });
     expect(result.meta.cached).toBe(true);
+    expect(result.meta.stale).toBe(true);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns stale cache when the provider returns errors", async () => {
+    await writeCacheEnvelopeForTests(
+      "provider:test:provider-error",
+      {
+        value: { id: "stale-provider" },
+        cachedAt: new Date(Date.now() - 120_000).toISOString(),
+      },
+      3600
+    );
+
+    const fn = vi.fn().mockRejectedValue(
+      new ApiFootballError("API-Football provider returned errors", {
+        path: "/fixtures",
+      })
+    );
+
+    const result = await cached({
+      key: "provider:test:provider-error",
+      freshTtlSeconds: 30,
+      staleTtlSeconds: 3600,
+      fn,
+    });
+
+    expect(result.value).toEqual({ id: "stale-provider" });
     expect(result.meta.stale).toBe(true);
     expect(fn).toHaveBeenCalledTimes(1);
   });

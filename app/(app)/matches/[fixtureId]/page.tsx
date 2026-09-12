@@ -14,7 +14,7 @@ import { MatchOverviewPanel } from "@/components/match/panels/MatchOverviewPanel
 import { MatchStandingsPanel } from "@/components/match/panels/MatchStandingsPanel";
 import { MatchTabPanelFallback } from "@/components/match/panels/MatchTabPanelFallback";
 import { parseFixtureId } from "@/lib/fixtures/ids";
-import { getOverviewLayout } from "@/lib/fixtures/overview-layout";
+import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import {
   getFixtureById,
   getFixtureEvents,
@@ -69,7 +69,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
   const isGuest = !user;
 
   let initialLiveSnapshot: MatchLiveSnapshot | undefined;
-  if (getOverviewLayout(fixture.status) === "live") {
+  if (isLiveFixtureStatus(fixture.status)) {
     const [{ data: events }, { data: statistics }] = await Promise.all([
       getFixtureEvents(fixture.externalId),
       getFixtureStatistics(fixture.externalId),

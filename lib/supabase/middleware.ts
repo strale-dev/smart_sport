@@ -42,9 +42,21 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const {
+      data: { user: sessionUser },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error) {
+      console.warn("[auth] middleware getUser failed:", error.message);
+    } else {
+      user = sessionUser;
+    }
+  } catch (error) {
+    console.warn("[auth] middleware getUser failed:", error);
+  }
 
   const pathname = request.nextUrl.pathname;
   const returnToParam = request.nextUrl.searchParams.get("returnTo");

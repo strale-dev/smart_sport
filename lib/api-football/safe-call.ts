@@ -1,4 +1,4 @@
-function isOptionalProviderFailure(error: unknown): boolean {
+export function isOptionalProviderFailure(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
   }

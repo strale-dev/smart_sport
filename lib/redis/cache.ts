@@ -1,4 +1,5 @@
 import { ApiFootballQuotaError } from "@/lib/api-football/errors";
+import { isOptionalProviderFailure } from "@/lib/api-football/safe-call";
 import { getRedis } from "@/lib/redis/client";
 import { cacheLockKey } from "@/lib/redis/keys";
 import { LockNotAcquiredError, withLock } from "@/lib/redis/lock";
@@ -194,7 +195,10 @@ async function populateCache<T>(
             cachedAt: envelope.cachedAt,
           });
         } catch (error) {
-          if (error instanceof ApiFootballQuotaError) {
+          if (
+            error instanceof ApiFootballQuotaError ||
+            isOptionalProviderFailure(error)
+          ) {
             const stale = await loadStaleValue(options);
             if (stale) {
               return stale;

@@ -57,9 +57,11 @@ function makeFixture(overrides: Partial<Fixture> = {}): Fixture {
 }
 
 function mockImportanceContext() {
-  vi.spyOn(liveFixtureMeta, "attachAiUpdatedAtToFixtures").mockImplementation(
-    async (fixtures) =>
-      fixtures.map((fixture) => ({ ...fixture, aiUpdatedAt: null }))
+  vi.spyOn(
+    liveFixtureMeta,
+    "attachAiUpdatedAtToFixturesSafe"
+  ).mockImplementation(async (fixtures) =>
+    fixtures.map((fixture) => ({ ...fixture, aiUpdatedAt: null }))
   );
   vi.spyOn(dbRead, "readLeaguePrestigeMap").mockResolvedValue(
     new Map([

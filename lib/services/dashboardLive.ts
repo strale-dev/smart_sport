@@ -9,7 +9,7 @@ import {
 } from "@/lib/ingestion/db-read";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import {
-  attachAiUpdatedAtToFixtures,
+  attachAiUpdatedAtToFixturesSafe,
   isAiUpdatedMarkerFresh,
   type LiveFixtureRow,
 } from "@/lib/live/live-fixture-meta";
@@ -50,7 +50,7 @@ export async function getDashboardLiveFixtures(
     return [];
   }
 
-  const withAi = await attachAiUpdatedAtToFixtures(candidates, now);
+  const withAi = await attachAiUpdatedAtToFixturesSafe(candidates, now);
   const context = await buildImportanceContext(withAi, now);
   return rankFixturesByImportance(withAi, context)
     .sort((left, right) => {

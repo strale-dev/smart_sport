@@ -22,11 +22,22 @@ export function toAuthUserView(user: User): AuthUserView {
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
-  return user;
+    if (error) {
+      console.warn("[auth] getUser failed:", error.message);
+      return null;
+    }
+
+    return user;
+  } catch (error) {
+    console.warn("[auth] getCurrentUser failed:", error);
+    return null;
+  }
 }

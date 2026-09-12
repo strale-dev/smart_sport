@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getMatchOverviewRenderMode,
   getOverviewCardOrder,
   getOverviewLayout,
   isOverviewCardVisible,
@@ -18,6 +19,25 @@ describe("getOverviewLayout", () => {
     expect(getOverviewLayout("1H")).toBe("live");
     expect(getOverviewLayout("FT")).toBe("live");
     expect(getOverviewLayout("PEN")).toBe("live");
+  });
+});
+
+describe("getMatchOverviewRenderMode", () => {
+  it("uses pre for upcoming fixtures", () => {
+    expect(getMatchOverviewRenderMode("NS")).toBe("pre");
+    expect(getMatchOverviewRenderMode("TBD")).toBe("pre");
+  });
+
+  it("uses finished for completed fixtures", () => {
+    expect(getMatchOverviewRenderMode("FT")).toBe("finished");
+    expect(getMatchOverviewRenderMode("AET")).toBe("finished");
+    expect(getMatchOverviewRenderMode("PEN")).toBe("finished");
+  });
+
+  it("uses live for in-progress fixtures", () => {
+    expect(getMatchOverviewRenderMode("1H")).toBe("live");
+    expect(getMatchOverviewRenderMode("2H")).toBe("live");
+    expect(getMatchOverviewRenderMode("LIVE")).toBe("live");
   });
 });
 

@@ -56,3 +56,18 @@ export async function attachAiUpdatedAtToFixtures(
     return { ...fixture, aiUpdatedAt };
   });
 }
+
+export async function attachAiUpdatedAtToFixturesSafe(
+  fixtures: Fixture[],
+  now = new Date()
+): Promise<LiveFixtureRow[]> {
+  try {
+    return await attachAiUpdatedAtToFixtures(fixtures, now);
+  } catch (error) {
+    console.warn(
+      "[live] AI updated timestamps unavailable, continuing without markers",
+      error
+    );
+    return fixtures.map((fixture) => ({ ...fixture, aiUpdatedAt: null }));
+  }
+}

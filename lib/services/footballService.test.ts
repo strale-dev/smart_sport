@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mapFixture } from "@/lib/api-football/adapter";
+import { ApiFootballError } from "@/lib/api-football/errors";
 import * as fixtureEndpoints from "@/lib/api-football/endpoints/fixtures";
 import type { RawApiFootballFixture } from "@/lib/api-football/types";
+import * as dbRead from "@/lib/ingestion/db-read";
 import { resetCacheForTests } from "@/lib/redis/cache";
 import { providerFixturesDateKey } from "@/lib/redis/keys";
 import { resetMemoryLocksForTests } from "@/lib/redis/lock";
@@ -57,5 +59,22 @@ describe("footballService", () => {
     expect(first.data?.externalId).toBe(1035037);
     expect(second.meta.cached).toBe(true);
     expect(getSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to the database when the live provider errors", async () => {
+    vi.spyOn(fixtureEndpoints, "listLiveFixtures").mockRejectedValue(
+      new ApiFootballError("API-Football provider returned errors", {
+        path: "/fixtures",
+      })
+    );
+    const dbSpy = vi
+      .spyOn(dbRead, "readLiveFixturesFromDb")
+      .mockResolvedValue([sampleFixture]);
+
+    const result = await footballService.listLiveFixtures();
+
+    expect(result.data).toEqual([sampleFixture]);
+    expect(result.meta.stale).toBe(true);
+    expect(dbSpy).toHaveBeenCalledOnce();
   });
 });
