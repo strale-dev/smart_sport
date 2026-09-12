@@ -10,6 +10,25 @@ export const UPCOMING_SOON_LIMIT = 8;
 /** Client polling interval in milliseconds. */
 export const LIVE_POLL_INTERVAL_MS = 30_000;
 
+/** Server provider poll cadence (ms). */
+export const LIVE_SERVER_POLL_MIN_MS = 30_000;
+export const LIVE_SERVER_POLL_MAX_MS = 40_000;
+
+/** Redis lock TTL for live poll workers (renewed each tick). */
+export const LIVE_POLL_LOCK_TTL_SEC = 90;
+
+/** Grace period after last viewer leaves before stopping poll. */
+export const LIVE_PRESENCE_GRACE_MS = 60_000;
+
+/** Watch token TTL; extended on heartbeat. */
+export const LIVE_WATCH_TOKEN_TTL_SEC = 120;
+
+export const LIVE_INTERNAL_POLL_TICK_PATH = "/api/internal/live/poll-tick";
+export const LIVE_INTERNAL_POLL_CENTER_TICK_PATH =
+  "/api/internal/live/poll-center-tick";
+
+export type LiveWatchSurface = "match" | "live-center";
+
 /** Status filter options exposed in Live Center UI. */
 export const LIVE_STATUS_FILTERS = ["1H", "HT", "2H", "ET"] as const;
 

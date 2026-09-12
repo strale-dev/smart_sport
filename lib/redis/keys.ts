@@ -243,3 +243,44 @@ export function fixtureFreshTtlSeconds(status?: FixtureStatus): number {
 
   return CACHE_TTL.fixtureNonLiveFresh;
 }
+
+export function lockFixturePollKey(fixtureProviderId: number): string {
+  return `lock:fixture:${fixtureProviderId}:poll`;
+}
+
+export function lockLiveCenterPollKey(): string {
+  return "lock:live-center:poll";
+}
+
+export function liveWatchTokenKey(watchToken: string): string {
+  return `live:watch:${watchToken}`;
+}
+
+export function liveWatchersMatchKey(fixtureProviderId: number): string {
+  return `live:watchers:match:${fixtureProviderId}`;
+}
+
+export function liveWatchersLiveCenterKey(): string {
+  return "live:watchers:live-center";
+}
+
+export function livePollFixtureLastAtKey(fixtureProviderId: number): string {
+  return `live:poll:fixture:${fixtureProviderId}:last_at`;
+}
+
+export function livePollLiveCenterLastAtKey(): string {
+  return "live:poll:live-center:last_at";
+}
+
+export function liveGraceMatchKey(fixtureProviderId: number): string {
+  return `live:grace:match:${fixtureProviderId}`;
+}
+
+export function liveGraceLiveCenterKey(): string {
+  return "live:grace:live-center";
+}
+
+/** Fixtures with at least one match watch (for reap cron). */
+export function liveActiveMatchWatchesKey(): string {
+  return "live:active-match-watches";
+}

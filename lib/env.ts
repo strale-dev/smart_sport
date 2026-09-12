@@ -19,6 +19,7 @@ export const serverEnvSchema = publicEnvSchema.extend({
   API_FOOTBALL_BASE_URL: z.string().url().optional(),
   API_FOOTBALL_DAILY_LIMIT: z.coerce.number().int().positive().optional(),
   API_FOOTBALL_INGEST_ONLY: z.enum(["true", "false", "1", "0"]).optional(),
+  LIVE_POLLING_ENABLED: z.enum(["true", "false", "1", "0"]).optional(),
   CRON_SECRET: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
   OPENAI_MODEL_DEFAULT: z.string().min(1).optional(),
@@ -81,6 +82,7 @@ function readServerEnvSource(
     API_FOOTBALL_BASE_URL: emptyToUndefined(source.API_FOOTBALL_BASE_URL),
     API_FOOTBALL_DAILY_LIMIT: emptyToUndefined(source.API_FOOTBALL_DAILY_LIMIT),
     API_FOOTBALL_INGEST_ONLY: emptyToUndefined(source.API_FOOTBALL_INGEST_ONLY),
+    LIVE_POLLING_ENABLED: emptyToUndefined(source.LIVE_POLLING_ENABLED),
     CRON_SECRET: emptyToUndefined(source.CRON_SECRET),
     OPENAI_API_KEY: emptyToUndefined(source.OPENAI_API_KEY),
     OPENAI_MODEL_DEFAULT: emptyToUndefined(source.OPENAI_MODEL_DEFAULT),
@@ -179,6 +181,17 @@ export function isApiFootballIngestOnly(
   }
 
   return parsePublicEnv(source).NEXT_PUBLIC_APP_ENV === "development";
+}
+
+export function isLivePollingEnabled(
+  source: Record<string, string | undefined> = process.env
+): boolean {
+  const explicit = emptyToUndefined(source.LIVE_POLLING_ENABLED);
+  if (explicit !== undefined) {
+    return explicit === "true" || explicit === "1";
+  }
+
+  return false;
 }
 
 export function hasOpenAiConfig(
