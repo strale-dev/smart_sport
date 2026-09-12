@@ -24,7 +24,7 @@
     },
     {
       "path": "/api/cron/reap-stale-locks",
-      "schedule": "* * * * *"
+      "schedule": "45 5 * * *"
     }
   ]
 }
