@@ -9,6 +9,10 @@ import {
   shouldContinueFixturePoll,
   shouldContinueLiveCenterPoll,
 } from "@/lib/live/coordinator";
+import {
+  broadcastLiveFeedUpdate,
+  broadcastMatchUpdate,
+} from "@/lib/live/broadcaster";
 import { ingestLiveCenterTick } from "@/lib/live/ingest-live-center-tick";
 import { ingestLiveFixtureTick } from "@/lib/live/ingest-live-tick";
 import { parsePublicEnv, getCronSecret } from "@/lib/env";
@@ -177,7 +181,10 @@ export async function runFixturePollChainTick(
     };
   }
 
-  await ingestLiveFixtureTick(fixtureProviderId);
+  const ingestResult = await ingestLiveFixtureTick(fixtureProviderId);
+  if (ingestResult.ok) {
+    await broadcastMatchUpdate(fixtureProviderId, new Date().toISOString());
+  }
   await writeLastPollAt(lastAtKey, Date.now());
   await renewLock(lockKey, LIVE_POLL_LOCK_TTL_SEC);
 
@@ -217,7 +224,10 @@ export async function runLiveCenterPollChainTick(): Promise<LiveCenterPollTickRe
     return { ok: true, skipped: true, reason: "stopped_before_poll" };
   }
 
-  await ingestLiveCenterTick();
+  const ingestResult = await ingestLiveCenterTick();
+  if (ingestResult.ok) {
+    await broadcastLiveFeedUpdate(new Date().toISOString(), "live-center");
+  }
   await writeLastPollAt(lastAtKey, Date.now());
   await renewLock(lockKey, LIVE_POLL_LOCK_TTL_SEC);
 

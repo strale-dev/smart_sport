@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { AIHeroSection } from "@/components/ai/AIHeroSection";
 import { AIInsightProvider } from "@/components/ai/AIInsightProvider";
 import { MatchDetailsTabsSection } from "@/components/match/MatchDetailsTabsSection";
+import { MatchLiveSession } from "@/components/match/MatchLiveSession";
 import { MatchHeader } from "@/components/match/MatchHeader";
 import { MatchViewAnalytics } from "@/components/match/MatchViewAnalytics";
 import { MatchLineupsPanel } from "@/components/match/panels/MatchLineupsPanel";
@@ -13,7 +14,13 @@ import { MatchOverviewPanel } from "@/components/match/panels/MatchOverviewPanel
 import { MatchStandingsPanel } from "@/components/match/panels/MatchStandingsPanel";
 import { MatchTabPanelFallback } from "@/components/match/panels/MatchTabPanelFallback";
 import { parseFixtureId } from "@/lib/fixtures/ids";
-import { getFixtureById } from "@/lib/services/footballService";
+import { getOverviewLayout } from "@/lib/fixtures/overview-layout";
+import {
+  getFixtureById,
+  getFixtureEvents,
+  getFixtureStatistics,
+} from "@/lib/services/footballService";
+import type { MatchLiveSnapshot } from "@/lib/live/live-fetch";
 import { getCurrentUser } from "@/lib/supabase/user";
 
 type MatchPageProps = {
@@ -61,6 +68,19 @@ export default async function MatchPage({ params }: MatchPageProps) {
   const returnTo = `/matches/${id}`;
   const isGuest = !user;
 
+  let initialLiveSnapshot: MatchLiveSnapshot | undefined;
+  if (getOverviewLayout(fixture.status) === "live") {
+    const [{ data: events }, { data: statistics }] = await Promise.all([
+      getFixtureEvents(fixture.externalId),
+      getFixtureStatistics(fixture.externalId),
+    ]);
+    initialLiveSnapshot = {
+      fixture,
+      events,
+      statistics,
+    };
+  }
+
   return (
     <AIInsightProvider
       key={`${fixture.externalId}-${fixture.status}-${isGuest ? "guest" : "user"}`}
@@ -68,43 +88,45 @@ export default async function MatchPage({ params }: MatchPageProps) {
       fixtureStatus={fixture.status}
       isGuest={isGuest}
     >
-      <div className="flex w-full max-w-3xl flex-col gap-6">
-        <MatchHeader fixture={fixture} />
+      <MatchLiveSession fixture={fixture} initialSnapshot={initialLiveSnapshot}>
+        <div className="flex w-full max-w-3xl flex-col gap-6">
+          <MatchHeader fixture={fixture} />
 
-        <AIHeroSection
-          homeTeam={fixture.homeTeam}
-          awayTeam={fixture.awayTeam}
-          returnTo={returnTo}
-        />
+          <AIHeroSection
+            homeTeam={fixture.homeTeam}
+            awayTeam={fixture.awayTeam}
+            returnTo={returnTo}
+          />
 
-        <MatchDetailsTabsSection
-          fixtureId={fixture.externalId}
-          homeTeam={fixture.homeTeam}
-          awayTeam={fixture.awayTeam}
-          overview={
-            <Suspense fallback={<MatchTabPanelFallback />}>
-              <MatchOverviewPanel fixture={fixture} />
-            </Suspense>
-          }
-          lineups={
-            <Suspense fallback={<MatchTabPanelFallback />}>
-              <MatchLineupsPanel fixture={fixture} />
-            </Suspense>
-          }
-          standings={
-            <Suspense fallback={<MatchTabPanelFallback />}>
-              <MatchStandingsPanel fixture={fixture} />
-            </Suspense>
-          }
-          matches={
-            <Suspense fallback={<MatchTabPanelFallback />}>
-              <MatchMatchesPanel fixture={fixture} />
-            </Suspense>
-          }
-        />
+          <MatchDetailsTabsSection
+            fixtureId={fixture.externalId}
+            homeTeam={fixture.homeTeam}
+            awayTeam={fixture.awayTeam}
+            overview={
+              <Suspense fallback={<MatchTabPanelFallback />}>
+                <MatchOverviewPanel fixture={fixture} />
+              </Suspense>
+            }
+            lineups={
+              <Suspense fallback={<MatchTabPanelFallback />}>
+                <MatchLineupsPanel fixture={fixture} />
+              </Suspense>
+            }
+            standings={
+              <Suspense fallback={<MatchTabPanelFallback />}>
+                <MatchStandingsPanel fixture={fixture} />
+              </Suspense>
+            }
+            matches={
+              <Suspense fallback={<MatchTabPanelFallback />}>
+                <MatchMatchesPanel fixture={fixture} />
+              </Suspense>
+            }
+          />
 
-        <MatchViewAnalytics fixture={fixture} isGuest={isGuest} />
-      </div>
+          <MatchViewAnalytics fixture={fixture} isGuest={isGuest} />
+        </div>
+      </MatchLiveSession>
     </AIInsightProvider>
   );
 }

@@ -1,7 +1,7 @@
+import { MatchOverviewLiveClient } from "@/components/match/MatchOverviewLiveClient";
 import { OverviewTabContent } from "@/components/match/OverviewTabContent";
 import { aggregateForm } from "@/lib/analytics/compute-form";
 import { getOverviewLayout } from "@/lib/fixtures/overview-layout";
-import { computeMatchMomentum } from "@/lib/momentum/computeMatchMomentum";
 import { getRecentForm } from "@/lib/services/analyticsService";
 import {
   getFixtureEvents,
@@ -45,17 +45,23 @@ export async function MatchOverviewPanel({ fixture }: MatchOverviewPanelProps) {
     getPlayersToWatch(fixture),
   ]);
 
-  const momentumBuckets =
-    overviewMode === "live"
-      ? computeMatchMomentum(events, stats, fixture.minute ?? 90)
-      : [];
+  if (overviewMode === "live") {
+    return (
+      <MatchOverviewLiveClient
+        fixture={fixture}
+        homeForm={homeForm10}
+        awayForm={awayForm10}
+        playersToWatch={playersToWatch}
+      />
+    );
+  }
 
   return (
     <OverviewTabContent
       fixture={fixture}
       stats={stats}
       events={events}
-      momentumBuckets={momentumBuckets}
+      momentumBuckets={[]}
       homeForm={homeForm10}
       awayForm={awayForm10}
       playersToWatch={playersToWatch}

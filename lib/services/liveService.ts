@@ -19,25 +19,16 @@ import {
   getMatchesForDate,
   listLiveFixtures,
 } from "@/lib/services/footballService";
+import type {
+  LiveCenterData,
+  LiveCenterParams,
+} from "@/lib/live/live-center-types";
 import type { Fixture, FixtureStatus } from "@/types/domain";
 
-export type LiveCenterParams = {
-  league?: number;
-  status?: LiveStatusFilter;
-  page?: number;
-};
-
-export type LiveCenterData = {
-  fixtures: Fixture[];
-  totalCount: number;
-  page: number;
-  totalPages: number;
-  upcomingSoon: Fixture[];
-  filters: {
-    league?: number;
-    status?: LiveStatusFilter;
-  };
-};
+export type {
+  LiveCenterData,
+  LiveCenterParams,
+} from "@/lib/live/live-center-types";
 
 function utcDateString(date = new Date()): string {
   return date.toISOString().slice(0, 10);

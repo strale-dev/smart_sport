@@ -498,7 +498,7 @@ Run automated gates first: `npm.cmd run phase4:check`. Then complete the manual 
 - [x] **Free tier daily cap** — `lib/ai/usage-gate.test.ts` blocks 6th generation; `AIHeroLimitState` + `ai_limit_reached` PostHog event wired in `AIInsightProvider`.
 - [ ] **Signed-in NS fixture** — Login → `/matches/{upcomingFixtureId}` → AI hero shows insight or Generate CTA; generate once → card populates with probabilities + key factors. _(Founder browser pass ~5 min.)_
 - [x] **Guest NS fixture** — Incognito → same URL → `AIHeroLockedCard` blurred CTA (SSR renders guest branch via `AIHeroSection`).
-- [x] **`/methodology`** — Public page explains deterministic model + AI wrapper in plain English.
+- [x] `/methodology` — Public page explains deterministic model + AI wrapper in plain English.
 - [ ] **PostHog Live Events** — With analytics consent → click Generate → confirm `ai_generate_clicked`; exhaust cap → `ai_limit_reached`. _(Capture wired; confirm in PostHog dashboard.)_
 
 #### Cross-cutting
@@ -524,18 +524,18 @@ Live matches update automatically. When a user opens a live fixture, a shared po
 
 **Coordinator + polling**
 
-- [ ] `lib/live/coordinator.ts` — presence-aware start/stop.
-- [ ] `lib/live/poller.ts` — the 30–40s poll loop per active fixture.
-- [ ] Redis distributed lock ensures **one worker per fixture** globally.
-- [ ] Grace period (60s) before stopping when presence drops to zero.
-- [ ] Fallback cron `app/api/cron/reap-stale-locks/route.ts` — recovers from crashed workers.
+- [x] `lib/live/coordinator.ts` — presence-aware start/stop.
+- [x] `lib/live/poller.ts` — the 30–40s poll loop per active fixture.
+- [x] Redis distributed lock ensures **one worker per fixture** globally.
+- [x] Grace period (60s) before stopping when presence drops to zero.
+- [x] Fallback cron `app/api/cron/reap-stale-locks/route.ts` — recovers from crashed workers.
 
 **Realtime broadcast**
 
-- [ ] `lib/live/broadcaster.ts` — writes to `match:{id}` channel.
-- [ ] Client subscription hook `useLiveMatch(fixtureId)` on match page.
-- [ ] React Query fallback polling (60s while tab visible) if broadcast missed.
-- [ ] Presence tracking on the same channel.
+- [x] `lib/live/broadcaster.ts` — writes to `match:{id}` channel.
+- [x] Client subscription hook `useLiveMatch(fixtureId)` on match page.
+- [x] React Query fallback polling (60s while tab visible) if broadcast missed.
+- [x] Presence tracking on the same channel.
 
 **Meaningful event detection**
 

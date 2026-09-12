@@ -10,6 +10,9 @@ export const UPCOMING_SOON_LIMIT = 8;
 /** Client polling interval in milliseconds. */
 export const LIVE_POLL_INTERVAL_MS = 30_000;
 
+/** React Query fallback when Realtime broadcast is missed (tab visible). */
+export const LIVE_FALLBACK_REFETCH_MS = 60_000;
+
 /** Server provider poll cadence (ms). */
 export const LIVE_SERVER_POLL_MIN_MS = 30_000;
 export const LIVE_SERVER_POLL_MAX_MS = 40_000;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MapPinIcon, UserIcon } from "lucide-react";
 
 import { LiveDot } from "@/components/common/LiveDot";
+import { useMatchLiveContext } from "@/components/match/MatchLiveSession";
 import { LeagueLink } from "@/components/common/LeagueLink";
 import { TeamLogo } from "@/components/match/TeamLogo";
 import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider";
@@ -52,7 +53,9 @@ function formatVenue(fixture: Fixture): string | null {
   return fixture.venue.name;
 }
 
-export function MatchHeader({ fixture }: MatchHeaderProps) {
+export function MatchHeader({ fixture: fixtureProp }: MatchHeaderProps) {
+  const liveContext = useMatchLiveContext();
+  const fixture = liveContext?.fixture ?? fixtureProp;
   const timeZone = useViewerTimezone();
   const isLive = isLiveFixtureStatus(fixture.status);
   const isFinished = isFinishedFixtureStatus(fixture.status);

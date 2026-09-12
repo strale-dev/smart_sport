@@ -5,6 +5,7 @@ import { DashboardQuickLinks } from "@/components/dashboard/DashboardQuickLinks"
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
 import { FeaturedMatchHero } from "@/components/dashboard/FeaturedMatchHero";
 import { FollowedSection } from "@/components/dashboard/FollowedSection";
+import { DashboardLiveSection } from "@/components/dashboard/DashboardLiveSection";
 import { MatchRow } from "@/components/match/MatchRow";
 import { getDashboardData } from "@/lib/services/dashboardService";
 
@@ -21,23 +22,7 @@ export default async function DashboardPage() {
 
       {data.featured ? <FeaturedMatchHero fixture={data.featured} /> : null}
 
-      <DashboardSection
-        title="Live now"
-        actionHref="/live"
-        actionLabel="Live Center"
-      >
-        {data.live.length > 0 ? (
-          <div className="space-y-2">
-            {data.live.map((fixture) => (
-              <MatchRow key={fixture.externalId} fixture={fixture} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-sm">
-            No live matches right now.
-          </p>
-        )}
-      </DashboardSection>
+      <DashboardLiveSection initialLive={data.live} />
 
       <DashboardSection
         title={data.isTodayFallback ? "Nearby matches" : "Important today"}
