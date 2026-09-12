@@ -1,7 +1,10 @@
 import {
   mapAiInsightRowToStored,
+  readLiveInsightFromStore,
   readPrematchInsightFromStore,
+  withLiveInsightLock,
   withPrematchInsightLock,
+  writeLiveInsightCache,
   writePrematchInsightCache,
 } from "@/lib/ai/cache";
 import { insertAiInsight, readLatestPrematchInsight } from "@/lib/ai/db";
@@ -11,7 +14,10 @@ import {
   OpenAiGenerationError,
   OpenAiNotConfiguredError,
 } from "@/lib/ai/openai";
-import { buildPrematchSystemPrompt } from "@/lib/ai/prompts";
+import {
+  buildPrematchSystemPrompt,
+  buildLiveSystemPrompt,
+} from "@/lib/ai/prompts";
 import type { PrematchInsightResponse } from "@/lib/ai/schemas";
 import {
   canGeneratePrematchInsight,
@@ -25,7 +31,11 @@ import {
   recordAiGeneration,
 } from "@/lib/ai/usage-gate";
 import { resolveFixtureUuidByExternalId } from "@/lib/predictions/db";
+import type { MeaningfulEventKind } from "@/lib/live/event-detector-types";
+import type { LivePredictionResult } from "@/types/prediction";
 import {
+  buildLiveContext,
+  buildLiveUserPrompt,
   buildPrematchContext,
   buildPrematchUserPrompt,
 } from "@/lib/services/aiContextService";
@@ -270,3 +280,108 @@ export async function getPrematchInsightQuota(userId: string): Promise<{
 }
 
 export { getAiDailyLimit };
+
+export type GenerateLiveInsightInput = {
+  fixtureExternalId: number;
+  prediction: LivePredictionResult;
+  meaningfulTriggers: MeaningfulEventKind[];
+  minute: number | null;
+  score: { home: number | null; away: number | null };
+  liveStats: {
+    xgHome: number | null;
+    xgAway: number | null;
+    redCardsHome: number;
+    redCardsAway: number;
+  };
+};
+
+export type GenerateLiveInsightResult =
+  | { ok: true; contextHash: string; cached: boolean }
+  | { ok: false; reason: string };
+
+export async function generateLiveInsight(
+  input: GenerateLiveInsightInput
+): Promise<GenerateLiveInsightResult> {
+  const fixture = await resolveFixtureUuidByExternalId(input.fixtureExternalId);
+  if (!fixture) {
+    return { ok: false, reason: "FIXTURE_NOT_FOUND" };
+  }
+
+  const { context, contextHash } = await buildLiveContext({
+    fixtureExternalId: input.fixtureExternalId,
+    prediction: input.prediction,
+    meaningfulTriggers: input.meaningfulTriggers,
+    minute: input.minute,
+    score: input.score,
+    liveStats: input.liveStats,
+  });
+
+  const existing = await readLiveInsightFromStore(
+    fixture.id,
+    input.fixtureExternalId,
+    contextHash
+  );
+  if (existing) {
+    return { ok: true, contextHash, cached: true };
+  }
+
+  try {
+    await withLiveInsightLock(input.fixtureExternalId, async () => {
+      const cachedInsideLock = await readLiveInsightFromStore(
+        fixture.id,
+        input.fixtureExternalId,
+        contextHash
+      );
+      if (cachedInsideLock) {
+        return cachedInsideLock;
+      }
+
+      const llm = await generateStructuredInsight({
+        systemPrompt: buildLiveSystemPrompt(),
+        userPrompt: buildLiveUserPrompt(context),
+      });
+
+      const row = await insertAiInsight({
+        fixtureUuid: fixture.id,
+        predictionId: input.prediction.predictionId,
+        contextHash,
+        openaiModel: llm.model,
+        promptVersion: context.promptVersion,
+        payload: llm.parsed,
+        rawOutput: llm.rawOutput as Json,
+        tokensInput: llm.tokensInput,
+        tokensOutput: llm.tokensOutput,
+        costUsd: llm.costUsd,
+        type: "LIVE",
+      });
+
+      const stored = mapAiInsightRowToStored(
+        row,
+        input.fixtureExternalId,
+        false
+      );
+      await writeLiveInsightCache(input.fixtureExternalId, contextHash, stored);
+      return stored;
+    });
+
+    return { ok: true, contextHash, cached: false };
+  } catch (error) {
+    if (
+      error instanceof OpenAiNotConfiguredError ||
+      error instanceof OpenAiGenerationError
+    ) {
+      const message =
+        error instanceof OpenAiNotConfiguredError
+          ? error.message
+          : error.message;
+      console.error("[aiService] live generation failed:", message);
+      return { ok: false, reason: message };
+    }
+
+    console.error("[aiService] live generation failed:", error);
+    return {
+      ok: false,
+      reason: error instanceof Error ? error.message : "UNKNOWN_ERROR",
+    };
+  }
+}

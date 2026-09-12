@@ -1,6 +1,11 @@
 import { getAiPrematchCacheTtlSec } from "@/lib/env";
 import { readInsightByContextHash, type AiInsightRow } from "@/lib/ai/db";
-import { aiPrematchInsightKey, aiPrematchLockKey } from "@/lib/redis/keys";
+import {
+  aiLiveInsightKey,
+  aiLiveLockKey,
+  aiPrematchInsightKey,
+  aiPrematchLockKey,
+} from "@/lib/redis/keys";
 import { peekCachedValue, writeCachedValue } from "@/lib/redis/cache";
 import { LockNotAcquiredError, withRenewableLock } from "@/lib/redis/lock";
 import type { StoredAIInsight } from "@/lib/ai/schemas";
@@ -131,6 +136,69 @@ export async function withPrematchInsightLock<T>(
   fn: () => Promise<T>
 ): Promise<T> {
   const lockKey = aiPrematchLockKey(fixtureExternalId);
+
+  try {
+    return await withRenewableLock(
+      lockKey,
+      LOCK_TTL_SECONDS,
+      LOCK_RENEW_INTERVAL_MS,
+      fn
+    );
+  } catch (error) {
+    if (!(error instanceof LockNotAcquiredError)) {
+      throw error;
+    }
+
+    for (let attempt = 0; attempt < LOCK_WAIT_ATTEMPTS; attempt += 1) {
+      await sleep(LOCK_WAIT_MS);
+      try {
+        return await fn();
+      } catch (retryError) {
+        if (!(retryError instanceof LockNotAcquiredError)) {
+          throw retryError;
+        }
+      }
+    }
+
+    throw error;
+  }
+}
+
+export async function readLiveInsightFromStore(
+  fixtureUuid: string,
+  fixtureExternalId: number,
+  contextHash: string
+): Promise<StoredAIInsight | null> {
+  const cacheKey = aiLiveInsightKey(fixtureExternalId, contextHash);
+  const cached = await peekCachedValue<StoredAIInsight>(cacheKey);
+  if (cached) {
+    return { ...cached, cached: true };
+  }
+
+  const row = await readInsightByContextHash(fixtureUuid, "LIVE", contextHash);
+  if (!row) {
+    return null;
+  }
+
+  const insight = mapAiInsightRowToStored(row, fixtureExternalId, true);
+  await writeLiveInsightCache(fixtureExternalId, contextHash, insight);
+  return insight;
+}
+
+export async function writeLiveInsightCache(
+  fixtureExternalId: number,
+  contextHash: string,
+  insight: StoredAIInsight
+): Promise<void> {
+  const cacheKey = aiLiveInsightKey(fixtureExternalId, contextHash);
+  await writeCachedValue(cacheKey, insight, getAiPrematchCacheTtlSec());
+}
+
+export async function withLiveInsightLock<T>(
+  fixtureExternalId: number,
+  fn: () => Promise<T>
+): Promise<T> {
+  const lockKey = aiLiveLockKey(fixtureExternalId);
 
   try {
     return await withRenewableLock(

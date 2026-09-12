@@ -72,3 +72,39 @@ export type PrematchAiContext = {
   dataQuality: "COMPLETE" | "PARTIAL" | "STALE";
   dataTimestamp: string;
 };
+
+export type LiveAiContext = {
+  fixtureExternalId: number;
+  kickoffAt: string;
+  status: string;
+  minute: number | null;
+  score: {
+    home: number | null;
+    away: number | null;
+  };
+  venue: string | null;
+  league: {
+    externalId: number;
+    name: string;
+  };
+  homeTeam: {
+    externalId: number;
+    name: string;
+  };
+  awayTeam: {
+    externalId: number;
+    name: string;
+  };
+  modelVersion: string;
+  promptVersion: string;
+  meaningfulTriggers: string[];
+  prediction: PrematchAiContext["prediction"];
+  liveStats: {
+    xgHome: number | null;
+    xgAway: number | null;
+    redCardsHome: number;
+    redCardsAway: number;
+  };
+  dataQuality: "COMPLETE" | "PARTIAL" | "STALE";
+  dataTimestamp: string;
+};

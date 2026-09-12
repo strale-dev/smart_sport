@@ -3,6 +3,7 @@ import {
   LIVE_FEED_CHANNEL,
   matchChannel,
   type LiveBroadcastPayload,
+  type MeaningfulEventBroadcastPayload,
 } from "@/lib/live/channels";
 import { getServerEnv } from "@/lib/env.server";
 
@@ -50,13 +51,18 @@ async function sendBroadcastSafe(messages: BroadcastMessage[]): Promise<void> {
 
 export async function broadcastMatchUpdate(
   fixtureProviderId: number,
-  syncedAt: string
+  syncedAt: string,
+  meaningfulEvents?: MeaningfulEventBroadcastPayload[]
 ): Promise<void> {
   const payload: LiveBroadcastPayload = {
     fixtureProviderId,
     syncedAt,
     source: "match",
   };
+
+  if (meaningfulEvents && meaningfulEvents.length > 0) {
+    payload.meaningfulEvents = meaningfulEvents;
+  }
 
   await sendBroadcastSafe([
     {

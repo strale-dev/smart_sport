@@ -121,3 +121,55 @@ export type PrematchPredictionRow = {
   input_snapshot: PrematchFeatureVector;
   created_at: string;
 };
+
+export type LiveFeatureVector = {
+  fixtureExternalId: number;
+  asOf: string;
+  minute: number | null;
+  scoreHome: number;
+  scoreAway: number;
+  redCardsHome: number;
+  redCardsAway: number;
+  shotsOnTargetHome: number | null;
+  shotsOnTargetAway: number | null;
+  xgHome: number | null;
+  xgAway: number | null;
+  possessionHome: number | null;
+  possessionAway: number | null;
+  cornersHome: number | null;
+  cornersAway: number | null;
+  priorWinProbabilities: WinProbabilities;
+  dataQuality: PredictionDataQuality;
+};
+
+export type LivePredictionResult = PrematchModelOutput & {
+  fixtureId: string;
+  fixtureExternalId: number;
+  modelVersionId: string;
+  modelVersion: string;
+  predictionId: string;
+  type: "LIVE";
+  minute: number | null;
+  inputSnapshot: LiveFeatureVector;
+  createdAt: string;
+  fromCache: boolean;
+};
+
+export type LivePredictionRow = {
+  id: string;
+  fixture_id: string;
+  model_version_id: string;
+  minute: number | null;
+  home_win_prob: number;
+  draw_prob: number;
+  away_win_prob: number;
+  expected_goals_home: number | null;
+  expected_goals_away: number | null;
+  expected_goals_total_min: number | null;
+  expected_goals_total_max: number | null;
+  btts_prob: number | null;
+  weaker_team_scoring_prob: number | null;
+  confidence: AiConfidence;
+  input_snapshot: LiveFeatureVector;
+  created_at: string;
+};

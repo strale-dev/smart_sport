@@ -1,10 +1,17 @@
 import {
+  LIVE_DETECTOR_TICK_LOCK_SEC,
   LIVE_INTERNAL_POLL_CENTER_TICK_PATH,
   LIVE_INTERNAL_POLL_TICK_PATH,
   LIVE_POLL_LOCK_TTL_SEC,
   LIVE_SERVER_POLL_MAX_MS,
   LIVE_SERVER_POLL_MIN_MS,
 } from "@/lib/live/constants";
+import {
+  buildLiveDetectorSnapshot,
+  readDetectorSnapshot,
+  writeDetectorSnapshot,
+} from "@/lib/live/detector-snapshot";
+import { runMeaningfulEventPipeline } from "@/lib/live/meaningful-event-pipeline";
 import {
   shouldContinueFixturePoll,
   shouldContinueLiveCenterPoll,
@@ -18,6 +25,7 @@ import { ingestLiveFixtureTick } from "@/lib/live/ingest-live-tick";
 import { parsePublicEnv, getCronSecret } from "@/lib/env";
 import { getRedis } from "@/lib/redis/client";
 import {
+  liveDetectorLockKey,
   livePollFixtureLastAtKey,
   livePollLiveCenterLastAtKey,
   lockFixturePollKey,
@@ -181,11 +189,92 @@ export async function runFixturePollChainTick(
     };
   }
 
-  const ingestResult = await ingestLiveFixtureTick(fixtureProviderId);
-  if (ingestResult.ok) {
-    await broadcastMatchUpdate(fixtureProviderId, new Date().toISOString());
+  const detectorLockKey = liveDetectorLockKey(fixtureProviderId);
+  const detectorLockAcquired = await acquireLock(
+    detectorLockKey,
+    LIVE_DETECTOR_TICK_LOCK_SEC
+  );
+
+  if (!detectorLockAcquired) {
+    await renewLock(lockKey, LIVE_POLL_LOCK_TTL_SEC);
+    if (await shouldContinueFixturePoll(fixtureProviderId)) {
+      scheduleMatchPollTick(fixtureProviderId);
+    } else {
+      await releaseLock(lockKey);
+    }
+    return {
+      ok: true,
+      fixtureProviderId,
+      skipped: true,
+      reason: "detector_tick_lock_busy",
+    };
   }
-  await writeLastPollAt(lastAtKey, Date.now());
+
+  try {
+    const prevSnapshot = await readDetectorSnapshot(fixtureProviderId);
+    const ingestResult = await ingestLiveFixtureTick(fixtureProviderId);
+
+    if (ingestResult.ok) {
+      const syncedAt = new Date().toISOString();
+      const nextSnapshot = await buildLiveDetectorSnapshot(fixtureProviderId);
+
+      if (nextSnapshot) {
+        const pipelineResult = await runMeaningfulEventPipeline({
+          fixtureProviderId,
+          prevSnapshot,
+          nextSnapshot,
+        });
+
+        if (pipelineResult.detectResult.scoreGoalMismatch) {
+          console.warn(
+            JSON.stringify({
+              scope: "live/meaningful-event-detector",
+              level: "warn",
+              message: "score_goal_event_count_mismatch",
+              fixtureProviderId,
+              mismatch: pipelineResult.detectResult.scoreGoalMismatch,
+              prevScore: prevSnapshot?.score ?? null,
+              nextScore: nextSnapshot.score,
+            })
+          );
+        }
+
+        if (pipelineResult.broadcastEvents.length > 0) {
+          console.info(
+            JSON.stringify({
+              scope: "live/meaningful-event-detector",
+              level: "info",
+              message: "meaningful_events_detected",
+              fixtureProviderId,
+              events: pipelineResult.broadcastEvents,
+              livePredictionUpdated: pipelineResult.livePredictionUpdated,
+              liveInsightGenerated: pipelineResult.liveInsightGenerated,
+            })
+          );
+        }
+
+        await writeDetectorSnapshot(nextSnapshot);
+
+        const meaningfulEvents =
+          pipelineResult.broadcastEvents.length > 0
+            ? pipelineResult.broadcastEvents
+            : undefined;
+
+        await broadcastMatchUpdate(
+          fixtureProviderId,
+          syncedAt,
+          meaningfulEvents
+        );
+      } else {
+        await broadcastMatchUpdate(fixtureProviderId, syncedAt);
+      }
+    }
+
+    await writeLastPollAt(lastAtKey, Date.now());
+  } finally {
+    await releaseLock(detectorLockKey);
+  }
+
   await renewLock(lockKey, LIVE_POLL_LOCK_TTL_SEC);
 
   if (await shouldContinueFixturePoll(fixtureProviderId)) {

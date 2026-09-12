@@ -22,4 +22,13 @@ export function buildPrematchSystemPrompt(): string {
   return PREMATCH_SYSTEM_PROMPT;
 }
 
-// Phase 5: add streamPrematchCommentary() hook here for SSE streaming.
+export const LIVE_SYSTEM_PROMPT = `${PREMATCH_SYSTEM_PROMPT}
+
+Live match rules:
+- The context includes the current minute, score, and live model probabilities after in-match events.
+- Explain momentum and what changed since the prior state using only supplied evidence.
+- Reference meaningful triggers (goals, cards, substitutions, xG shifts) when present in the context.`;
+
+export function buildLiveSystemPrompt(): string {
+  return LIVE_SYSTEM_PROMPT;
+}

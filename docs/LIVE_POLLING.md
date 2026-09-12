@@ -83,7 +83,58 @@ Clients invalidate React Query and refetch:
 
 Fallback while the tab is visible: refetch every **60s** (`LIVE_FALLBACK_REFETCH_MS`) if a broadcast is missed.
 
-**Database:** migration `20260912160000_0021_realtime_live_broadcast_rls.sql` adds RLS on `realtime.messages` so `anon` / `authenticated` can receive broadcasts and track presence on `match:*` and `live:feed`. Apply via Supabase Dashboard SQL (project owner) or `npm.cmd run db:push` if your linked role owns `realtime.messages`.
+## Meaningful event detection (detector MVP)
+
+After each successful **match** poll tick, `lib/live/eventDetector.ts` compares the previous Redis snapshot to the current provider snapshot:
+
+- **Triggers:** goal (event feed + score-diff fallback), red card (including _Second Yellow card_), penalty (scored penalty goal or VAR penalty signal), team xG delta ≥ **0.5** (only when both snapshots already had xG), significant substitution (starter off before minute **70**), probability swing ≥ **10pp** vs last stored prediction (via live model preview in pipeline).
+- **On trigger:** inserts a `LIVE` row in `predictions`, then regenerates shared **`LIVE` `ai_insights`** (Redis cache key `ai:insight:live:{fixtureId}:{contextHash}`). Poller `generateLiveInsight` does **not** consume per-user daily AI quota.
+
+**Redis keys**
+
+| Key                                          | Purpose                                                            |
+| -------------------------------------------- | ------------------------------------------------------------------ |
+| `live:detector:snapshot:{fixtureProviderId}` | Last compared snapshot (TTL 24h)                                   |
+| `live:detector:lock:{fixtureProviderId}`     | Short NX lock (~8s) so overlapping poll ticks do not double-detect |
+
+**Known limitation:** VAR overturn does not retract an earlier GOAL trigger; the detector only reacts on the first tick when state appears in the feed or statistics.
+
+When meaningful events fire, structured logs go to the server console (`live/meaningful-event-detector`). Score vs goal-event count mismatches are logged at **warn** before score-diff fallback goals are emitted.
+
+### Broadcast contract (`event: update`)
+
+Existing clients keep working. Optional field on match broadcasts:
+
+```ts
+type MeaningfulEventBroadcastPayload = {
+  kind:
+    | "GOAL"
+    | "RED_CARD"
+    | "PENALTY"
+    | "XG_DELTA"
+    | "SIGNIFICANT_SUBSTITUTION"
+    | "PROBABILITY_SHIFT";
+  minute: number | null;
+  teamExternalId: number | null;
+  reason: string;
+  externalEventId?: string;
+  meta?: Record<string, unknown>;
+};
+
+type LiveBroadcastPayload = {
+  fixtureProviderId?: number;
+  syncedAt: string;
+  source: "match" | "live-center";
+  meaningfulEvents?: MeaningfulEventBroadcastPayload[];
+};
+```
+
+`meaningfulEvents` is omitted when nothing meaningful occurred on that tick. Treat field names as a stable contract for future AI/live insight work.
+
+**Database:** migration `20260912160000_0021_realtime_live_broadcast_rls.sql` adds RLS on `realtime.messages` so `anon` / `authenticated` can receive broadcasts and track presence on `match:*` and `live:feed`.
+
+- **Apply in Supabase Dashboard → SQL Editor** (postgres owner): [SQL editor](https://supabase.com/dashboard/project/zovobemlpqoclyjhvkpw/sql/new) — paste the migration file. CLI/MCP `db push` / `db query -f` cannot alter `realtime.messages` (`must be owner of table messages`).
+- Verify: `npm.cmd run live:verify-rls`
 
 ### Broadcast smoke (two tabs)
 

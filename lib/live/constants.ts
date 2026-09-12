@@ -13,6 +13,12 @@ export const LIVE_POLL_INTERVAL_MS = 30_000;
 /** React Query fallback when Realtime broadcast is missed (tab visible). */
 export const LIVE_FALLBACK_REFETCH_MS = 60_000;
 
+/** Per-fixture lock while running detector + ingest tick (prevents overlapping reads). */
+export const LIVE_DETECTOR_TICK_LOCK_SEC = 8;
+
+/** Redis TTL for last detector snapshot per fixture. */
+export const LIVE_DETECTOR_SNAPSHOT_TTL_SEC = 86_400;
+
 /** Server provider poll cadence (ms). */
 export const LIVE_SERVER_POLL_MIN_MS = 30_000;
 export const LIVE_SERVER_POLL_MAX_MS = 40_000;

@@ -44,6 +44,8 @@
     "phase4:match-smoke": "tsx --import ./scripts/preload-env.ts ./scripts/phase4-match-smoke.ts",
     "verify:ingestion": "tsx --import ./scripts/preload-env.ts ./scripts/verify-ingestion.ts",
     "cache:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/cache-smoke.ts",
+    "live:verify-rls": "tsx ./scripts/verify-realtime-live-rls.ts",
+    "live:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/live-polling-smoke.ts",
     "quota:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/quota-smoke.ts",
     "auth:configure-supabase": "tsx --import ./scripts/preload-env.ts ./scripts/configure-supabase-auth.ts",
     "auth:push-config": "supabase config push --yes"

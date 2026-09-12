@@ -6,8 +6,16 @@ import {
   readLineupsFromDb,
 } from "@/lib/ingestion/db-read";
 import { getH2H, getRecentForm } from "@/lib/services/analyticsService";
-import type { PrematchAiContext, LineupsContextState } from "@/types/ai";
-import type { PrematchPredictionResult } from "@/types/prediction";
+import type {
+  LiveAiContext,
+  PrematchAiContext,
+  LineupsContextState,
+} from "@/types/ai";
+import type {
+  LivePredictionResult,
+  PrematchPredictionResult,
+} from "@/types/prediction";
+import type { MeaningfulEventKind } from "@/lib/live/event-detector-types";
 
 function resolveLineupsState(
   lineups: Awaited<ReturnType<typeof readLineupsFromDb>>
@@ -165,5 +173,86 @@ export async function buildPrematchContext(
 }
 
 export function buildPrematchUserPrompt(context: PrematchAiContext): string {
+  return JSON.stringify(context, null, 2);
+}
+
+export type LiveContextResult = {
+  context: LiveAiContext;
+  contextHash: string;
+};
+
+export async function buildLiveContext(input: {
+  fixtureExternalId: number;
+  prediction: LivePredictionResult;
+  meaningfulTriggers: MeaningfulEventKind[];
+  minute: number | null;
+  score: { home: number | null; away: number | null };
+  liveStats: LiveAiContext["liveStats"];
+}): Promise<LiveContextResult> {
+  const fixture = await readFixtureByProviderIdFromDb(input.fixtureExternalId);
+  if (!fixture) {
+    throw new Error(
+      `Fixture ${input.fixtureExternalId} not found for live AI context`
+    );
+  }
+
+  const promptVersion = getAiPromptVersion();
+  const context: LiveAiContext = {
+    fixtureExternalId: input.fixtureExternalId,
+    kickoffAt: fixture.kickoffAt,
+    status: fixture.status,
+    minute: input.minute,
+    score: input.score,
+    venue: sanitizeProviderText(fixture.venue?.name ?? null),
+    league: {
+      externalId: fixture.league.externalId,
+      name: sanitizeProviderText(fixture.league.name) ?? "Unknown league",
+    },
+    homeTeam: {
+      externalId: fixture.homeTeam.externalId,
+      name: sanitizeProviderText(fixture.homeTeam.name) ?? "Home team",
+    },
+    awayTeam: {
+      externalId: fixture.awayTeam.externalId,
+      name: sanitizeProviderText(fixture.awayTeam.name) ?? "Away team",
+    },
+    modelVersion: input.prediction.modelVersion,
+    promptVersion,
+    meaningfulTriggers: [...input.meaningfulTriggers].sort(),
+    prediction: {
+      winProbabilities: input.prediction.winProbabilities,
+      expectedGoalsHome: input.prediction.expectedGoalsHome,
+      expectedGoalsAway: input.prediction.expectedGoalsAway,
+      expectedGoalsTotalMin: input.prediction.expectedGoalsTotalMin,
+      expectedGoalsTotalMax: input.prediction.expectedGoalsTotalMax,
+      bttsProb: input.prediction.bttsProb,
+      weakerTeamScoringProb: input.prediction.weakerTeamScoringProb,
+      confidence: input.prediction.confidence,
+      predictedOutcome: input.prediction.predictedOutcome,
+      dataQuality: input.prediction.inputSnapshot.dataQuality,
+    },
+    liveStats: input.liveStats,
+    dataQuality:
+      input.prediction.inputSnapshot.dataQuality === "PARTIAL"
+        ? "PARTIAL"
+        : "COMPLETE",
+    dataTimestamp: new Date().toISOString(),
+  };
+
+  const contextHash = computeContextHash({
+    fixtureExternalId: input.fixtureExternalId,
+    modelVersion: context.modelVersion,
+    promptVersion: context.promptVersion,
+    minute: context.minute,
+    score: context.score,
+    meaningfulTriggers: context.meaningfulTriggers,
+    prediction: context.prediction,
+    liveStats: context.liveStats,
+  });
+
+  return { context, contextHash };
+}
+
+export function buildLiveUserPrompt(context: LiveAiContext): string {
   return JSON.stringify(context, null, 2);
 }

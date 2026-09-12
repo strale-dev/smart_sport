@@ -539,11 +539,11 @@ Live matches update automatically. When a user opens a live fixture, a shared po
 
 **Meaningful event detection**
 
-- [ ] `lib/live/eventDetector.ts` — detects: goal, red card, penalty, xG delta > 0.5, probability swing > 10pp, significant sub.
-- [ ] When triggered:
-  - New `predictions` row (LIVE, with minute).
-  - `predictionService.updateLiveProbability` via `lib/models/liveProbability.ts`.
-  - `aiService.generateLiveInsight` regenerates (cache key includes state hash).
+- [x] `lib/live/eventDetector.ts` + `detector-snapshot.ts` — goal, red (incl. second yellow), penalty/VAR, xG delta > 0.5, significant sub (starter off, minute < 70); snapshot diff, detector lock, structured logs, optional `meaningfulEvents` on broadcast.
+- [x] When triggered (live model + AI slice):
+  - New `predictions` row (`LIVE`, with minute) via `predictionService.updateLiveProbability` + `lib/models/liveProbability.ts`.
+  - `aiService.generateLiveInsight` on shared cache key (`context_hash` from live context).
+  - Probability swing > 10pp trigger via `lib/live/probability-shift.ts` + pipeline.
 
 **UI**
 

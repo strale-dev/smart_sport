@@ -221,6 +221,10 @@ export function predictionPrematchLockKey(fixtureExternalId: number): string {
   return `lock:prediction:prematch:${fixtureExternalId}`;
 }
 
+export function predictionLiveLockKey(fixtureExternalId: number): string {
+  return `lock:prediction:live:${fixtureExternalId}`;
+}
+
 export function aiPrematchInsightKey(
   fixtureExternalId: number,
   contextHash: string
@@ -230,6 +234,17 @@ export function aiPrematchInsightKey(
 
 export function aiPrematchLockKey(fixtureExternalId: number): string {
   return `lock:ai:prematch:${fixtureExternalId}`;
+}
+
+export function aiLiveInsightKey(
+  fixtureExternalId: number,
+  contextHash: string
+): string {
+  return `ai:insight:live:${fixtureExternalId}:${contextHash}`;
+}
+
+export function aiLiveLockKey(fixtureExternalId: number): string {
+  return `lock:ai:live:${fixtureExternalId}`;
 }
 
 export function aiUserDailyLimitKey(userId: string): string {
@@ -283,4 +298,12 @@ export function liveGraceLiveCenterKey(): string {
 /** Fixtures with at least one match watch (for reap cron). */
 export function liveActiveMatchWatchesKey(): string {
   return "live:active-match-watches";
+}
+
+export function liveDetectorSnapshotKey(fixtureProviderId: number): string {
+  return `live:detector:snapshot:${fixtureProviderId}`;
+}
+
+export function liveDetectorLockKey(fixtureProviderId: number): string {
+  return `live:detector:lock:${fixtureProviderId}`;
 }

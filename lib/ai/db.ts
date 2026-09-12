@@ -64,14 +64,16 @@ export async function insertAiInsight(input: {
   tokensInput: number | null;
   tokensOutput: number | null;
   costUsd: number | null;
+  type?: Database["public"]["Enums"]["ai_insight_type"];
 }): Promise<AiInsightRow> {
   const client = createAdminClient();
+  const insightType = input.type ?? "PREMATCH";
   const { data, error } = await client
     .from("ai_insights")
     .insert({
       fixture_id: input.fixtureUuid,
       prediction_id: input.predictionId,
-      type: "PREMATCH",
+      type: insightType,
       context_hash: input.contextHash,
       openai_model: input.openaiModel,
       prompt_version: input.promptVersion,
