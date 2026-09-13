@@ -1,0 +1,28 @@
+# Sub-daily ingestion while Vercel is on Hobby (vercel.json stays daily-only).
+# Requires repo secrets: PRODUCTION_SITE_URL (e.g. https://scorence.app), CRON_SECRET (same as Vercel Production).
+name: Ingestion schedule
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync-lineups:
+    if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger sync-lineups
+        run: |
+          curl -sfS -X GET "${{ secrets.PRODUCTION_SITE_URL }}/api/cron/sync-lineups" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+
+  sync-standings:
+    if: github.event.schedule == '0 */6 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger sync-standings
+        run: |
+          curl -sfS -X GET "${{ secrets.PRODUCTION_SITE_URL }}/api/cron/sync-standings" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

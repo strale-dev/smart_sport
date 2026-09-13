@@ -3,6 +3,11 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  VERCEL_CRON_HOBBY_SCHEDULES,
+  VERCEL_CRON_PRO_TARGETS,
+} from "@/lib/ingestion/vercel-cron-contract";
+
 type VercelCronEntry = { path: string; schedule: string };
 
 function loadVercelCrons(): VercelCronEntry[] {
@@ -12,26 +17,54 @@ function loadVercelCrons(): VercelCronEntry[] {
   return parsed.crons ?? [];
 }
 
+/** Hobby deploy gate — must match scripts/validate-vercel-cron-hobby.mjs */
+function runsMoreThanOncePerDay(schedule: string): boolean {
+  const parts = schedule.trim().split(/\s+/);
+  if (parts.length !== 5) {
+    return true;
+  }
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+  if (minute.includes("/") || minute === "*") {
+    return true;
+  }
+  if (hour.includes("/") || hour === "*") {
+    return true;
+  }
+  if (dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
+    return false;
+  }
+  if (dayOfMonth !== "*" || month !== "*" || dayOfWeek !== "*") {
+    return false;
+  }
+  return true;
+}
+
 describe("vercel.json cron contract", () => {
-  it("schedules sync-lineups every 15 minutes", () => {
+  it("uses Hobby-safe schedules so Production deploys succeed", () => {
     const crons = loadVercelCrons();
-    const lineups = crons.find(
-      (entry) => entry.path === "/api/cron/sync-lineups"
-    );
-    expect(lineups).toEqual({
-      path: "/api/cron/sync-lineups",
-      schedule: "*/15 * * * *",
-    });
+    for (const entry of crons) {
+      expect(
+        runsMoreThanOncePerDay(entry.schedule),
+        `${entry.path} schedule ${entry.schedule} would block Vercel Hobby deploys`
+      ).toBe(false);
+    }
   });
 
-  it("schedules sync-standings every 6 hours (ING-3 Pro cutover)", () => {
+  it("matches documented daily Vercel cron paths", () => {
     const crons = loadVercelCrons();
-    const standings = crons.find(
-      (entry) => entry.path === "/api/cron/sync-standings"
+    for (const [cronPath, schedule] of Object.entries(
+      VERCEL_CRON_HOBBY_SCHEDULES
+    )) {
+      expect(crons).toContainEqual({ path: cronPath, schedule });
+    }
+  });
+
+  it("documents Pro cutover targets separately from vercel.json", () => {
+    expect(VERCEL_CRON_PRO_TARGETS["/api/cron/sync-standings"]).toBe(
+      "0 */6 * * *"
     );
-    expect(standings).toEqual({
-      path: "/api/cron/sync-standings",
-      schedule: "0 */6 * * *",
-    });
+    expect(VERCEL_CRON_PRO_TARGETS["/api/cron/sync-lineups"]).toBe(
+      "*/15 * * * *"
+    );
   });
 });
