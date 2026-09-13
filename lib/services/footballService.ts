@@ -28,7 +28,7 @@ import {
   searchTeams as searchTeamsEndpoint,
 } from "@/lib/api-football/endpoints/teams";
 import { getTeamSquad as getTeamSquadEndpoint } from "@/lib/api-football/endpoints/players";
-import { isApiFootballIngestOnly } from "@/lib/env";
+import { isApiFootballIngestOnly, isLivePollingEnabled } from "@/lib/env";
 import {
   isOptionalProviderFailure,
   safeOptionalProviderFetch,
@@ -146,8 +146,10 @@ async function cachedProviderOrDb<T>(options: {
   providerFn: () => Promise<T>;
   dbFn: () => Promise<T>;
   label: string;
+  /** When true, call the provider even if API_FOOTBALL_INGEST_ONLY is set (live list). */
+  forceProvider?: boolean;
 }): Promise<CachedResult<T>> {
-  if (isApiFootballIngestOnly()) {
+  if (isApiFootballIngestOnly() && !options.forceProvider) {
     return cached({
       key: options.key,
       freshTtlSeconds: options.freshTtlSeconds,
@@ -239,6 +241,7 @@ export async function listLiveFixtures(): Promise<ServiceResult<Fixture[]>> {
     providerFn: () => listLiveFixturesEndpoint(),
     dbFn: () => readLiveFixturesFromDb(),
     label: "listLiveFixtures",
+    forceProvider: isLivePollingEnabled(),
   });
 
   return toServiceResult(result);
@@ -322,22 +325,13 @@ export async function getFixturePlayers(
 export async function getTeamById(
   id: number
 ): Promise<ServiceResult<Team | null>> {
-  if (isApiFootballIngestOnly()) {
-    const result = await cached({
-      key: providerTeamKey(id),
-      freshTtlSeconds: CACHE_TTL.teamFresh,
-      staleTtlSeconds: CACHE_TTL.teamStale,
-      fn: () => readTeamByProviderIdFromDb(id),
-    });
-
-    return toServiceResult(result);
-  }
-
-  const result = await cached({
+  const result = await cachedProviderOrDb({
     key: providerTeamKey(id),
     freshTtlSeconds: CACHE_TTL.teamFresh,
     staleTtlSeconds: CACHE_TTL.teamStale,
-    fn: () => getTeamByIdEndpoint(id),
+    providerFn: () => getTeamByIdEndpoint(id),
+    dbFn: () => readTeamByProviderIdFromDb(id),
+    label: "getTeamById",
   });
 
   return toServiceResult(result);

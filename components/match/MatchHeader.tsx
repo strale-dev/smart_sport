@@ -4,14 +4,14 @@ import { MapPinIcon } from "lucide-react";
 
 import { LiveStatusChip } from "@/components/match/LiveStatusChip";
 import { MatchFixtureScoreboard } from "@/components/match/MatchFixtureScoreboard";
+import {
+  MatchHeaderShell,
+  MatchHeaderShellContent,
+  MatchHeaderShellHeader,
+} from "@/components/match/MatchHeaderShell";
 import { useMatchLiveContext } from "@/components/match/MatchLiveSession";
 import { LeagueLink } from "@/components/common/LeagueLink";
 import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider";
-import {
-  MatchAnalyticsCard,
-  MatchCardContent,
-  MatchCardHeader,
-} from "@/components/match/MatchAnalyticsCard";
 import {
   formatFixtureMinute,
   formatMatchHeaderStatusLabel,
@@ -45,14 +45,14 @@ export function MatchHeader({ fixture: fixtureProp }: MatchHeaderProps) {
   const leagueLabel = `${fixture.league.name}${fixture.round ? ` · ${fixture.round}` : ""}`;
 
   return (
-    <MatchAnalyticsCard>
-      <MatchCardHeader className="gap-2 pb-2">
+    <MatchHeaderShell>
+      <MatchHeaderShellHeader>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <LeagueLink
             leagueExternalId={fixture.league.externalId}
             leagueName={leagueLabel}
             leagueLogoUrl={fixture.league.logoUrl}
-            className="min-w-0 text-sm"
+            className="min-w-0 text-sm sm:text-base"
           />
           <span className="text-muted-foreground inline-flex shrink-0 items-center gap-1.5 text-sm">
             {isLive ? (
@@ -65,9 +65,9 @@ export function MatchHeader({ fixture: fixtureProp }: MatchHeaderProps) {
             )}
           </span>
         </div>
-      </MatchCardHeader>
+      </MatchHeaderShellHeader>
 
-      <MatchCardContent className="space-y-3">
+      <MatchHeaderShellContent>
         <h1 className="sr-only">
           {fixture.homeTeam.name} vs {fixture.awayTeam.name}
         </h1>
@@ -77,7 +77,14 @@ export function MatchHeader({ fixture: fixtureProp }: MatchHeaderProps) {
           linkTeams
           showHalftimeLine
           animateScore
+          truncateTeamNames={false}
           scoreClassName="text-2xl sm:text-4xl"
+          scheduledKickoffClassName="px-3 py-1.5 text-base sm:px-3.5 sm:py-2 sm:text-lg"
+          logoClassName="size-10 sm:size-16"
+          teamNameClassName="text-sm font-semibold sm:text-xl md:text-2xl"
+          teamLinkClassName="hover:bg-muted/40 focus-visible:ring-ring/50 flex min-w-0 items-center gap-2 rounded-xl p-1.5 transition-colors focus-visible:ring-[3px] focus-visible:outline-none sm:gap-2.5 sm:p-2"
+          className="max-w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-3 sm:gap-4"
+          centerColumnClassName="shrink-0 px-1 sm:px-2"
         />
 
         {venueLabel ? (
@@ -88,7 +95,7 @@ export function MatchHeader({ fixture: fixtureProp }: MatchHeaderProps) {
             </span>
           </div>
         ) : null}
-      </MatchCardContent>
-    </MatchAnalyticsCard>
+      </MatchHeaderShellContent>
+    </MatchHeaderShell>
   );
 }

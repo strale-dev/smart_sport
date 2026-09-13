@@ -199,7 +199,10 @@ export async function getLiveCenterData(
     getMatchesForDate(today),
   ]);
 
-  const liveCandidates = dedupeFixtures(liveResult.data);
+  const liveFromToday = todayResult.data.filter((fixture) =>
+    isLiveFixtureStatus(fixture.status)
+  );
+  const liveCandidates = dedupeFixtures([...liveResult.data, ...liveFromToday]);
   const filtered = filterLiveFixtures(liveCandidates, params);
   const withAi = await attachAiUpdatedAtToFixturesSafe(filtered, now);
   const context = await buildImportanceContext(withAi, now);

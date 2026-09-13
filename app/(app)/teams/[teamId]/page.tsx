@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { TeamDetailsTabsSection } from "@/components/team/TeamDetailsTabsSection";
 import { TeamHeader } from "@/components/team/TeamHeader";
 import { TeamViewAnalytics } from "@/components/team/TeamViewAnalytics";
+import { aggregateForm } from "@/lib/analytics/compute-form";
 import { parseProviderId } from "@/lib/fixtures/ids";
 import { getRecentForm } from "@/lib/services/analyticsService";
 import {
@@ -20,10 +21,28 @@ import {
 } from "@/lib/teams/resolve-primary-league";
 import { getCurrentUser } from "@/lib/supabase/user";
 import type {
+  FormScope,
+  FormSnapshot,
   SquadPlayer,
   StandingsGroup,
   TeamSeasonStatistics,
 } from "@/types/domain";
+
+function emptyFormSnapshot(matches: 5 | 10, scope: FormScope): FormSnapshot {
+  return aggregateForm([], scope, matches);
+}
+
+async function loadTeamRecentForm(
+  teamProviderId: number,
+  options: { matches: 5 | 10; scope: FormScope }
+): Promise<FormSnapshot> {
+  try {
+    return await getRecentForm(teamProviderId, options);
+  } catch (error: unknown) {
+    console.warn("[team] recent form unavailable", error);
+    return emptyFormSnapshot(options.matches, options.scope);
+  }
+}
 
 type TeamPageProps = {
   params: Promise<{ teamId: string }>;
@@ -39,13 +58,16 @@ export async function generateMetadata({
     return { title: "Team" };
   }
 
-  const { data: team } = await getTeamById(id);
-
-  if (!team) {
+  try {
+    const { data: team } = await getTeamById(id);
+    if (!team) {
+      return { title: "Team" };
+    }
+    return { title: team.name };
+  } catch (error: unknown) {
+    console.warn("[team] metadata lookup failed", error);
     return { title: "Team" };
   }
-
-  return { title: team.name };
 }
 
 export default async function TeamPage({ params }: TeamPageProps) {
@@ -92,12 +114,12 @@ export default async function TeamPage({ params }: TeamPageProps) {
     squadResult,
     seasonStatsResult,
   ] = await Promise.all([
-    getRecentForm(id, { matches: 5, scope: "ALL" }),
-    getRecentForm(id, { matches: 10, scope: "ALL" }),
-    getRecentForm(id, { matches: 5, scope: "HOME" }),
-    getRecentForm(id, { matches: 10, scope: "HOME" }),
-    getRecentForm(id, { matches: 5, scope: "AWAY" }),
-    getRecentForm(id, { matches: 10, scope: "AWAY" }),
+    loadTeamRecentForm(id, { matches: 5, scope: "ALL" }),
+    loadTeamRecentForm(id, { matches: 10, scope: "ALL" }),
+    loadTeamRecentForm(id, { matches: 5, scope: "HOME" }),
+    loadTeamRecentForm(id, { matches: 10, scope: "HOME" }),
+    loadTeamRecentForm(id, { matches: 5, scope: "AWAY" }),
+    loadTeamRecentForm(id, { matches: 10, scope: "AWAY" }),
     primaryLeague && seasonYear != null
       ? getStandings(primaryLeague.leagueExternalId, seasonYear).catch(
           (error: unknown) => {

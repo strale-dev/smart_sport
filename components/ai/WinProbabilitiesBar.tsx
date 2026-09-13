@@ -1,5 +1,14 @@
+"use client";
+
+import { motion } from "motion/react";
+
 import { formatWinProbability } from "@/lib/ai/format";
 import type { AIInsightPayload } from "@/lib/ai/schemas";
+import {
+  layoutTransition,
+  usePrefersReducedMotion,
+  valueChangeFade,
+} from "@/lib/motion";
 import type { TeamRef } from "@/types/domain";
 
 import { cn } from "@/lib/utils";
@@ -26,6 +35,10 @@ export function WinProbabilitiesBar({
   awayTeam,
   className,
 }: WinProbabilitiesBarProps) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const valueMotion = valueChangeFade(prefersReducedMotion);
+  const layoutMotion = layoutTransition(prefersReducedMotion);
+
   const segments = [
     {
       key: "1" as const,
@@ -46,19 +59,32 @@ export function WinProbabilitiesBar({
 
   return (
     <div className={cn("grid grid-cols-3 gap-2", className)}>
-      {segments.map((segment) => (
-        <div
-          key={segment.key}
-          className={segmentClass(winOutcome === segment.key)}
-        >
-          <span className="text-muted-foreground truncate text-xs">
-            {segment.label}
-          </span>
-          <span className="font-heading text-lg font-semibold tabular-nums">
-            {formatWinProbability(segment.value)}
-          </span>
-        </div>
-      ))}
+      {segments.map((segment) => {
+        const isHighlighted = winOutcome === segment.key;
+        const formatted = formatWinProbability(segment.value);
+
+        return (
+          <motion.div
+            key={segment.key}
+            layout={!prefersReducedMotion}
+            transition={layoutMotion}
+            className={segmentClass(isHighlighted)}
+          >
+            <span className="text-muted-foreground truncate text-xs">
+              {segment.label}
+            </span>
+            <motion.span
+              key={formatted}
+              className="font-heading text-lg font-semibold tabular-nums"
+              initial={valueMotion.initial}
+              animate={valueMotion.animate}
+              transition={valueMotion.transition}
+            >
+              {formatted}
+            </motion.span>
+          </motion.div>
+        );
+      })}
     </div>
   );
 }

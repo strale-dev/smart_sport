@@ -1,28 +1,65 @@
 # Sub-daily ingestion while Vercel is on Hobby (vercel.json stays daily-only).
-# Requires repo secrets: PRODUCTION_SITE_URL (e.g. https://scorence.app), CRON_SECRET (same as Vercel Production).
+# Repo secret: CRON_SECRET (same as Vercel Production).
+# Optional repo variable: PRODUCTION_SITE_URL (defaults to https://scorence.app).
 name: Ingestion schedule
 
 on:
   schedule:
+    - cron: "*/5 * * * *"
     - cron: "*/15 * * * *"
     - cron: "0 */6 * * *"
   workflow_dispatch:
+    inputs:
+      target:
+        description: Which Production cron route to trigger
+        type: choice
+        required: true
+        default: lineups
+        options:
+          - lineups
+          - standings
+          - live
+          - both
 
 jobs:
-  sync-lineups:
-    if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
+  trigger:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: lineups
+            path: /api/cron/sync-lineups
+            schedule: "*/15 * * * *"
+          - id: sync-live-center
+            path: /api/cron/sync-live-center
+            schedule: "*/15 * * * *"
+          - id: sync-fixtures-today
+            path: /api/cron/sync-fixtures-today
+            schedule: "*/15 * * * *"
+          - id: reap-stale-locks
+            path: /api/cron/reap-stale-locks
+            schedule: "*/5 * * * *"
+          - id: standings
+            path: /api/cron/sync-standings
+            schedule: "0 */6 * * *"
+    if: >
+      (github.event_name == 'schedule' && github.event.schedule == matrix.schedule) ||
+      (github.event_name == 'workflow_dispatch' && (
+        github.event.inputs.target == 'both' ||
+        github.event.inputs.target == matrix.id ||
+        (github.event.inputs.target == 'live' && (
+          matrix.id == 'sync-live-center' ||
+          matrix.id == 'sync-fixtures-today' ||
+          matrix.id == 'reap-stale-locks'
+        ))
+      ))
     steps:
-      - name: Trigger sync-lineups
-        run: |
-          curl -sfS -X GET "${{ secrets.PRODUCTION_SITE_URL }}/api/cron/sync-lineups" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  sync-standings:
-    if: github.event.schedule == '0 */6 * * *' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger sync-standings
-        run: |
-          curl -sfS -X GET "${{ secrets.PRODUCTION_SITE_URL }}/api/cron/sync-standings" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+      - name: Trigger ${{ matrix.id }}
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          PRODUCTION_SITE_URL: ${{ vars.PRODUCTION_SITE_URL }}
+        run: node scripts/trigger-production-cron.mjs "${{ matrix.path }}"

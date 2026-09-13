@@ -23,7 +23,7 @@ import {
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import type { Fixture } from "@/types/domain";
 
-import { LiveDot } from "@/components/common/LiveDot";
+import { LiveStatusChip } from "@/components/match/LiveStatusChip";
 import { LeagueLink } from "@/components/common/LeagueLink";
 
 type FeaturedMatchHeroProps = {
@@ -53,7 +53,7 @@ export function FeaturedMatchHero({ fixture }: FeaturedMatchHeroProps) {
       <CardHeader className="gap-3 pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">Featured match</Badge>
-          {isLive ? <LiveDot /> : null}
+          {isLive ? <LiveStatusChip appearance="compact" animate /> : null}
         </div>
         <CardDescription className="flex flex-wrap items-center gap-2">
           <LeagueLink

@@ -1,6 +1,22 @@
 # Live polling API (Phase 5 backend)
 
-Server-side presence-gated polling. Enable with `LIVE_POLLING_ENABLED=true` and API-Football Pro key (`API_FOOTBALL_DAILY_LIMIT=7500`). Live polls bypass `API_FOOTBALL_INGEST_ONLY`.
+Server-side presence-gated polling. Enable with `LIVE_POLLING_ENABLED=true` and API-Football Pro key (`API_FOOTBALL_DAILY_LIMIT=7500`). Live polls bypass `API_FOOTBALL_INGEST_ONLY` for **writes** and for **`listLiveFixtures` reads** when polling is enabled.
+
+## Local development (`npm run dev`)
+
+Live Center stays empty if Postgres still has `NS` and nothing refreshes statuses during the match. Required in `.env.local`:
+
+| Variable                                              | Value                                                                                                                      |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `LIVE_POLLING_ENABLED`                                | `true`                                                                                                                     |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | set                                                                                                                        |
+| `CRON_SECRET`                                         | set (internal poll routes use the same bearer token as Vercel cron)                                                        |
+| `API_FOOTBALL_KEY`                                    | valid key                                                                                                                  |
+| `NEXT_PUBLIC_SITE_URL`                                | **`http://localhost:3000`** — the poller self-`fetch`es this origin; `https://scorence.app` sends local tabs to Production |
+
+With `API_FOOTBALL_INGEST_ONLY=true` (default in development), `listLiveFixtures` calls the provider only when `LIVE_POLLING_ENABLED=true`. Live Center also merges **today’s** fixtures with live statuses from the date read path as a fallback.
+
+Optional background refresh (Production via GitHub Actions, every 15 minutes): `GET /api/cron/sync-live-center` (requires live polling) and `GET /api/cron/sync-fixtures-today` (updates today’s allowlist fixtures in Postgres).
 
 ## Watch / unwatch / heartbeat
 
@@ -66,7 +82,13 @@ Verify Postgres `fixtures` / `fixture_events` / scores and Redis keys `provider:
 
 ## Cron
 
-`GET /api/cron/reap-stale-locks` (every minute) restarts workers when locks expire but viewers remain (after grace rules).
+| Route                               | Purpose                                                                                      |
+| ----------------------------------- | -------------------------------------------------------------------------------------------- |
+| `GET /api/cron/sync-live-center`    | `live=all` ingest (no open browser tab required); skipped when `LIVE_POLLING_ENABLED` is off |
+| `GET /api/cron/sync-fixtures-today` | Re-sync UTC today’s allowlist fixtures into Postgres + date cache                            |
+| `GET /api/cron/reap-stale-locks`    | Restarts presence-gated workers when locks expire but viewers remain                         |
+
+On Vercel Hobby, `reap-stale-locks` in `vercel.json` runs once daily. Sub-daily live maintenance uses [`.github/workflows/ingestion-schedule.yml`](../.github/workflows/ingestion-schedule.yml) (`reap-stale-locks` every 5 minutes when live is enabled in Production).
 
 ## Realtime broadcast
 

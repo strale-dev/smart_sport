@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ChevronDownIcon, GlobeIcon } from "lucide-react";
 
 import { LeagueFilterLogo } from "@/components/live/LeagueFilterLogo";
-import { LiveDot } from "@/components/common/LiveDot";
+import { LiveStatusChip } from "@/components/match/LiveStatusChip";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -96,7 +96,9 @@ function LeagueFilterTab({
         )}
       >
         <span className="hidden sm:inline">{tab.shortLabel ?? tab.label}</span>
-        {showLive ? <LiveDot className="shrink-0" /> : null}
+        {showLive ? (
+          <LiveStatusChip appearance="compact" className="shrink-0" animate />
+        ) : null}
       </Link>
     </div>
   );
@@ -139,7 +141,13 @@ export function FixturesLeagueTabs({
           >
             <GlobeIcon className="size-4 shrink-0" aria-hidden="true" />
             <span className="hidden sm:inline">All</span>
-            {anyLive ? <LiveDot className="shrink-0" /> : null}
+            {anyLive ? (
+              <LiveStatusChip
+                appearance="compact"
+                className="shrink-0"
+                animate
+              />
+            ) : null}
           </FilterTab>
 
           {visiblePrimaryTabs.map((tab) => (
@@ -182,7 +190,11 @@ export function FixturesLeagueTabs({
                   {isMoreLeagueActive ? moreLeagueLabel : "More"}
                 </span>
                 {visibleMoreTabs.some((tab) => liveSet.has(tab.providerId)) ? (
-                  <LiveDot className="shrink-0" />
+                  <LiveStatusChip
+                    appearance="compact"
+                    className="shrink-0"
+                    animate
+                  />
                 ) : null}
                 <ChevronDownIcon className="size-4 shrink-0" />
               </DropdownMenuTrigger>
@@ -205,7 +217,11 @@ export function FixturesLeagueTabs({
                     />
                     {tab.label}
                     {liveSet.has(tab.providerId) ? (
-                      <LiveDot className="ml-auto shrink-0" />
+                      <LiveStatusChip
+                        appearance="compact"
+                        className="ml-auto shrink-0"
+                        animate
+                      />
                     ) : null}
                   </DropdownMenuItem>
                 ))}

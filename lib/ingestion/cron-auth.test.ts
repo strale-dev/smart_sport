@@ -43,4 +43,14 @@ describe("verifyCronRequest", () => {
 
     expect(result.ok).toBe(true);
   });
+
+  it("accepts bearer with alternate casing and surrounding whitespace", () => {
+    const result = verifyCronRequest("  bearer cron_test_secret  ", {
+      ...baseEnv,
+      NEXT_PUBLIC_APP_ENV: "production",
+      CRON_SECRET: "cron_test_secret",
+    });
+
+    expect(result.ok).toBe(true);
+  });
 });

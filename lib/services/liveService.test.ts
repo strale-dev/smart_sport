@@ -218,6 +218,38 @@ describe("getLiveCenterData", () => {
     expect(data.fixtures.map((fixture) => fixture.externalId)).toEqual([2, 1]);
   });
 
+  it("includes live fixtures from today's date when the live list is empty", async () => {
+    mockImportanceContext();
+
+    vi.spyOn(footballService, "listLiveFixtures").mockResolvedValue({
+      data: [],
+      meta: { cached: false, stale: false },
+    });
+    vi.spyOn(footballService, "getMatchesForDate").mockResolvedValue({
+      data: [
+        makeFixture({
+          externalId: 99,
+          status: "2H",
+          kickoffAt: "2026-09-13T12:00:00.000Z",
+        }),
+        makeFixture({
+          externalId: 100,
+          status: "NS",
+          kickoffAt: "2026-09-13T18:00:00.000Z",
+        }),
+      ],
+      meta: { cached: false, stale: false },
+    });
+
+    const data = await getLiveCenterData(
+      {},
+      new Date("2026-09-13T14:00:00.000Z")
+    );
+
+    expect(data.fixtures).toHaveLength(1);
+    expect(data.fixtures[0]?.externalId).toBe(99);
+  });
+
   it("returns upcoming fixtures starting within the next 3 hours", async () => {
     mockImportanceContext();
     const now = new Date("2026-09-01T15:00:00.000Z");

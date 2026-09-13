@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { SparklesIcon } from "lucide-react";
-import { motion } from "motion/react";
 
+import { AIHeroMotionSection } from "@/components/ai/AIHeroMotionSection";
 import { AiUpdatedIndicator } from "@/components/ai/AiUpdatedIndicator";
 import { ConfidenceBadge } from "@/components/ai/ConfidenceBadge";
 import { DataQualityChip } from "@/components/ai/DataQualityChip";
@@ -16,7 +16,6 @@ import {
 } from "@/lib/ai/format";
 import type { StoredAIInsight } from "@/lib/ai/schemas";
 import type { PrematchInsightMode } from "@/lib/ai/schemas";
-import { motionTransition, usePrefersReducedMotion } from "@/lib/motion";
 import type { TeamRef } from "@/types/domain";
 import { AI_DISCLAIMER } from "@/lib/marketing/copy";
 
@@ -43,8 +42,6 @@ export function AIHeroCard({
   homeTeam,
   awayTeam,
 }: AIHeroCardProps) {
-  const prefersReducedMotion = usePrefersReducedMotion();
-
   return (
     <AIHeroShell variant="default">
       <CardHeader className="gap-3">
@@ -70,35 +67,25 @@ export function AIHeroCard({
             insightId={insight.id}
           />
         </div>
-        <motion.div
-          key={insight.id}
-          initial={prefersReducedMotion ? false : { opacity: 0.45 }}
-          animate={{ opacity: 1 }}
-          transition={motionTransition(prefersReducedMotion, { duration: 0.3 })}
-        >
+        <AIHeroMotionSection motionKey={insight.id}>
           <CardDescription className="text-foreground/90 max-w-3xl text-base">
             {insight.summary}
           </CardDescription>
           <p className="text-muted-foreground mt-2 text-xs">
             {outcomeLabel(insight.winOutcome, homeTeam, awayTeam)}
           </p>
-        </motion.div>
+        </AIHeroMotionSection>
       </CardHeader>
 
       <CardContent className="space-y-5">
-        <motion.div
-          key={`${insight.id}-probs`}
-          initial={prefersReducedMotion ? false : { opacity: 0.45 }}
-          animate={{ opacity: 1 }}
-          transition={motionTransition(prefersReducedMotion, { duration: 0.3 })}
-        >
+        <AIHeroMotionSection motionKey={`${insight.id}-probs`}>
           <WinProbabilitiesBar
             probabilities={insight.winProbabilities}
             winOutcome={insight.winOutcome}
             homeTeam={homeTeam}
             awayTeam={awayTeam}
           />
-        </motion.div>
+        </AIHeroMotionSection>
 
         <div className="text-muted-foreground grid gap-2 text-sm sm:grid-cols-3">
           <p>
@@ -115,16 +102,9 @@ export function AIHeroCard({
 
         <div>
           <h3 className="mb-3 text-sm font-medium">Key factors</h3>
-          <motion.div
-            key={`${insight.id}-factors`}
-            initial={prefersReducedMotion ? false : { opacity: 0.45 }}
-            animate={{ opacity: 1 }}
-            transition={motionTransition(prefersReducedMotion, {
-              duration: 0.3,
-            })}
-          >
+          <AIHeroMotionSection motionKey={`${insight.id}-factors`}>
             <KeyFactorsList factors={insight.keyFactors} limit={3} />
-          </motion.div>
+          </AIHeroMotionSection>
         </div>
       </CardContent>
 

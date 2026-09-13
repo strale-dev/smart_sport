@@ -9,7 +9,11 @@ import {
   getFixtureEventPresentation,
 } from "@/lib/fixtures/events";
 import { timelineEventKey } from "@/lib/fixtures/timeline-event-key";
-import { motionTransition, usePrefersReducedMotion } from "@/lib/motion";
+import {
+  MOTION_DURATION,
+  motionTransition,
+  usePrefersReducedMotion,
+} from "@/lib/motion";
 import {
   MatchAnalyticsCard,
   MatchCardContent,
@@ -70,7 +74,7 @@ export function TimelineCard({ fixture, events }: TimelineCardProps) {
                   initial={prefersReducedMotion ? false : { opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={motionTransition(prefersReducedMotion, {
-                    duration: 0.25,
+                    duration: MOTION_DURATION.fast,
                   })}
                   className="space-y-3"
                 >

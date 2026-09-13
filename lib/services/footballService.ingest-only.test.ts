@@ -21,6 +21,7 @@ describe("footballService ingest-only mode", () => {
     resetCacheForTests();
     vi.restoreAllMocks();
     delete process.env.API_FOOTBALL_INGEST_ONLY;
+    delete process.env.LIVE_POLLING_ENABLED;
     delete process.env.NEXT_PUBLIC_APP_ENV;
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -126,5 +127,23 @@ describe("footballService ingest-only mode", () => {
       "2026-08-04T00:00:00.000Z",
       "2027-09-04T00:00:00.000Z"
     );
+  });
+
+  it("reads live fixtures from the provider when live polling is enabled", async () => {
+    Object.assign(process.env, baseEnv);
+    process.env.API_FOOTBALL_INGEST_ONLY = "true";
+    process.env.LIVE_POLLING_ENABLED = "true";
+
+    const dbSpy = vi
+      .spyOn(dbRead, "readLiveFixturesFromDb")
+      .mockResolvedValue([]);
+    const apiSpy = vi
+      .spyOn(fixtureEndpoints, "listLiveFixtures")
+      .mockResolvedValue([]);
+
+    await footballService.listLiveFixtures();
+
+    expect(apiSpy).toHaveBeenCalledOnce();
+    expect(dbSpy).not.toHaveBeenCalled();
   });
 });

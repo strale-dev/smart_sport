@@ -51,6 +51,7 @@
     "live:verify-rls": "tsx ./scripts/verify-realtime-live-rls.ts",
     "live:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/live-polling-smoke.ts",
     "ui-b3:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/ui-b3-match-regression-smoke.ts",
+    "ui-p2:check": "node scripts/ui-p2-motion-audit.mjs && vitest run lib/motion.test.ts components/match/LiveStatusChip.test.tsx components/ai/WinProbabilitiesBar.test.tsx",
     "e2e": "playwright test",
     "e2e:match": "playwright test e2e/match-page.spec.ts",
     "phase5:check": "node scripts/phase5-dod-check.mjs",

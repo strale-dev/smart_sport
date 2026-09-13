@@ -4,6 +4,7 @@ import Link from "next/link";
 import { SparklesIcon } from "lucide-react";
 
 import { usePrematchInsight } from "@/components/ai/AIInsightProvider";
+import { AIHeroMotionSection } from "@/components/ai/AIHeroMotionSection";
 import { ConfidenceBadge } from "@/components/ai/ConfidenceBadge";
 import { DataQualityChip } from "@/components/ai/DataQualityChip";
 import { KeyFactorsList } from "@/components/ai/KeyFactorsList";
@@ -113,14 +114,18 @@ export function AIHeroDetailedPanel({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <p className="text-sm leading-relaxed">{insight.commentary}</p>
+        <AIHeroMotionSection motionKey={insight.id}>
+          <p className="text-sm leading-relaxed">{insight.commentary}</p>
+        </AIHeroMotionSection>
 
-        <WinProbabilitiesBar
-          probabilities={insight.winProbabilities}
-          winOutcome={insight.winOutcome}
-          homeTeam={homeTeam}
-          awayTeam={awayTeam}
-        />
+        <AIHeroMotionSection motionKey={`${insight.id}-probs`}>
+          <WinProbabilitiesBar
+            probabilities={insight.winProbabilities}
+            winOutcome={insight.winOutcome}
+            homeTeam={homeTeam}
+            awayTeam={awayTeam}
+          />
+        </AIHeroMotionSection>
 
         <div className="text-muted-foreground grid gap-2 text-sm sm:grid-cols-3">
           <p>
@@ -137,30 +142,34 @@ export function AIHeroDetailedPanel({
 
         <div>
           <h3 className="mb-3 text-sm font-medium">Key factors</h3>
-          <KeyFactorsList factors={insight.keyFactors} />
+          <AIHeroMotionSection motionKey={`${insight.id}-factors`}>
+            <KeyFactorsList factors={insight.keyFactors} />
+          </AIHeroMotionSection>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
-          {(
-            [
-              ["Likely", insight.scenarios.likely],
-              ["Best case", insight.scenarios.best],
-              ["Upset", insight.scenarios.upset],
-            ] as const
-          ).map(([label, text]) => (
-            <div
-              key={label}
-              className="border-border/70 bg-muted/20 rounded-xl border px-4 py-3"
-            >
-              <p className="text-xs font-medium tracking-wide uppercase">
-                {label}
-              </p>
-              <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-                {text}
-              </p>
-            </div>
-          ))}
-        </div>
+        <AIHeroMotionSection motionKey={`${insight.id}-scenarios`}>
+          <div className="grid gap-3 md:grid-cols-3">
+            {(
+              [
+                ["Likely", insight.scenarios.likely],
+                ["Best case", insight.scenarios.best],
+                ["Upset", insight.scenarios.upset],
+              ] as const
+            ).map(([label, text]) => (
+              <div
+                key={label}
+                className="border-border/70 bg-muted/20 rounded-xl border px-4 py-3"
+              >
+                <p className="text-xs font-medium tracking-wide uppercase">
+                  {label}
+                </p>
+                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+                  {text}
+                </p>
+              </div>
+            ))}
+          </div>
+        </AIHeroMotionSection>
       </CardContent>
 
       <CardFooter className="flex flex-col items-start gap-2 border-t pt-4">

@@ -79,7 +79,7 @@ async function upsertFormSnapshot(
   });
 
   if (error) {
-    throw new Error(`Failed to upsert form snapshot: ${error.message}`);
+    console.warn("[analytics] form snapshot insert skipped:", error.message);
   }
 }
 

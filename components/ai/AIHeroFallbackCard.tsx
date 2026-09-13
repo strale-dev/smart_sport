@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { SparklesIcon } from "lucide-react";
 
+import { AIHeroMotionSection } from "@/components/ai/AIHeroMotionSection";
 import { ConfidenceBadge } from "@/components/ai/ConfidenceBadge";
 import { DataQualityChip } from "@/components/ai/DataQualityChip";
 import { WinProbabilitiesBar } from "@/components/ai/WinProbabilitiesBar";
@@ -38,6 +41,7 @@ export function AIHeroFallbackCard({
   isRetrying = false,
 }: AIHeroFallbackCardProps) {
   const confidence = prediction.confidence;
+  const motionKey = prediction.predictionId;
 
   return (
     <AIHeroShell variant="plain">
@@ -54,18 +58,22 @@ export function AIHeroFallbackCard({
           <ConfidenceBadge confidence={confidence} />
           <DataQualityChip quality={prediction.inputSnapshot.dataQuality} />
         </div>
-        <CardDescription>
-          {message ??
-            "The narrative analysis is temporarily unavailable. Model probabilities are shown below."}
-        </CardDescription>
+        <AIHeroMotionSection motionKey={`${motionKey}-message`}>
+          <CardDescription>
+            {message ??
+              "The narrative analysis is temporarily unavailable. Model probabilities are shown below."}
+          </CardDescription>
+        </AIHeroMotionSection>
       </CardHeader>
       <CardContent className="space-y-4">
-        <WinProbabilitiesBar
-          probabilities={prediction.winProbabilities}
-          winOutcome={prediction.predictedOutcome}
-          homeTeam={homeTeam}
-          awayTeam={awayTeam}
-        />
+        <AIHeroMotionSection motionKey={`${motionKey}-probs`}>
+          <WinProbabilitiesBar
+            probabilities={prediction.winProbabilities}
+            winOutcome={prediction.predictedOutcome}
+            homeTeam={homeTeam}
+            awayTeam={awayTeam}
+          />
+        </AIHeroMotionSection>
         <div className="text-muted-foreground grid gap-2 text-sm sm:grid-cols-2">
           <p>
             Expected goals: {prediction.expectedGoalsHome.toFixed(1)} –{" "}

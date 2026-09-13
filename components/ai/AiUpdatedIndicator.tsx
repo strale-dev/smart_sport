@@ -5,7 +5,11 @@ import { motion } from "motion/react";
 import { useAiUpdatedTicker } from "@/hooks/useAiUpdatedTicker";
 import { formatRelativeTime } from "@/lib/ai/format";
 import type { PrematchInsightMode } from "@/lib/ai/schemas";
-import { motionTransition, usePrefersReducedMotion } from "@/lib/motion";
+import {
+  MOTION_DURATION,
+  motionTransition,
+  usePrefersReducedMotion,
+} from "@/lib/motion";
 import { Badge } from "@/components/ui/badge";
 
 type AiUpdatedIndicatorProps = {
@@ -37,7 +41,9 @@ export function AiUpdatedIndicator({
       key={insightId}
       initial={prefersReducedMotion ? false : { scale: 0.96, opacity: 0.7 }}
       animate={{ scale: 1, opacity: 1 }}
-      transition={motionTransition(prefersReducedMotion, { duration: 0.35 })}
+      transition={motionTransition(prefersReducedMotion, {
+        duration: MOTION_DURATION.standard,
+      })}
     >
       <Badge variant="outline" className="font-normal">
         {modeLabel(insightMode)} updated {formatRelativeTime(createdAt)}

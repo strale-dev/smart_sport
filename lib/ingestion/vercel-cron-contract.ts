@@ -30,4 +30,7 @@ export const VERCEL_CRON_PRO_TARGETS: Record<string, string> = {
 export const GITHUB_ACTIONS_INGESTION_PATHS = [
   "/api/cron/sync-lineups",
   "/api/cron/sync-standings",
+  "/api/cron/sync-live-center",
+  "/api/cron/sync-fixtures-today",
+  "/api/cron/reap-stale-locks",
 ] as const;

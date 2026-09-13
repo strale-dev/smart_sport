@@ -22,10 +22,15 @@ type MatchFixtureScoreboardProps = {
   showHalftimeLine?: boolean;
   animateScore?: boolean;
   scheduledCenterVariant?: "badge" | "text";
+  teamNameClassName?: string;
+  teamLinkClassName?: string;
+  scheduledKickoffClassName?: string;
+  centerColumnClassName?: string;
+  truncateTeamNames?: boolean;
   className?: string;
 };
 
-const teamLinkClassName =
+const defaultTeamLinkClassName =
   "hover:bg-muted/40 focus-visible:ring-ring/50 flex min-w-0 items-center gap-2 rounded-xl p-1 transition-colors focus-visible:ring-[3px] focus-visible:outline-none";
 
 export function MatchFixtureScoreboard({
@@ -36,6 +41,11 @@ export function MatchFixtureScoreboard({
   showHalftimeLine = false,
   animateScore = false,
   scheduledCenterVariant = "badge",
+  teamNameClassName = "text-sm font-medium",
+  teamLinkClassName = defaultTeamLinkClassName,
+  scheduledKickoffClassName,
+  centerColumnClassName,
+  truncateTeamNames = true,
   className,
 }: MatchFixtureScoreboardProps) {
   const timeZone = useViewerTimezone();
@@ -51,7 +61,14 @@ export function MatchFixtureScoreboard({
         logoUrl={fixture.homeTeam.logoUrl}
         className={logoClassName}
       />
-      <span className="truncate text-sm font-medium">
+      <span
+        className={cn(
+          teamNameClassName,
+          truncateTeamNames
+            ? "truncate"
+            : "min-w-0 text-left leading-snug break-words"
+        )}
+      >
         {fixture.homeTeam.name}
       </span>
     </>
@@ -59,7 +76,14 @@ export function MatchFixtureScoreboard({
 
   const awayCell = (
     <>
-      <span className="truncate text-right text-sm font-medium">
+      <span
+        className={cn(
+          teamNameClassName,
+          truncateTeamNames
+            ? "truncate text-right"
+            : "min-w-0 text-right leading-snug break-words"
+        )}
+      >
         {fixture.awayTeam.name}
       </span>
       <TeamLogo
@@ -88,7 +112,7 @@ export function MatchFixtureScoreboard({
         <div className="flex min-w-0 items-center gap-2">{homeCell}</div>
       )}
 
-      <div className="text-center">
+      <div className={cn("shrink-0 px-2 text-center", centerColumnClassName)}>
         {showScore ? (
           <div className="space-y-0.5">
             <AnimatedScore
@@ -107,7 +131,13 @@ export function MatchFixtureScoreboard({
             ) : null}
           </div>
         ) : scheduledCenterVariant === "badge" ? (
-          <Badge variant="outline" className="font-mono tabular-nums">
+          <Badge
+            variant="outline"
+            className={cn(
+              "h-auto font-mono font-semibold tabular-nums",
+              scheduledKickoffClassName
+            )}
+          >
             {scoreText}
           </Badge>
         ) : (

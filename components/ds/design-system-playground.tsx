@@ -17,7 +17,7 @@ import {
 import { Wordmark } from "@/components/brand/Wordmark";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
-import { LiveDot } from "@/components/common/LiveDot";
+import { LiveStatusChip } from "@/components/match/LiveStatusChip";
 import { StaleBadge } from "@/components/common/StaleBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  motionTransition,
+  livePulseTransition,
   pulseKeyframes,
   usePrefersReducedMotion,
 } from "@/lib/motion";
@@ -125,10 +125,7 @@ function MotionDemo() {
       <motion.div
         className="bg-primary size-10"
         animate={pulseKeyframes(prefersReducedMotion)}
-        transition={motionTransition(prefersReducedMotion, {
-          duration: 1.2,
-          ease: "easeInOut" as const,
-        })}
+        transition={livePulseTransition(prefersReducedMotion)}
       />
       <p className="text-muted-foreground text-sm">
         {prefersReducedMotion
@@ -393,7 +390,8 @@ export function DesignSystemPlayground() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="info">62% home</Badge>
-                <LiveDot />
+                <LiveStatusChip appearance="default" />
+                <LiveStatusChip appearance="compact" />
               </div>
             </CardContent>
           </Card>

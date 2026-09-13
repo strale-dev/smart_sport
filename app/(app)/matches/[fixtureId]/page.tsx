@@ -89,7 +89,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
       isGuest={isGuest}
     >
       <MatchLiveSession fixture={fixture} initialSnapshot={initialLiveSnapshot}>
-        <div className="flex w-full max-w-3xl flex-col gap-4">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
           <MatchHeader fixture={fixture} />
 
           <AIHeroSection

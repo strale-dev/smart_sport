@@ -119,6 +119,75 @@ describe("analyticsService", () => {
     expect(snapshot.scope).toBe("ALL");
   });
 
+  it("still returns form when snapshot insert fails", async () => {
+    const baseClient = {
+      from: vi.fn((table: string) => {
+        if (table === "teams") {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: { id: "team-a-uuid" },
+                  error: null,
+                })),
+              })),
+            })),
+          };
+        }
+
+        if (table === "fixtures") {
+          const chain = {
+            select: vi.fn(() => chain),
+            in: vi.fn(() => chain),
+            order: vi.fn(() => chain),
+            limit: vi.fn(() => chain),
+            eq: vi.fn(() => chain),
+            or: vi.fn(() => chain),
+            then(onFulfilled: (value: unknown) => unknown) {
+              return Promise.resolve({
+                data: [
+                  {
+                    provider_id: 1001,
+                    kickoff_at: "2026-08-20T15:00:00.000Z",
+                    score_home: 2,
+                    score_away: 1,
+                    home_team: { provider_id: 40, name: "Liverpool" },
+                    away_team: { provider_id: 50, name: "Arsenal" },
+                    league: { provider_id: 39, name: "Premier League" },
+                  },
+                ],
+                error: null,
+              }).then(onFulfilled);
+            },
+          };
+          return chain;
+        }
+
+        if (table === "form_snapshots") {
+          return {
+            insert: vi.fn(async () => ({
+              error: { message: "duplicate key value" },
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected table mock: ${table}`);
+      }),
+    };
+
+    vi.mocked(createAdminClient).mockReturnValue(
+      baseClient as unknown as ReturnType<typeof createAdminClient>
+    );
+
+    const snapshot = await analyticsService.computeRecentForm(40, {
+      matches: 5,
+      scope: "ALL",
+    });
+
+    expect(snapshot.results).toHaveLength(1);
+    expect(snapshot.wins).toBe(1);
+  });
+
   it("computes and persists form snapshot from fixtures", async () => {
     mockAdminClient({
       teams: { 40: "team-a-uuid" },

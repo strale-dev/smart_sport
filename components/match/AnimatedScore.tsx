@@ -3,7 +3,11 @@
 import { motion, useInView } from "motion/react";
 import { useRef } from "react";
 
-import { motionTransition, usePrefersReducedMotion } from "@/lib/motion";
+import {
+  MOTION_DURATION,
+  motionTransition,
+  usePrefersReducedMotion,
+} from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 type AnimatedScoreProps = {
@@ -47,7 +51,9 @@ export function AnimatedScore({
       key={score}
       initial={{ y: -12, opacity: 0.6 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={motionTransition(false, { duration: 0.35 })}
+      transition={motionTransition(prefersReducedMotion, {
+        duration: MOTION_DURATION.standard,
+      })}
       className={cn(
         "font-mono font-semibold tabular-nums",
         isLive && "text-live",
