@@ -1,6 +1,9 @@
 # Sub-daily ingestion while Vercel is on Hobby (vercel.json stays daily-only).
 # Repo secret: CRON_SECRET (same as Vercel Production).
 # Optional repo variable: PRODUCTION_SITE_URL (defaults to https://scorence.app).
+#
+# Do not put `matrix` in jobs.<id>.if — GitHub evaluates that before matrix
+# expansion and rejects the workflow (Unrecognized named-value: 'matrix').
 name: Ingestion schedule
 
 on:
@@ -22,38 +25,61 @@ on:
           - both
 
 jobs:
+  select:
+    runs-on: ubuntu-latest
+    outputs:
+      include: ${{ steps.pick.outputs.include }}
+    steps:
+      - id: pick
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          TARGET: ${{ github.event.inputs.target }}
+        run: |
+          node <<'EOF'
+          const fs = require("node:fs");
+
+          const rows = [
+            { id: "lineups", path: "/api/cron/sync-lineups", schedule: "*/15 * * * *" },
+            { id: "sync-live-center", path: "/api/cron/sync-live-center", schedule: "*/15 * * * *" },
+            { id: "sync-fixtures-today", path: "/api/cron/sync-fixtures-today", schedule: "*/15 * * * *" },
+            { id: "reap-stale-locks", path: "/api/cron/reap-stale-locks", schedule: "*/5 * * * *" },
+            { id: "standings", path: "/api/cron/sync-standings", schedule: "0 */6 * * *" },
+          ];
+          const liveIds = new Set([
+            "sync-live-center",
+            "sync-fixtures-today",
+            "reap-stale-locks",
+          ]);
+
+          const eventName = process.env.EVENT_NAME;
+          const schedule = process.env.EVENT_SCHEDULE;
+          const target = process.env.TARGET;
+
+          const picked = rows.filter((row) => {
+            if (eventName === "schedule") {
+              return row.schedule === schedule;
+            }
+            if (target === "both") return true;
+            if (target === row.id) return true;
+            if (target === "live") return liveIds.has(row.id);
+            return false;
+          });
+
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `include=${JSON.stringify(picked)}\n`,
+          );
+          EOF
+
   trigger:
+    needs: select
+    if: needs.select.outputs.include != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - id: lineups
-            path: /api/cron/sync-lineups
-            schedule: "*/15 * * * *"
-          - id: sync-live-center
-            path: /api/cron/sync-live-center
-            schedule: "*/15 * * * *"
-          - id: sync-fixtures-today
-            path: /api/cron/sync-fixtures-today
-            schedule: "*/15 * * * *"
-          - id: reap-stale-locks
-            path: /api/cron/reap-stale-locks
-            schedule: "*/5 * * * *"
-          - id: standings
-            path: /api/cron/sync-standings
-            schedule: "0 */6 * * *"
-    if: >
-      (github.event_name == 'schedule' && github.event.schedule == matrix.schedule) ||
-      (github.event_name == 'workflow_dispatch' && (
-        github.event.inputs.target == 'both' ||
-        github.event.inputs.target == matrix.id ||
-        (github.event.inputs.target == 'live' && (
-          matrix.id == 'sync-live-center' ||
-          matrix.id == 'sync-fixtures-today' ||
-          matrix.id == 'reap-stale-locks'
-        ))
-      ))
+        include: ${{ fromJSON(needs.select.outputs.include) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
