@@ -39,6 +39,49 @@ describe("ingestion config", () => {
     expect(config.lineupsSyncEnabled).toBe(true);
   });
 
+  it("disables lineups sync in development by default", () => {
+    const config = getIngestionConfig({
+      ...baseEnv,
+      NEXT_PUBLIC_APP_ENV: "development",
+    });
+
+    expect(config.lineupsSyncEnabled).toBe(false);
+  });
+
+  it("disables lineups sync in production when kill-switch env is false", () => {
+    const config = getIngestionConfig({
+      ...baseEnv,
+      NEXT_PUBLIC_APP_ENV: "production",
+      API_FOOTBALL_LINEUPS_SYNC_ENABLED: "false",
+    });
+
+    expect(config.lineupsSyncEnabled).toBe(false);
+  });
+
+  it("enables lineups sync in development when override env is set", () => {
+    const config = getIngestionConfig({
+      ...baseEnv,
+      NEXT_PUBLIC_APP_ENV: "development",
+      API_FOOTBALL_LINEUPS_SYNC_ENABLED: "true",
+    });
+
+    expect(config.lineupsSyncEnabled).toBe(true);
+  });
+
+  it("uses default lineups sync batch and respects LINEUPS_SYNC_BATCH", () => {
+    expect(
+      getIngestionConfig({ ...baseEnv, NEXT_PUBLIC_APP_ENV: "development" })
+        .lineupsSyncBatch
+    ).toBe(30);
+    expect(
+      getIngestionConfig({
+        ...baseEnv,
+        NEXT_PUBLIC_APP_ENV: "development",
+        LINEUPS_SYNC_BATCH: "12",
+      }).lineupsSyncBatch
+    ).toBe(12);
+  });
+
   it("filters fixtures to the configured league allowlist", () => {
     const config = getIngestionConfig({
       ...baseEnv,

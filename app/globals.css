@@ -66,10 +66,12 @@
   --popover-foreground: oklch(0.97 0 0);
   --primary: oklch(0.86 0.15 170);
   --primary-foreground: oklch(0.155 0.02 240);
-  --secondary: oklch(0.24 0.02 240);
+  /* PRD secondary accent — analytical blue (#4C7BF3) */
+  --secondary: oklch(0.66 0.16 260);
   --secondary-foreground: oklch(0.97 0 0);
   --muted: oklch(0.24 0.02 240);
-  --muted-foreground: oklch(0.66 0.03 250);
+  /* PRD text secondary (#8B94A8) */
+  --muted-foreground: oklch(0.63 0.028 250);
   --accent: oklch(0.24 0.02 240);
   --accent-foreground: oklch(0.97 0 0);
   --destructive: oklch(0.64 0.24 25);

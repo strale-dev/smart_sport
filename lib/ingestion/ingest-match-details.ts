@@ -1,21 +1,19 @@
 import {
   getFixtureEvents as getFixtureEventsEndpoint,
-  getFixtureLineups as getFixtureLineupsEndpoint,
   getFixturePlayers as getFixturePlayersEndpoint,
   getFixtureStatistics as getFixtureStatisticsEndpoint,
 } from "@/lib/api-football/endpoints/fixtures";
+import { ingestLineupsFromProvider } from "@/lib/ingestion/ingest-lineups";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import {
   getFixtureUuidByProviderId,
   upsertFixtureEvents,
   upsertFixtureStatistics,
-  upsertLineups,
   upsertPlayerMatchPerformances,
 } from "@/lib/ingestion/match-details-upsert";
 import { getRedis } from "@/lib/redis/client";
 import {
   providerFixtureEventsKey,
-  providerFixtureLineupsKey,
   providerFixturePlayersKey,
   providerFixtureStatsKey,
 } from "@/lib/redis/keys";
@@ -65,9 +63,8 @@ export async function ingestMatchDetailsFromProvider(
   const statistics = await getFixtureStatisticsEndpoint(fixtureProviderId);
   apiRequests += 1;
 
-  await throttleProviderRequest();
-  const lineups = await getFixtureLineupsEndpoint(fixtureProviderId);
-  apiRequests += 1;
+  const lineupsResult = await ingestLineupsFromProvider(fixtureProviderId);
+  apiRequests += lineupsResult.stats.apiRequests;
 
   await throttleProviderRequest();
   const playerPerformances = await getFixturePlayersEndpoint(fixtureProviderId);
@@ -79,7 +76,6 @@ export async function ingestMatchDetailsFromProvider(
     fixtureId,
     statistics
   );
-  const lineupsCount = await upsertLineups(client, fixtureId, lineups);
   const playerPerformancesCount = await upsertPlayerMatchPerformances(
     client,
     fixtureId,
@@ -102,16 +98,26 @@ export async function ingestMatchDetailsFromProvider(
         { ex: 86_400 }
       ),
       redis.set(
-        providerFixtureLineupsKey(fixtureProviderId),
-        { value: lineups, cachedAt: syncedAt },
-        { ex: 86_400 }
-      ),
-      redis.set(
         providerFixturePlayersKey(fixtureProviderId),
         { value: playerPerformances, cachedAt: syncedAt },
         { ex: 86_400 }
       ),
     ]);
+  }
+
+  if (!lineupsResult.ok) {
+    return {
+      ok: false,
+      fixtureProviderId,
+      stats: {
+        events: eventsCount,
+        statistics: statisticsCount,
+        lineups: 0,
+        playerPerformances: playerPerformancesCount,
+        apiRequests,
+      },
+      reason: lineupsResult.reason,
+    };
   }
 
   return {
@@ -120,7 +126,7 @@ export async function ingestMatchDetailsFromProvider(
     stats: {
       events: eventsCount,
       statistics: statisticsCount,
-      lineups: lineupsCount,
+      lineups: lineupsResult.stats.lineups,
       playerPerformances: playerPerformancesCount,
       apiRequests,
     },

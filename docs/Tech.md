@@ -506,7 +506,7 @@ Development ingestion config lives in `lib/ingestion/config.ts` and is driven by
 
 - Fixtures: daily, window **today ± 1 day** (~3 API requests/run).
 - Standings: daily for allowlisted leagues (~7 requests/run).
-- Lineups cron: **disabled** (route exists as stub; not registered in `vercel.json`).
+- Lineups cron: registered in `vercel.json` every 15 min; **body no-op** when `lineupsSyncEnabled` is false (development default). Manual: `npm.cmd run sync:lineups` or `API_FOOTBALL_LINEUPS_SYNC_ENABLED=true`.
 - UI: `API_FOOTBALL_INGEST_ONLY=true` (default in development) — `footballService` reads Postgres only.
 
 Priority allocation (Pro key):
@@ -518,6 +518,8 @@ Priority allocation (Pro key):
 - Historical backfill: lowest (throttled to <30 req/min).
 
 Configuration constants live in `lib/api-football/config.ts` and `lib/ingestion/config.ts`, overridable via env vars for easy scaling to Ultra.
+
+**Development ops (sync/bootstrap/diagnose):** see [scripts/INGESTION.md](./scripts/INGESTION.md) — `npm.cmd run diagnose:ingestion`, `npm.cmd run ingest:dev-qa`, and the full command table.
 
 ---
 
@@ -976,23 +978,15 @@ Optional hardening (not required for Phase 0): in Sentry → Project Settings �
 
 ### 23.2 Vercel Cron
 
-**Development schedule** (Free API key, current `vercel.json`):
+**Current `vercel.json` schedule** (same JSON on all deployments; runtime gates API usage via `lib/ingestion/config.ts`):
 
-```json
-{
-  "crons": [
-    { "path": "/api/cron/sync-fixtures", "schedule": "0 4 * * *" },
-    { "path": "/api/cron/sync-standings", "schedule": "30 4 * * *" }
-  ]
-}
-```
-
-- Fixtures: daily at 04:00 UTC, window today ± 1 day, allowlisted leagues only.
-- Standings: daily at 04:30 UTC for allowlisted leagues.
-- Lineups: **not scheduled** in development (`/api/cron/sync-lineups` exists as manual/stub endpoint).
+- Fixtures: daily at 04:00 UTC (`sync-fixtures`).
+- Standings: every 6h UTC (`sync-standings`, **ING-3** applied — see [ING-3-pro-cutover.md](./ING-3-pro-cutover.md)).
+- Match details, analytics, AI warm, stale-lock reap: see repo [`vercel.json`](../vercel.json).
+- Lineups: every 15 min (`sync-lineups`, **ING-2**). Invokes the route on Production; sync **body** runs only when `lineupsSyncEnabled` is true (production default, or development with `API_FOOTBALL_LINEUPS_SYNC_ENABLED=true`). Use `API_FOOTBALL_LINEUPS_SYNC_ENABLED=false` on Production as a kill-switch before Pro cutover.
 - Auth: `CRON_SECRET` (Vercel sends `Authorization: Bearer …` automatically when configured).
 
-**Production schedule** (after API-Football **Pro key** cutover — update `vercel.json` only, no ingestion refactor):
+**Production cron reference** (API-Football **Pro key** cutover env steps: [ING-3-pro-cutover.md](./ING-3-pro-cutover.md)):
 
 ```json
 {

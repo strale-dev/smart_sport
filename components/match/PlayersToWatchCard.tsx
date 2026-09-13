@@ -1,18 +1,18 @@
 import Link from "next/link";
 import { UserIcon } from "lucide-react";
 
-import { EmptyState } from "@/components/common/EmptyState";
+import { MatchEmptyStateFromFixture } from "@/components/match/MatchEmptyState";
 import type { PlayersToWatchResult } from "@/lib/services/playersToWatchService";
 import type { Fixture } from "@/types/domain";
 
 import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  MatchAnalyticsCard,
+  MatchCardContent,
+  MatchCardDescription,
+  MatchCardHeader,
+  MatchCardTitle,
+} from "@/components/match/MatchAnalyticsCard";
 
 type PlayersToWatchCardProps = {
   fixture: Fixture;
@@ -23,16 +23,12 @@ const copyBySource = {
   predicted: {
     title: "Players to Watch",
     description: "Predicted impact based on recent form",
-    emptyTitle: "Lineups not confirmed yet",
-    emptyDescription:
-      "Predicted player impact will appear once lineups are available.",
+    emptyId: "playersToWatchPredicted" as const,
   },
   actual: {
     title: "Top Performers",
     description: "Based on live match ratings",
-    emptyTitle: "No player ratings yet",
-    emptyDescription:
-      "Player performance data will appear once match ratings are available.",
+    emptyId: "playersToWatchActual" as const,
   },
 } as const;
 
@@ -40,22 +36,22 @@ export function PlayersToWatchCard({ fixture, data }: PlayersToWatchCardProps) {
   const copy = copyBySource[data.source];
 
   return (
-    <Card className="w-full">
-      <CardHeader className="gap-2">
+    <MatchAnalyticsCard>
+      <MatchCardHeader className="gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="font-heading text-base">{copy.title}</CardTitle>
+          <MatchCardTitle>{copy.title}</MatchCardTitle>
           <Badge variant="outline">{copy.description}</Badge>
         </div>
-        <CardDescription>
+        <MatchCardDescription>
           {fixture.homeTeam.name} vs {fixture.awayTeam.name}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </MatchCardDescription>
+      </MatchCardHeader>
+      <MatchCardContent>
         {data.players.length === 0 ? (
-          <EmptyState
+          <MatchEmptyStateFromFixture
+            id={copy.emptyId}
+            fixture={fixture}
             icon={UserIcon}
-            title={copy.emptyTitle}
-            description={copy.emptyDescription}
             className="border-0 bg-transparent py-6"
           />
         ) : (
@@ -98,7 +94,7 @@ export function PlayersToWatchCard({ fixture, data }: PlayersToWatchCardProps) {
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </MatchCardContent>
+    </MatchAnalyticsCard>
   );
 }

@@ -7,6 +7,33 @@ type FetchCacheEntry = {
 
 const getCache = new Map<number, FetchCacheEntry>();
 
+function shouldPersistPrematchResponse(
+  payload: PrematchInsightResponse
+): boolean {
+  return payload.status !== "FALLBACK";
+}
+
+function persistPrematchResponse(
+  fixtureId: number,
+  payload: PrematchInsightResponse
+): void {
+  if (!shouldPersistPrematchResponse(payload)) {
+    getCache.delete(fixtureId);
+    return;
+  }
+
+  const entry = getCache.get(fixtureId);
+  if (entry) {
+    entry.response = payload;
+    return;
+  }
+
+  getCache.set(fixtureId, {
+    promise: Promise.resolve(payload),
+    response: payload,
+  });
+}
+
 export async function fetchPrematchInsightGet(
   fixtureId: number
 ): Promise<PrematchInsightResponse> {
@@ -32,10 +59,7 @@ export async function fetchPrematchInsightGet(
     }
 
     const payload = (await response.json()) as PrematchInsightResponse;
-    const entry = getCache.get(fixtureId);
-    if (entry) {
-      entry.response = payload;
-    }
+    persistPrematchResponse(fixtureId, payload);
     return payload;
   });
 
@@ -56,17 +80,7 @@ export async function fetchPrematchInsightPost(
   }
 
   const payload = (await response.json()) as PrematchInsightResponse;
-
-  const entry = getCache.get(fixtureId);
-  if (entry) {
-    entry.response = payload;
-  } else {
-    getCache.set(fixtureId, {
-      promise: Promise.resolve(payload),
-      response: payload,
-    });
-  }
-
+  persistPrematchResponse(fixtureId, payload);
   return payload;
 }
 

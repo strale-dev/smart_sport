@@ -49,22 +49,14 @@ export async function MatchMatchesPanel({ fixture }: MatchMatchesPanelProps) {
   return (
     <>
       <FormCard
-        fixtureId={fixture.externalId}
-        homeTeamName={fixture.homeTeam.name}
-        awayTeamName={fixture.awayTeam.name}
+        fixture={fixture}
         homeForm5={homeForm5}
         homeForm10={homeForm10}
         awayForm5={awayForm5}
         awayForm10={awayForm10}
       />
-      <H2HCard
-        fixtureId={fixture.externalId}
-        homeTeamName={fixture.homeTeam.name}
-        awayTeamName={fixture.awayTeam.name}
-        h2hAll={h2hAll}
-        h2hSameComp={h2hSameComp}
-      />
-      <MatchTeamsFixturesList fixtures={relatedFixtures} />
+      <H2HCard fixture={fixture} h2hAll={h2hAll} h2hSameComp={h2hSameComp} />
+      <MatchTeamsFixturesList fixture={fixture} fixtures={relatedFixtures} />
     </>
   );
 }

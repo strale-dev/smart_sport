@@ -1,15 +1,15 @@
 import { BarChart3Icon } from "lucide-react";
 
 import { DataQualityChip } from "@/components/ai/DataQualityChip";
-import { EmptyState } from "@/components/common/EmptyState";
+import { MatchEmptyStateFromFixture } from "@/components/match/MatchEmptyState";
 import { StatComparisonRow } from "@/components/match/StatComparisonRow";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  MatchAnalyticsCard,
+  MatchCardContent,
+  MatchCardDescription,
+  MatchCardHeader,
+  MatchCardTitle,
+} from "@/components/match/MatchAnalyticsCard";
 import type { Fixture, FixtureTeamStatistics } from "@/types/domain";
 
 type LiveStatsCardProps = {
@@ -30,18 +30,18 @@ export function LiveStatsCard({ fixture, stats }: LiveStatsCardProps) {
 
   if (!homeStats && !awayStats) {
     return (
-      <Card className="w-full">
-        <CardHeader className="gap-2">
-          <CardTitle className="font-heading text-base">Live stats</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
+      <MatchAnalyticsCard>
+        <MatchCardHeader className="gap-2">
+          <MatchCardTitle>Live stats</MatchCardTitle>
+        </MatchCardHeader>
+        <MatchCardContent>
+          <MatchEmptyStateFromFixture
+            id="liveStats"
+            fixture={fixture}
             icon={BarChart3Icon}
-            title="Stats not available yet"
-            description="Match statistics will appear once the provider publishes them."
           />
-        </CardContent>
-      </Card>
+        </MatchCardContent>
+      </MatchAnalyticsCard>
     );
   }
 
@@ -90,17 +90,17 @@ export function LiveStatsCard({ fixture, stats }: LiveStatsCardProps) {
   const awayPossession = awayStats?.ballPossession;
 
   return (
-    <Card className="w-full">
-      <CardHeader className="gap-2">
+    <MatchAnalyticsCard>
+      <MatchCardHeader className="gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="font-heading text-base">Live stats</CardTitle>
+          <MatchCardTitle>Live stats</MatchCardTitle>
           {hasPartialData ? <DataQualityChip quality="PARTIAL" /> : null}
         </div>
-        <CardDescription>
+        <MatchCardDescription>
           {fixture.homeTeam.name} vs {fixture.awayTeam.name}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        </MatchCardDescription>
+      </MatchCardHeader>
+      <MatchCardContent className="space-y-4">
         {homePossession != null && awayPossession != null ? (
           <div className="space-y-2">
             <div className="text-muted-foreground flex justify-between text-xs">
@@ -132,7 +132,7 @@ export function LiveStatsCard({ fixture, stats }: LiveStatsCardProps) {
             />
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </MatchCardContent>
+    </MatchAnalyticsCard>
   );
 }

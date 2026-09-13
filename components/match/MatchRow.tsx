@@ -3,16 +3,9 @@
 import Link from "next/link";
 
 import { LiveStatusChip } from "@/components/match/LiveStatusChip";
-import { AnimatedScore } from "@/components/match/AnimatedScore";
+import { MatchFixtureScoreboard } from "@/components/match/MatchFixtureScoreboard";
 import { LeagueLink } from "@/components/common/LeagueLink";
-import { TeamLogo } from "@/components/match/TeamLogo";
-import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider";
-import { Badge } from "@/components/ui/badge";
-import {
-  formatFixtureMinute,
-  formatFixtureScore,
-  isFinishedFixtureStatus,
-} from "@/lib/fixtures/display";
+import { formatFixtureMinute } from "@/lib/fixtures/display";
 import { formatRelativeTime } from "@/lib/ai/format";
 import { isAiUpdatedMarkerFresh } from "@/lib/live/ai-updated-marker";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
@@ -34,11 +27,8 @@ export function MatchRow({
   showLeague = true,
   anchorId,
 }: MatchRowProps) {
-  const timeZone = useViewerTimezone();
   const isLive = isLiveFixtureStatus(fixture.status);
-  const isFinished = isFinishedFixtureStatus(fixture.status);
   const minuteLabel = formatFixtureMinute(fixture);
-  const showScore = isLive || isFinished;
   const showAiUpdated =
     fixture.aiUpdatedAt != null && isAiUpdatedMarkerFresh(fixture.aiUpdatedAt);
 
@@ -76,44 +66,7 @@ export function MatchRow({
         href={`/matches/${fixture.externalId}`}
         className="hover:bg-muted/40 focus-visible:ring-ring/50 block rounded-xl px-3 py-3 transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
       >
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <TeamLogo
-              name={fixture.homeTeam.name}
-              logoUrl={fixture.homeTeam.logoUrl}
-            />
-            <span className="truncate text-sm font-medium">
-              {fixture.homeTeam.name}
-            </span>
-          </div>
-
-          <div className="text-center">
-            {showScore ? (
-              <div className="space-y-0.5">
-                <AnimatedScore
-                  score={formatFixtureScore(fixture, timeZone)}
-                  isLive={isLive}
-                  className="text-lg"
-                  animate={isLive}
-                />
-              </div>
-            ) : (
-              <Badge variant="outline" className="font-mono tabular-nums">
-                {formatFixtureScore(fixture, timeZone)}
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex min-w-0 items-center justify-end gap-2">
-            <span className="truncate text-right text-sm font-medium">
-              {fixture.awayTeam.name}
-            </span>
-            <TeamLogo
-              name={fixture.awayTeam.name}
-              logoUrl={fixture.awayTeam.logoUrl}
-            />
-          </div>
-        </div>
+        <MatchFixtureScoreboard fixture={fixture} linkTeams={false} />
       </Link>
     </div>
   );

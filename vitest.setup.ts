@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import "@testing-library/jest-dom/vitest";
+
 import { loadLocalEnvForScripts } from "@/lib/env/load-local";
 
 loadLocalEnvForScripts(path.resolve(__dirname, ".."));

@@ -1,8 +1,8 @@
 import { SparklesIcon } from "lucide-react";
 
+import { AIHeroShell } from "@/components/ai/AIHeroShell";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -19,7 +19,7 @@ export function AIHeroMissState({
   isGenerating = false,
 }: AIHeroMissStateProps) {
   return (
-    <Card className="border-primary/20 bg-card/70 ring-primary/10 min-h-[min(28vh,14rem)] w-full ring-1">
+    <AIHeroShell variant="plain">
       <CardHeader className="gap-2">
         <div className="flex items-center gap-2">
           <SparklesIcon
@@ -40,6 +40,6 @@ export function AIHeroMissState({
           {isGenerating ? "Generating analysis…" : "Generate analysis"}
         </Button>
       </CardContent>
-    </Card>
+    </AIHeroShell>
   );
 }

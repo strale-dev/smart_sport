@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { SparklesIcon } from "lucide-react";
 
+import { AIHeroShell } from "@/components/ai/AIHeroShell";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -20,7 +20,7 @@ export function AIHeroLockedCard({ returnTo }: AIHeroLockedCardProps) {
   const signupHref = `/signup?returnTo=${encodeURIComponent(returnTo)}`;
 
   return (
-    <Card className="border-primary/20 bg-card/70 ring-primary/10 relative min-h-[min(28vh,14rem)] w-full overflow-hidden ring-1">
+    <AIHeroShell variant="locked">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 flex flex-col gap-4 p-6 opacity-40 blur-sm select-none"
@@ -72,6 +72,6 @@ export function AIHeroLockedCard({ returnTo }: AIHeroLockedCardProps) {
           Log in
         </Button>
       </CardContent>
-    </Card>
+    </AIHeroShell>
   );
 }

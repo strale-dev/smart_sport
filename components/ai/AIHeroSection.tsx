@@ -87,6 +87,8 @@ export function AIHeroSection({
         message={fallbackMessage}
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        onRetry={() => void generate()}
+        isRetrying={isGenerating}
       />
     );
   }

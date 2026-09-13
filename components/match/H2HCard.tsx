@@ -2,37 +2,35 @@
 
 import { useState } from "react";
 
-import { EmptyState } from "@/components/common/EmptyState";
+import { MatchEmptyStateFromFixture } from "@/components/match/MatchEmptyState";
 import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  MatchAnalyticsCard,
+  MatchCardContent,
+  MatchCardDescription,
+  MatchCardHeader,
+  MatchCardTitle,
+} from "@/components/match/MatchAnalyticsCard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatFixtureKickoffDateTime } from "@/lib/fixtures/display";
 import { captureClientEvent } from "@/lib/posthog/client";
 import { POSTHOG_EVENTS } from "@/lib/posthog/events";
-import type { H2HScope, H2HSummary } from "@/types/domain";
+import type { Fixture, H2HScope, H2HSummary } from "@/types/domain";
 import { SwordsIcon } from "lucide-react";
 
 type H2HCardProps = {
-  fixtureId: number;
-  homeTeamName: string;
-  awayTeamName: string;
+  fixture: Pick<
+    Fixture,
+    "externalId" | "status" | "homeTeam" | "awayTeam" | "league"
+  >;
   h2hAll: H2HSummary;
   h2hSameComp: H2HSummary;
 };
 
-export function H2HCard({
-  fixtureId,
-  homeTeamName,
-  awayTeamName,
-  h2hAll,
-  h2hSameComp,
-}: H2HCardProps) {
+export function H2HCard({ fixture, h2hAll, h2hSameComp }: H2HCardProps) {
+  const fixtureId = fixture.externalId;
+  const homeTeamName = fixture.homeTeam.name;
+  const awayTeamName = fixture.awayTeam.name;
   const timeZone = useViewerTimezone();
   const [scope, setScope] = useState<H2HScope>("ALL");
   const summary = scope === "ALL" ? h2hAll : h2hSameComp;
@@ -47,10 +45,10 @@ export function H2HCard({
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="gap-3">
+    <MatchAnalyticsCard>
+      <MatchCardHeader className="gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="font-heading text-base">Head to head</CardTitle>
+          <MatchCardTitle>Head to head</MatchCardTitle>
           <Tabs value={scope} onValueChange={handleScopeChange}>
             <TabsList>
               <TabsTrigger value="ALL">All comps</TabsTrigger>
@@ -58,17 +56,17 @@ export function H2HCard({
             </TabsList>
           </Tabs>
         </div>
-        <CardDescription>
+        <MatchCardDescription>
           Last {summary.windowSize} meetings between {homeTeamName} and{" "}
           {awayTeamName}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        </MatchCardDescription>
+      </MatchCardHeader>
+      <MatchCardContent className="space-y-4">
         {summary.meetings.length === 0 ? (
-          <EmptyState
+          <MatchEmptyStateFromFixture
+            id="h2h"
+            fixture={fixture}
             icon={SwordsIcon}
-            title="No head-to-head history"
-            description="These teams have no recorded meetings in this scope yet."
           />
         ) : (
           <>
@@ -122,7 +120,7 @@ export function H2HCard({
             </div>
           </>
         )}
-      </CardContent>
-    </Card>
+      </MatchCardContent>
+    </MatchAnalyticsCard>
   );
 }

@@ -22,11 +22,6 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Deploy on [Vercel](https://vercel.com). Production domain: `https://scorence.app`.
 
-**Vercel Production environment variables** (mirror `.env.local` secrets):
-
-- `NEXT_PUBLIC_SITE_URL=https://scorence.app`
-- `RESEND_FROM=Scorence <hello@scorence.app>`
-- `NEXT_PUBLIC_APP_ENV=production`
-- Plus Supabase, Resend, PostHog, Sentry keys from `.env.local`
+**Vercel Production environment variables:** see [docs/ING-3-pro-cutover.md](./docs/ING-3-pro-cutover.md) (full matrix, API-Football Pro cutover runbook, cron verification).
 
 Sentry does not need domain setup — only DSN + org/project slugs.

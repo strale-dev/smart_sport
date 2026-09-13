@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { FormScope, FormSnapshot } from "@/types/domain";
 
 type TeamFormCardProps = {
+  teamExternalId: number;
   teamName: string;
   form5All: FormSnapshot;
   form10All: FormSnapshot;
@@ -95,6 +96,7 @@ export function TeamFormCard(props: TeamFormCardProps) {
       <CardContent>
         <TeamFormPanel
           teamName={teamName}
+          teamExternalId={props.teamExternalId}
           form5={form5}
           form10={form10}
           matchCount={matchCount}

@@ -1,3 +1,5 @@
+import pRetry from "p-retry";
+
 import { listSeasonsByLeague } from "@/lib/api-football/endpoints/leagues";
 import { INGESTION_LEAGUE_PROVIDER_IDS } from "@/lib/ingestion/config";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
@@ -21,16 +23,46 @@ async function fetchRawFixturesByLeagueSeason(
   });
 }
 
+function isTransientIngestError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("fetch failed") ||
+    message.includes("network") ||
+    message.includes("timeout") ||
+    message.includes("econnreset") ||
+    message.includes("503") ||
+    message.includes("502")
+  );
+}
+
+async function ingestFixtureWithRetry(
+  client: ReturnType<typeof createAdminClient>,
+  raw: RawApiFootballFixture
+): Promise<void> {
+  await pRetry(() => ingestFixtureFromRaw(client, raw), {
+    retries: 3,
+    minTimeout: 2_000,
+    maxTimeout: 10_000,
+    shouldRetry: ({ error }) => isTransientIngestError(error),
+  });
+}
+
 export async function backfillHistoricalFixtures(): Promise<{
   leaguesProcessed: number;
   apiRequests: number;
   fixturesUpserted: number;
   terminalFixtures: number;
+  ingestErrors: number;
 }> {
   const client = createAdminClient();
   let apiRequests = 0;
   let fixturesUpserted = 0;
   let terminalFixtures = 0;
+  let ingestErrors = 0;
 
   for (const leagueProviderId of INGESTION_LEAGUE_PROVIDER_IDS) {
     const seasons = await listSeasonsByLeague(leagueProviderId);
@@ -57,9 +89,17 @@ export async function backfillHistoricalFixtures(): Promise<{
           continue;
         }
 
-        await ingestFixtureFromRaw(client, raw);
-        fixturesUpserted += 1;
-        terminalFixtures += 1;
+        try {
+          await ingestFixtureWithRetry(client, raw);
+          fixturesUpserted += 1;
+          terminalFixtures += 1;
+        } catch (error) {
+          ingestErrors += 1;
+          console.error(
+            `[backfill] fixture ${raw.fixture.id} (${leagueProviderId}/${season.year}):`,
+            error
+          );
+        }
       }
     }
   }
@@ -69,6 +109,7 @@ export async function backfillHistoricalFixtures(): Promise<{
     apiRequests,
     fixturesUpserted,
     terminalFixtures,
+    ingestErrors,
   };
 }
 
@@ -81,6 +122,13 @@ async function main() {
   console.log("Backfilling historical fixtures for allowlist leagues...");
   const result = await backfillHistoricalFixtures();
   console.log(JSON.stringify(result, null, 2));
+
+  if (result.ingestErrors > 0) {
+    console.warn(
+      `Backfill finished with ${result.ingestErrors} fixture ingest error(s). Re-run to retry idempotently.`
+    );
+    process.exit(1);
+  }
 }
 
 main().catch((error) => {

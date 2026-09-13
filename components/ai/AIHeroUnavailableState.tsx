@@ -1,11 +1,7 @@
 import { SparklesIcon } from "lucide-react";
 
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { AIHeroShell } from "@/components/ai/AIHeroShell";
+import { CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type AIHeroUnavailableStateProps = {
   title?: string;
@@ -17,7 +13,10 @@ export function AIHeroUnavailableState({
   description = "We do not have a stored pre-match AI analysis for this fixture.",
 }: AIHeroUnavailableStateProps) {
   return (
-    <Card className="border-border/70 bg-card/50 min-h-[min(28vh,14rem)] w-full">
+    <AIHeroShell
+      variant="plain"
+      className="border-border/70 bg-card/50 from-card/50 to-card/50 ring-border/50"
+    >
       <CardHeader className="gap-2">
         <div className="flex items-center gap-2">
           <SparklesIcon
@@ -28,6 +27,6 @@ export function AIHeroUnavailableState({
         </div>
         <CardDescription className="max-w-lg">{description}</CardDescription>
       </CardHeader>
-    </Card>
+    </AIHeroShell>
   );
 }

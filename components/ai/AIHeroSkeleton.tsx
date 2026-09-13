@@ -1,11 +1,12 @@
 import { SparklesIcon } from "lucide-react";
 
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { AIHeroShell } from "@/components/ai/AIHeroShell";
+import { CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function AIHeroSkeleton() {
   return (
-    <Card className="border-primary/20 bg-card/70 ring-primary/10 min-h-[min(28vh,14rem)] w-full ring-1">
+    <AIHeroShell variant="plain">
       <CardHeader className="gap-3">
         <div className="flex items-center gap-2">
           <SparklesIcon
@@ -25,6 +26,6 @@ export function AIHeroSkeleton() {
         </div>
         <Skeleton className="h-20 w-full rounded-xl" />
       </CardContent>
-    </Card>
+    </AIHeroShell>
   );
 }

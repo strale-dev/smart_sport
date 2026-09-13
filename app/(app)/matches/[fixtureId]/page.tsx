@@ -89,7 +89,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
       isGuest={isGuest}
     >
       <MatchLiveSession fixture={fixture} initialSnapshot={initialLiveSnapshot}>
-        <div className="flex w-full max-w-3xl flex-col gap-6">
+        <div className="flex w-full max-w-3xl flex-col gap-4">
           <MatchHeader fixture={fixture} />
 
           <AIHeroSection
@@ -104,7 +104,10 @@ export default async function MatchPage({ params }: MatchPageProps) {
             awayTeam={fixture.awayTeam}
             overview={
               <Suspense fallback={<MatchTabPanelFallback />}>
-                <MatchOverviewPanel fixture={fixture} />
+                <MatchOverviewPanel
+                  fixture={fixture}
+                  liveSnapshot={initialLiveSnapshot}
+                />
               </Suspense>
             }
             lineups={

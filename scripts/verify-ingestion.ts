@@ -1,3 +1,7 @@
+/**
+ * Phase 1 narrow gate (UTC fixtures today). For full DB/API report use:
+ * npm.cmd run diagnose:ingestion
+ */
 import { createAdminClient } from "@/lib/supabase/admin";
 
 async function main() {

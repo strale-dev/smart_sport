@@ -1,8 +1,8 @@
 import Link from "next/link";
 
+import { AIHeroShell } from "@/components/ai/AIHeroShell";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -16,7 +16,10 @@ type AIHeroLimitStateProps = {
 
 export function AIHeroLimitState({ limit, used }: AIHeroLimitStateProps) {
   return (
-    <Card className="border-warning/30 bg-warning/5 min-h-[min(28vh,14rem)] w-full">
+    <AIHeroShell
+      variant="plain"
+      className="border-warning/30 bg-warning/5 from-warning/5 to-warning/5 ring-warning/20"
+    >
       <CardHeader className="gap-2">
         <CardTitle className="font-heading text-lg">
           Daily AI limit reached
@@ -35,6 +38,6 @@ export function AIHeroLimitState({ limit, used }: AIHeroLimitStateProps) {
           View plans
         </Button>
       </CardContent>
-    </Card>
+    </AIHeroShell>
   );
 }

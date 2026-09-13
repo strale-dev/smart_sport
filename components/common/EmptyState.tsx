@@ -1,7 +1,14 @@
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+
+export type EmptyStateAction = {
+  label: string;
+  href: string;
+  variant?: "default" | "outline";
+};
 
 type EmptyStateProps = {
   icon?: LucideIcon;
@@ -9,6 +16,7 @@ type EmptyStateProps = {
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
+  actions?: EmptyStateAction[];
   className?: string;
 };
 
@@ -18,6 +26,7 @@ export function EmptyState({
   description,
   actionLabel,
   onAction,
+  actions,
   className,
 }: EmptyStateProps) {
   return (
@@ -38,7 +47,22 @@ export function EmptyState({
           </p>
         ) : null}
       </div>
-      {actionLabel && onAction ? (
+      {actions && actions.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {actions.map((action) => (
+            <Button
+              key={`${action.href}-${action.label}`}
+              size="sm"
+              variant={action.variant ?? "default"}
+              nativeButton={false}
+              render={<Link href={action.href} />}
+            >
+              {action.label}
+            </Button>
+          ))}
+        </div>
+      ) : null}
+      {!actions?.length && actionLabel && onAction ? (
         <Button size="sm" onClick={onAction}>
           {actionLabel}
         </Button>

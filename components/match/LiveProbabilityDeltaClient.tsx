@@ -2,8 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { EmptyState } from "@/components/common/EmptyState";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MatchEmptyStateFromFixture } from "@/components/match/MatchEmptyState";
+import type { Fixture } from "@/types/domain";
+import {
+  MatchAnalyticsCard,
+  MatchCardContent,
+  MatchCardHeader,
+  MatchCardTitle,
+} from "@/components/match/MatchAnalyticsCard";
 import { useMatchLiveContext } from "@/components/match/MatchLiveSession";
 import { formatWinProbability } from "@/lib/ai/format";
 import {
@@ -19,6 +25,10 @@ import { TrendingUpIcon } from "lucide-react";
 type LiveProbabilityDeltaClientProps = {
   fixtureProviderId: number;
   fixtureStatus: string;
+  emptyFixture: Pick<
+    Fixture,
+    "externalId" | "status" | "homeTeam" | "awayTeam" | "league"
+  >;
   initialData?: LiveProbabilityDeltaResponse;
 };
 
@@ -86,6 +96,7 @@ function renderRows(
 export function LiveProbabilityDeltaClient({
   fixtureProviderId,
   fixtureStatus,
+  emptyFixture,
   initialData,
 }: LiveProbabilityDeltaClientProps) {
   const liveContext = useMatchLiveContext();
@@ -108,29 +119,25 @@ export function LiveProbabilityDeltaClient({
 
   if (!prematch && !live) {
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="font-heading text-base">
-            Live win probability
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
+      <MatchAnalyticsCard>
+        <MatchCardHeader>
+          <MatchCardTitle>Live win probability</MatchCardTitle>
+        </MatchCardHeader>
+        <MatchCardContent>
+          <MatchEmptyStateFromFixture
+            id="liveProbabilityDelta"
+            fixture={emptyFixture}
             icon={TrendingUpIcon}
-            title="No model baseline yet"
-            description="Pre-match probabilities will appear here once the fixture is analyzed."
           />
-        </CardContent>
-      </Card>
+        </MatchCardContent>
+      </MatchAnalyticsCard>
     );
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="gap-1">
-        <CardTitle className="font-heading text-base">
-          Live win probability
-        </CardTitle>
+    <MatchAnalyticsCard>
+      <MatchCardHeader className="gap-1">
+        <MatchCardTitle>Live win probability</MatchCardTitle>
         {live == null ? (
           <p className="text-muted-foreground text-xs">
             Waiting for the model to react to live events.
@@ -140,8 +147,8 @@ export function LiveProbabilityDeltaClient({
             Updated at {query.data.liveMinute}&apos;
           </p>
         ) : null}
-      </CardHeader>
-      <CardContent>{renderRows(prematch, live)}</CardContent>
-    </Card>
+      </MatchCardHeader>
+      <MatchCardContent>{renderRows(prematch, live)}</MatchCardContent>
+    </MatchAnalyticsCard>
   );
 }

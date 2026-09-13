@@ -12,18 +12,28 @@ export type OverviewCardId =
   | "timeline"
   | "momentum"
   | "liveStats"
+  | "formPreview"
+  | "h2hPreview"
   | "comparison"
-  | "playersToWatch";
+  | "playersToWatch"
+  | "lineupTeaser";
 
-const PRE_MATCH_ORDER: OverviewCardId[] = ["comparison", "playersToWatch"];
+const PRE_MATCH_ORDER: OverviewCardId[] = [
+  "comparison",
+  "formPreview",
+  "h2hPreview",
+  "playersToWatch",
+  "lineupTeaser",
+];
 
 const LIVE_MATCH_ORDER: OverviewCardId[] = [
   "probabilityDelta",
-  "timeline",
-  "momentum",
   "liveStats",
+  "momentum",
   "comparison",
+  "timeline",
   "playersToWatch",
+  "lineupTeaser",
 ];
 
 export function getOverviewLayout(status: FixtureStatus): OverviewLayoutMode {

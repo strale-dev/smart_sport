@@ -12,35 +12,35 @@ import {
   YAxis,
 } from "recharts";
 
-import { EmptyState } from "@/components/common/EmptyState";
+import { MatchEmptyStateFromFixture } from "@/components/match/MatchEmptyState";
+import type { Fixture } from "@/types/domain";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  MatchAnalyticsCard,
+  MatchCardContent,
+  MatchCardDescription,
+  MatchCardHeader,
+  MatchCardTitle,
+} from "@/components/match/MatchAnalyticsCard";
 import type { MomentumBucket } from "@/lib/momentum/computeMatchMomentum";
 import { captureClientEvent } from "@/lib/posthog/client";
 import { POSTHOG_EVENTS } from "@/lib/posthog/events";
-import type { FixtureStatus } from "@/types/domain";
 import { ActivityIcon } from "lucide-react";
 
 type MatchMomentumCardProps = {
-  fixtureId: number;
-  status: FixtureStatus;
-  homeTeamName: string;
-  awayTeamName: string;
+  fixture: Pick<
+    Fixture,
+    "externalId" | "status" | "homeTeam" | "awayTeam" | "league"
+  >;
   buckets: MomentumBucket[];
 };
 
 export function MatchMomentumCard({
-  fixtureId,
-  status,
-  homeTeamName,
-  awayTeamName,
+  fixture,
   buckets,
 }: MatchMomentumCardProps) {
+  const { externalId: fixtureId, status } = fixture;
+  const homeTeamName = fixture.homeTeam.name;
+  const awayTeamName = fixture.awayTeam.name;
   const capturedRef = useRef(false);
 
   const hasSignal = buckets.some(
@@ -62,20 +62,18 @@ export function MatchMomentumCard({
 
   if (!hasSignal) {
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="font-heading text-base">
-            Match momentum
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
+      <MatchAnalyticsCard>
+        <MatchCardHeader>
+          <MatchCardTitle>Match momentum</MatchCardTitle>
+        </MatchCardHeader>
+        <MatchCardContent>
+          <MatchEmptyStateFromFixture
+            id="momentum"
+            fixture={fixture}
             icon={ActivityIcon}
-            title="Not enough data for momentum"
-            description="Momentum builds once events and shot data are available."
           />
-        </CardContent>
-      </Card>
+        </MatchCardContent>
+      </MatchAnalyticsCard>
     );
   }
 
@@ -86,14 +84,14 @@ export function MatchMomentumCard({
   }));
 
   return (
-    <Card className="w-full">
-      <CardHeader className="gap-2">
-        <CardTitle className="font-heading text-base">Match momentum</CardTitle>
-        <CardDescription>
+    <MatchAnalyticsCard>
+      <MatchCardHeader className="gap-2">
+        <MatchCardTitle>Match momentum</MatchCardTitle>
+        <MatchCardDescription>
           5-minute intensity buckets from events and shots
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="h-64">
+        </MatchCardDescription>
+      </MatchCardHeader>
+      <MatchCardContent className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
@@ -115,7 +113,7 @@ export function MatchMomentumCard({
             />
           </BarChart>
         </ResponsiveContainer>
-      </CardContent>
-    </Card>
+      </MatchCardContent>
+    </MatchAnalyticsCard>
   );
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatFixtureKickoffDateTime,
   formatFixtureKickoffTime,
+  formatMatchHeaderStatusLabel,
 } from "@/lib/fixtures/display";
 import { mergeTeamFixtures } from "@/lib/match/merge-team-fixtures";
 import { selectRelevantStandingsGroup } from "@/lib/standings/select-relevant-group";
@@ -10,7 +11,11 @@ import type { Fixture, StandingsGroup } from "@/types/domain";
 
 const BELGRADE = "Europe/Belgrade";
 
-function buildFixture(externalId: number, kickoffAt: string): Fixture {
+function buildFixture(
+  externalId: number,
+  kickoffAt: string,
+  overrides: Partial<Fixture> = {}
+): Fixture {
   return {
     externalId,
     league: {
@@ -53,8 +58,62 @@ function buildFixture(externalId: number, kickoffAt: string): Fixture {
     venue: null,
     referee: null,
     round: null,
+    ...overrides,
   };
 }
+
+describe("formatMatchHeaderStatusLabel", () => {
+  const kickoff = "2026-09-08T16:45:00.000Z";
+
+  it("formats scheduled fixtures with kickoff datetime", () => {
+    const fixture = buildFixture(1, kickoff, { status: "NS" });
+    expect(formatMatchHeaderStatusLabel(fixture, BELGRADE)).toContain("18:45");
+  });
+
+  it("formats live minute", () => {
+    const fixture = buildFixture(1, kickoff, {
+      status: "2H",
+      minute: 67,
+    });
+    expect(formatMatchHeaderStatusLabel(fixture, BELGRADE)).toBe("67'");
+  });
+
+  it("formats finished variants", () => {
+    expect(
+      formatMatchHeaderStatusLabel(
+        buildFixture(1, kickoff, { status: "FT" }),
+        BELGRADE
+      )
+    ).toBe("Full time");
+    expect(
+      formatMatchHeaderStatusLabel(
+        buildFixture(1, kickoff, { status: "AET" }),
+        BELGRADE
+      )
+    ).toBe("After extra time");
+    expect(
+      formatMatchHeaderStatusLabel(
+        buildFixture(1, kickoff, { status: "PEN" }),
+        BELGRADE
+      )
+    ).toBe("Penalties");
+  });
+
+  it("formats interrupted fixtures without kickoff datetime", () => {
+    expect(
+      formatMatchHeaderStatusLabel(
+        buildFixture(1, kickoff, { status: "PST" }),
+        BELGRADE
+      )
+    ).toBe("Postponed");
+    expect(
+      formatMatchHeaderStatusLabel(
+        buildFixture(1, kickoff, { status: "CANC" }),
+        BELGRADE
+      )
+    ).toBe("Cancelled");
+  });
+});
 
 describe("formatFixtureKickoffTime", () => {
   it("uses 24-hour clock", () => {
@@ -89,6 +148,12 @@ describe("formatFixtureKickoffDateTime", () => {
     expect(
       formatFixtureKickoffDateTime("2026-09-08T16:45:00.000Z", BELGRADE)
     ).toContain("18:45");
+  });
+
+  it("uses en-GB locale for stable SSR and client output", () => {
+    expect(
+      formatFixtureKickoffDateTime("2026-09-13T12:00:00.000Z", "UTC")
+    ).toBe("Sun 13 Sept, 12:00");
   });
 });
 

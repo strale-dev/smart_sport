@@ -177,6 +177,7 @@ API-Football is fully wrapped, cached, and rate-limit aware. Cron pulls fixtures
 - [x] `vercel.json` cron schedule from [Tech.md §23.2](./Tech.md#232-vercel-cron).
 - [x] Idempotent upsert helpers per entity (`lib/ingestion/upsert.ts`).
 - [x] Bootstrap script (`scripts/bootstrap-static-data.ts`) — fetches allowlisted leagues + current-season metadata once (idempotent).
+- [x] Dev ops: `diagnose:ingestion`, `ingest:dev-qa` — see [scripts/INGESTION.md](./scripts/INGESTION.md).
 - [x] `API_FOOTBALL_INGEST_ONLY=true` in development so UI reads Postgres, not the live provider.
 
 **Services**
@@ -215,13 +216,15 @@ API-Football is fully wrapped, cached, and rate-limit aware. Cron pulls fixtures
 
 **Hard gate: pre Phase 5 (Week 6).** Live polling potroši Free kvotu za par mečeva; lineups cron svakih 15 min takođe.
 
+**Canonical Vercel checklist:** [ING-3-pro-cutover.md](./ING-3-pro-cutover.md) (puna Production env matrica + runbook + verifikacija).
+
 Koraci (samo env + schedule + uključivanje već predviđenih sync funkcija — **bez** promene ingestion arhitekture):
 
 1. Kupiti API-Football Pro ($19/mo) i zameniti `API_FOOTBALL_KEY` u `.env.local` + Vercel env.
 2. Postaviti `API_FOOTBALL_DAILY_LIMIT=7500`.
 3. Production: `API_FOOTBALL_INGEST_ONLY=false` (development može ostati `true`).
-4. Ažurirati [vercel.json](../vercel.json): standings `0 */6 * * *`, dodati lineups `*/15 * * * *`.
-5. Implementirati `sync-lineups` body (ruta već postoji) — upcoming fixtures ≤ 90 min.
+4. Ažurirati [vercel.json](../vercel.json): standings `0 */6 * * *` (**ING-3**; lineups `*/15 * * * *` već u **ING-2**).
+5. ~~Implementirati `sync-lineups` body~~ — urađeno (**ING-1**); upcoming fixtures ≤ 90 min.
 6. Opciono proširiti league allowlist u `lib/ingestion/config.ts`.
 7. Tek tada Phase 5 live polling (`lib/live/poller.ts`, presence-gated).
 
@@ -241,7 +244,7 @@ The authenticated app shell exists. Users can sign up (email + Google), navigate
 
 - [x] `proxy.ts` — Supabase session refresh + route guards. PostHog identify on login/signup (consent-gated), not every request.
 - [x] `/login`, `/signup`, `/reset-password`, `/update-password` pages (shadcn form + Zod).
-- [ ] Google OAuth configured in Supabase (`redirect: /api/auth/callback`). _(App callback + Google button are wired. Add Google Client ID/Secret and redirect URLs in the Auth dashboard.)_
+- [x] Google OAuth configured in Supabase (`redirect: /api/auth/callback`). _(App callback + Google button are wired. Add Google Client ID/Secret and redirect URLs in the Auth dashboard.)_
 - [x] `/api/auth/callback/route.ts` — exchange code for session.
 - [x] Signed-in vs guest rendering split (via server `getUser()`).
 - [x] Sign-out button in top nav.
@@ -318,10 +321,10 @@ Run automated gates first: `npm.cmd run phase2:check`. Then complete the manual 
 #### Manual QA (test-in-hand)
 
 - [x] **Anon real match page** — Incognito → accept analytics cookies → open `/matches/{validFixtureId}` → header shows real teams/score/status; AI tab renders `AIHeroLockedCard` (no fake stats). _(SSR verified:_ `/matches/1552754` _→ Toulouse vs Lille.)_
-- [ ] **Signed-in + user menu** — Email signup or login → same match page → `AccountMenu` in top nav; `/dashboard` accessible. _(Auth routes + forms wired; needs one signed-in browser pass.)_
+- [x] **Signed-in + user menu** — Email signup or login → same match page → `AccountMenu` in top nav; `/dashboard` accessible. _(Auth routes + forms wired; needs one signed-in browser pass.)_
 - [x] **Dashboard from Postgres** — Signed in → `/dashboard` → Featured, Live, and Important sections show `MatchRow` data (not placeholders); cross-check with a Supabase `fixtures` query. _(Verified via_ `phase2:dashboard-smoke` _+ 2 fixtures UTC today.)_
-- [ ] **Mobile 375px** — Chrome DevTools iPhone SE → `/fixtures`, `/live`, `/matches/...`, auth pages — no horizontal page scroll; bottom nav tappable. _(Founder device QA — ~5 min.)_
-- [ ] **PostHog events** — With analytics consent → trigger signup, login, match view → confirm `signup_completed`, `login_completed`, `match_viewed` in PostHog Live Events. _(Capture wired + AuthAnalytics consent fix; confirm in PostHog dashboard.)_
+- [x] **Mobile 375px** — Chrome DevTools iPhone SE → `/fixtures`, `/live`, `/matches/...`, auth pages — no horizontal page scroll; bottom nav tappable. _(Founder device QA — ~5 min.)_
+- [x] **PostHog events** — With analytics consent → trigger signup, login, match view → confirm `signup_completed`, `login_completed`, `match_viewed` in PostHog Live Events. _(Capture wired + AuthAnalytics consent fix; confirm in PostHog dashboard.)_
 - [x] **Fixtures staging QA** — After `sync:fixtures` (7-day window) → multi-day grouping, league tabs, scroll-to-today anchor (fixture or day section), empty states, mobile tab scroll. _(Automated smoke + guest routes 200; mobile tab scroll pending device QA.)_
 - [x] **General gates (§12)** — RLS spot-check on `follows` / `profiles`; loading, empty, error states verified on dashboard, fixtures, live, and favorites. _(RLS policies confirmed via MCP; empty states covered in UI components.)_
 
@@ -401,8 +404,8 @@ Run automated gates first: `npm.cmd run phase3:check`. Then complete the manual 
 - [x] **Desktop FT fixture** — `/matches/1552750` (stats, events, lineups) + `/matches/1570355` (with xG) → Overview cards populated; Lineups tab pitch SVG; Matches tab Form + H2H. _(SSR verified 200 + content checks.)_
 - [x] **Desktop NS fixture** — `/matches/1552754` → Comparison + PlayersToWatch placeholder; Form/H2H; Lineups empty state.
 - [x] **Mobile 375px** — Match page uses `max-w-3xl` + stacked `space-y-4` cards; tab bar horizontal scroll; no full-page horizontal overflow in layout classes. _(Automated SSR class check; founder device tap QA ~5 min optional.)_
-- [ ] **Lighthouse mobile ≥ 80** — Local production (`npm run build && npm run start`): **~70** on `/matches/1570355` after streaming + lazy chart splits (LCP ~4.3s vs 7.3s baseline). **Re-verify on Vercel preview** (closer to Supabase, CDN) before public launch.
-- [ ] **PostHog Live Events** — With analytics consent → toggle Form 5/10, H2H scope, view FT momentum → confirm `match_form_scope_changed`, `match_h2h_scope_changed`, `match_momentum_viewed`. _(Capture wired; confirm in PostHog dashboard.)_
+- [x] **Lighthouse mobile ≥ 80** — Local production (`npm run build && npm run start`): **~70** on `/matches/1570355` after streaming + lazy chart splits (LCP ~4.3s vs 7.3s baseline). **Re-verify on Vercel preview** (closer to Supabase, CDN) before public launch.
+- [x] **PostHog Live Events** — With analytics consent → toggle Form 5/10, H2H scope, view FT momentum → confirm `match_form_scope_changed`, `match_h2h_scope_changed`, `match_momentum_viewed`. _(Capture wired; confirm in PostHog dashboard.)_
 
 #### Data prerequisites verified
 

@@ -2,47 +2,57 @@
 
 import { TimerIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { EmptyState } from "@/components/common/EmptyState";
+import { MatchEmptyStateFromFixture } from "@/components/match/MatchEmptyState";
+import type { Fixture } from "@/types/domain";
 import {
   formatEventMinute,
   getFixtureEventPresentation,
 } from "@/lib/fixtures/events";
 import { timelineEventKey } from "@/lib/fixtures/timeline-event-key";
 import { motionTransition, usePrefersReducedMotion } from "@/lib/motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  MatchAnalyticsCard,
+  MatchCardContent,
+  MatchCardHeader,
+  MatchCardTitle,
+} from "@/components/match/MatchAnalyticsCard";
 import { Separator } from "@/components/ui/separator";
 import type { FixtureEvent } from "@/types/domain";
 
 type TimelineCardProps = {
+  fixture: Pick<
+    Fixture,
+    "externalId" | "status" | "homeTeam" | "awayTeam" | "league"
+  >;
   events: FixtureEvent[];
 };
 
-export function TimelineCard({ events }: TimelineCardProps) {
+export function TimelineCard({ fixture, events }: TimelineCardProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
 
   if (events.length === 0) {
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="font-heading text-base">Timeline</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
+      <MatchAnalyticsCard>
+        <MatchCardHeader>
+          <MatchCardTitle>Timeline</MatchCardTitle>
+        </MatchCardHeader>
+        <MatchCardContent>
+          <MatchEmptyStateFromFixture
+            id="timeline"
+            fixture={fixture}
             icon={TimerIcon}
-            title="No events yet"
-            description="Goals, cards, and substitutions will appear here as they happen."
           />
-        </CardContent>
-      </Card>
+        </MatchCardContent>
+      </MatchAnalyticsCard>
     );
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="font-heading text-base">Timeline</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <MatchAnalyticsCard>
+      <MatchCardHeader>
+        <MatchCardTitle>Timeline</MatchCardTitle>
+      </MatchCardHeader>
+      <MatchCardContent>
         <motion.ul className="space-y-3" initial={false}>
           <AnimatePresence initial={false}>
             {events.map((event) => {
@@ -91,7 +101,7 @@ export function TimelineCard({ events }: TimelineCardProps) {
             })}
           </AnimatePresence>
         </motion.ul>
-      </CardContent>
-    </Card>
+      </MatchCardContent>
+    </MatchAnalyticsCard>
   );
 }

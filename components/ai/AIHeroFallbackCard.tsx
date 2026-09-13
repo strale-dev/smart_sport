@@ -8,9 +8,10 @@ import { formatWinProbability } from "@/lib/ai/format";
 import type { PrematchPredictionResult } from "@/types/prediction";
 import type { TeamRef } from "@/types/domain";
 
+import { AIHeroShell } from "@/components/ai/AIHeroShell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardFooter,
@@ -24,6 +25,8 @@ type AIHeroFallbackCardProps = {
   message?: string | null;
   homeTeam: Pick<TeamRef, "name" | "code">;
   awayTeam: Pick<TeamRef, "name" | "code">;
+  onRetry?: () => void;
+  isRetrying?: boolean;
 };
 
 export function AIHeroFallbackCard({
@@ -31,11 +34,13 @@ export function AIHeroFallbackCard({
   message,
   homeTeam,
   awayTeam,
+  onRetry,
+  isRetrying = false,
 }: AIHeroFallbackCardProps) {
   const confidence = prediction.confidence;
 
   return (
-    <Card className="border-primary/20 bg-card/70 ring-primary/10 w-full ring-1">
+    <AIHeroShell variant="plain">
       <CardHeader className="gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <SparklesIcon
@@ -70,6 +75,17 @@ export function AIHeroFallbackCard({
         </div>
       </CardContent>
       <CardFooter className="flex flex-col items-start gap-2 border-t pt-4">
+        {onRetry ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={isRetrying}
+            onClick={onRetry}
+          >
+            {isRetrying ? "Generating…" : "Retry AI analysis"}
+          </Button>
+        ) : null}
         <p className="text-muted-foreground text-xs leading-relaxed">
           {AI_DISCLAIMER}
         </p>
@@ -80,6 +96,6 @@ export function AIHeroFallbackCard({
           How our model works
         </Link>
       </CardFooter>
-    </Card>
+    </AIHeroShell>
   );
 }

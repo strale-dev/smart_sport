@@ -702,12 +702,7 @@ Player and club pages must remain readable on mobile. Tables become stacked card
 
 All caches are **server-side shared** — no per-client cache invalidation storm. Rate-limit awareness via response headers (`x-ratelimit-requests-remaining`, `X-RateLimit-Remaining`) with exponential backoff on 429.
 
-**Pro key cutover checklist** (engineering + product trigger):
-
-1. Replace `API_FOOTBALL_KEY` with Pro key; set `API_FOOTBALL_DAILY_LIMIT=7500`.
-2. Set `API_FOOTBALL_INGEST_ONLY=false` in production.
-3. Update `vercel.json` cron schedules (standings every 6h, lineups every 15 min).
-4. Implement `sync-lineups` body; enable live polling in Phase 5.
+**Pro key cutover checklist** (engineering + product trigger): see **[ING-3-pro-cutover.md](./ING-3-pro-cutover.md)** for the full Vercel Production env matrix, ordered runbook, and verification. Trigger: before Phase 5 live engine; lineups body is already implemented (**ING-1**); enable live polling in Phase 5 separately.
 
 ---
 

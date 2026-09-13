@@ -3,6 +3,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import pRetry from "p-retry";
 
 import { getOpenAiModelDefault, hasOpenAiConfig } from "@/lib/env";
+import { getServerEnv } from "@/lib/env.server";
 import {
   AIInsightOpenAiSchema,
   normalizeAndValidateAIInsight,
@@ -39,14 +40,19 @@ export type StructuredInsightResult = {
 
 let cachedClient: OpenAI | undefined;
 
+function resolveOpenAiApiKey(): string | undefined {
+  return getServerEnv().OPENAI_API_KEY ?? process.env.OPENAI_API_KEY;
+}
+
 function getOpenAiClient(): OpenAI {
-  if (!hasOpenAiConfig()) {
+  const apiKey = resolveOpenAiApiKey();
+  if (!hasOpenAiConfig() || !apiKey) {
     throw new OpenAiNotConfiguredError();
   }
 
   if (!cachedClient) {
     cachedClient = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey,
       timeout: 30_000,
       maxRetries: 0,
     });

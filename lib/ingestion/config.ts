@@ -20,8 +20,31 @@ export type IngestionConfig = {
   standingsFreshnessHours: number;
   providerThrottleMs: number;
   lineupsSyncEnabled: boolean;
+  lineupsSyncBatch: number;
   isDevelopment: boolean;
 };
+
+const DEFAULT_LINEUPS_SYNC_BATCH = 30;
+
+export function resolveLineupsSyncEnabled(
+  isDevelopment: boolean,
+  source: Record<string, string | undefined>
+): boolean {
+  const flag = source.API_FOOTBALL_LINEUPS_SYNC_ENABLED;
+  if (flag === "true") return true;
+  if (flag === "false") return false;
+  return !isDevelopment;
+}
+
+function resolveLineupsSyncBatch(
+  source: Record<string, string | undefined>
+): number {
+  const raw = source.LINEUPS_SYNC_BATCH;
+  const parsed = raw ? Number.parseInt(raw, 10) : DEFAULT_LINEUPS_SYNC_BATCH;
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_LINEUPS_SYNC_BATCH;
+}
 
 const TERMINAL_FIXTURE_STATUSES = new Set([
   "FT",
@@ -49,7 +72,8 @@ export function getIngestionConfig(
     fixtureWindowDays: isDevelopment ? 1 : 7,
     standingsFreshnessHours: isDevelopment ? 20 : 5,
     providerThrottleMs: isDevelopment ? 6_500 : 250,
-    lineupsSyncEnabled: !isDevelopment,
+    lineupsSyncEnabled: resolveLineupsSyncEnabled(isDevelopment, source),
+    lineupsSyncBatch: resolveLineupsSyncBatch(source),
     isDevelopment,
   };
 }

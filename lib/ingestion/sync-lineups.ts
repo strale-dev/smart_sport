@@ -1,27 +1,132 @@
-import { isLineupsSyncEnabled } from "@/lib/ingestion/config";
+import { getIngestionConfig } from "@/lib/ingestion/config";
+import { ingestLineupsFromProvider } from "@/lib/ingestion/ingest-lineups";
+import { fixtureNeedsLineupSync } from "@/lib/ingestion/match-details-upsert";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export const LINEUP_SYNC_WINDOW_MS = 90 * 60_000;
+
+const PRE_MATCH_STATUSES = ["NS", "TBD"] as const;
 
 export type SyncLineupsResult = {
   ok: boolean;
   job: string;
-  skipped: boolean;
-  reason: string;
+  skipped?: boolean;
+  reason?: string;
+  stats?: {
+    candidates: number;
+    synced: number;
+    skippedComplete: number;
+    errors: number;
+    apiRequests: number;
+  };
 };
 
 export async function syncLineups(): Promise<SyncLineupsResult> {
-  if (!isLineupsSyncEnabled()) {
+  const config = getIngestionConfig();
+
+  if (!config.lineupsSyncEnabled) {
     return {
       ok: true,
       job: "sync-lineups",
       skipped: true,
       reason:
-        "Lineups cron is disabled in development. Enable after API-Football Pro key cutover.",
+        "Lineups sync is disabled. In development set API_FOOTBALL_LINEUPS_SYNC_ENABLED=true; in production unset the flag or set true (use false as kill-switch before Pro cutover).",
     };
+  }
+
+  const client = createAdminClient();
+  const batchSize = config.lineupsSyncBatch;
+  const now = Date.now();
+  const windowEnd = new Date(now + LINEUP_SYNC_WINDOW_MS).toISOString();
+  const windowStart = new Date(now).toISOString();
+
+  const { data: leagues, error: leaguesError } = await client
+    .from("leagues")
+    .select("id")
+    .in("provider_id", [...config.leagueProviderIds]);
+
+  if (leaguesError) {
+    throw new Error(`Failed to load leagues: ${leaguesError.message}`);
+  }
+
+  if (!leagues?.length) {
+    return {
+      ok: true,
+      job: "sync-lineups",
+      skipped: true,
+      reason: "No allowlist leagues in database.",
+      stats: {
+        candidates: 0,
+        synced: 0,
+        skippedComplete: 0,
+        errors: 0,
+        apiRequests: 0,
+      },
+    };
+  }
+
+  const leagueIds = leagues.map((league) => league.id);
+
+  const { data: fixtures, error: fixturesError } = await client
+    .from("fixtures")
+    .select("id, provider_id, kickoff_at")
+    .in("league_id", leagueIds)
+    .in("status", [...PRE_MATCH_STATUSES])
+    .gte("kickoff_at", windowStart)
+    .lte("kickoff_at", windowEnd)
+    .order("kickoff_at", { ascending: true })
+    .limit(batchSize);
+
+  if (fixturesError) {
+    throw new Error(`Failed to load fixtures: ${fixturesError.message}`);
+  }
+
+  const candidates = fixtures ?? [];
+  let synced = 0;
+  let skippedComplete = 0;
+  let errors = 0;
+  let apiRequests = 0;
+
+  for (const fixture of candidates) {
+    try {
+      const needsSync = await fixtureNeedsLineupSync(
+        client,
+        fixture.id,
+        fixture.kickoff_at,
+        new Date(now)
+      );
+
+      if (!needsSync) {
+        skippedComplete += 1;
+        continue;
+      }
+
+      const result = await ingestLineupsFromProvider(fixture.provider_id);
+      apiRequests += result.stats.apiRequests;
+
+      if (result.ok) {
+        synced += 1;
+      } else {
+        errors += 1;
+        console.warn(
+          `[sync-lineups] fixture ${fixture.provider_id}: ${result.reason ?? "unknown"}`
+        );
+      }
+    } catch (error) {
+      errors += 1;
+      console.error(`[sync-lineups] fixture ${fixture.provider_id}`, error);
+    }
   }
 
   return {
     ok: true,
     job: "sync-lineups",
-    skipped: true,
-    reason: "Lineups sync body is not implemented yet.",
+    stats: {
+      candidates: candidates.length,
+      synced,
+      skippedComplete,
+      errors,
+      apiRequests,
+    },
   };
 }

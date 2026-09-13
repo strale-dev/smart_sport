@@ -11,14 +11,14 @@ import {
   YAxis,
 } from "recharts";
 
-import { EmptyState } from "@/components/common/EmptyState";
+import { MatchEmptyStateFromFixture } from "@/components/match/MatchEmptyState";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  MatchAnalyticsCard,
+  MatchCardContent,
+  MatchCardDescription,
+  MatchCardHeader,
+  MatchCardTitle,
+} from "@/components/match/MatchAnalyticsCard";
 import type {
   Fixture,
   FixtureTeamStatistics,
@@ -74,20 +74,18 @@ export function TeamComparisonCard({
 
   if (chartData.length === 0) {
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="font-heading text-base">
-            Team comparison
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
+      <MatchAnalyticsCard>
+        <MatchCardHeader>
+          <MatchCardTitle>Team comparison</MatchCardTitle>
+        </MatchCardHeader>
+        <MatchCardContent>
+          <MatchEmptyStateFromFixture
+            id="comparison"
+            fixture={fixture}
             icon={GitCompareArrowsIcon}
-            title="Comparison unavailable"
-            description="We need match stats or recent form before comparing these teams."
           />
-        </CardContent>
-      </Card>
+        </MatchCardContent>
+      </MatchAnalyticsCard>
     );
   }
 
@@ -105,16 +103,14 @@ export function TeamComparisonCard({
   ]);
 
   return (
-    <Card className="w-full">
-      <CardHeader className="gap-2">
-        <CardTitle className="font-heading text-base">
-          Team comparison
-        </CardTitle>
-        <CardDescription>
+    <MatchAnalyticsCard>
+      <MatchCardHeader className="gap-2">
+        <MatchCardTitle>Team comparison</MatchCardTitle>
+        <MatchCardDescription>
           Match stats when available, otherwise recent form proxies
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="h-72">
+        </MatchCardDescription>
+      </MatchCardHeader>
+      <MatchCardContent className="h-72">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={flatData}
@@ -144,7 +140,7 @@ export function TeamComparisonCard({
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-      </CardContent>
-    </Card>
+      </MatchCardContent>
+    </MatchAnalyticsCard>
   );
 }

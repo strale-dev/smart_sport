@@ -1,0 +1,139 @@
+"use client";
+
+import Link from "next/link";
+
+import { AnimatedScore } from "@/components/match/AnimatedScore";
+import { TeamLogo } from "@/components/match/TeamLogo";
+import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider";
+import { Badge } from "@/components/ui/badge";
+import {
+  formatFixtureScore,
+  isFinishedFixtureStatus,
+} from "@/lib/fixtures/display";
+import { isLiveFixtureStatus } from "@/lib/redis/keys";
+import { cn } from "@/lib/utils";
+import type { Fixture } from "@/types/domain";
+
+type MatchFixtureScoreboardProps = {
+  fixture: Fixture;
+  scoreClassName?: string;
+  logoClassName?: string;
+  linkTeams?: boolean;
+  showHalftimeLine?: boolean;
+  animateScore?: boolean;
+  scheduledCenterVariant?: "badge" | "text";
+  className?: string;
+};
+
+const teamLinkClassName =
+  "hover:bg-muted/40 focus-visible:ring-ring/50 flex min-w-0 items-center gap-2 rounded-xl p-1 transition-colors focus-visible:ring-[3px] focus-visible:outline-none";
+
+export function MatchFixtureScoreboard({
+  fixture,
+  scoreClassName = "text-lg",
+  logoClassName,
+  linkTeams = true,
+  showHalftimeLine = false,
+  animateScore = false,
+  scheduledCenterVariant = "badge",
+  className,
+}: MatchFixtureScoreboardProps) {
+  const timeZone = useViewerTimezone();
+  const isLive = isLiveFixtureStatus(fixture.status);
+  const isFinished = isFinishedFixtureStatus(fixture.status);
+  const showScore = isLive || isFinished;
+  const scoreText = formatFixtureScore(fixture, timeZone);
+
+  const homeCell = (
+    <>
+      <TeamLogo
+        name={fixture.homeTeam.name}
+        logoUrl={fixture.homeTeam.logoUrl}
+        className={logoClassName}
+      />
+      <span className="truncate text-sm font-medium">
+        {fixture.homeTeam.name}
+      </span>
+    </>
+  );
+
+  const awayCell = (
+    <>
+      <span className="truncate text-right text-sm font-medium">
+        {fixture.awayTeam.name}
+      </span>
+      <TeamLogo
+        name={fixture.awayTeam.name}
+        logoUrl={fixture.awayTeam.logoUrl}
+        className={logoClassName}
+      />
+    </>
+  );
+
+  return (
+    <div
+      className={cn(
+        "grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3",
+        className
+      )}
+    >
+      {linkTeams ? (
+        <Link
+          href={`/teams/${fixture.homeTeam.externalId}`}
+          className={cn(teamLinkClassName, "justify-start")}
+        >
+          {homeCell}
+        </Link>
+      ) : (
+        <div className="flex min-w-0 items-center gap-2">{homeCell}</div>
+      )}
+
+      <div className="text-center">
+        {showScore ? (
+          <div className="space-y-0.5">
+            <AnimatedScore
+              score={scoreText}
+              isLive={isLive}
+              className={scoreClassName}
+              animate={animateScore || isLive}
+            />
+            {showHalftimeLine &&
+            isFinished &&
+            fixture.score.halftimeHome != null &&
+            fixture.score.halftimeAway != null ? (
+              <p className="text-muted-foreground font-mono text-xs tabular-nums">
+                HT {fixture.score.halftimeHome} – {fixture.score.halftimeAway}
+              </p>
+            ) : null}
+          </div>
+        ) : scheduledCenterVariant === "badge" ? (
+          <Badge variant="outline" className="font-mono tabular-nums">
+            {scoreText}
+          </Badge>
+        ) : (
+          <p
+            className={cn(
+              "font-mono font-semibold tabular-nums",
+              scoreClassName
+            )}
+          >
+            {scoreText}
+          </p>
+        )}
+      </div>
+
+      {linkTeams ? (
+        <Link
+          href={`/teams/${fixture.awayTeam.externalId}`}
+          className={cn(teamLinkClassName, "justify-end")}
+        >
+          {awayCell}
+        </Link>
+      ) : (
+        <div className="flex min-w-0 items-center justify-end gap-2">
+          {awayCell}
+        </div>
+      )}
+    </div>
+  );
+}

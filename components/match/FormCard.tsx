@@ -4,21 +4,22 @@ import { useState } from "react";
 
 import { TeamFormPanel } from "@/components/match/TeamFormPanel";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  MatchAnalyticsCard,
+  MatchCardContent,
+  MatchCardDescription,
+  MatchCardHeader,
+  MatchCardTitle,
+} from "@/components/match/MatchAnalyticsCard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { captureClientEvent } from "@/lib/posthog/client";
 import { POSTHOG_EVENTS } from "@/lib/posthog/events";
-import type { FormSnapshot } from "@/types/domain";
+import type { Fixture, FormSnapshot } from "@/types/domain";
 
 type FormCardProps = {
-  fixtureId: number;
-  homeTeamName: string;
-  awayTeamName: string;
+  fixture: Pick<
+    Fixture,
+    "externalId" | "status" | "homeTeam" | "awayTeam" | "league"
+  >;
   homeForm5: FormSnapshot;
   homeForm10: FormSnapshot;
   awayForm5: FormSnapshot;
@@ -26,14 +27,15 @@ type FormCardProps = {
 };
 
 export function FormCard({
-  fixtureId,
-  homeTeamName,
-  awayTeamName,
+  fixture,
   homeForm5,
   homeForm10,
   awayForm5,
   awayForm10,
 }: FormCardProps) {
+  const fixtureId = fixture.externalId;
+  const homeTeamName = fixture.homeTeam.name;
+  const awayTeamName = fixture.awayTeam.name;
   const [matchCount, setMatchCount] = useState<5 | 10>(10);
 
   function handleMatchCountChange(value: string) {
@@ -47,10 +49,10 @@ export function FormCard({
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="gap-3">
+    <MatchAnalyticsCard>
+      <MatchCardHeader className="gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="font-heading text-base">Recent form</CardTitle>
+          <MatchCardTitle>Recent form</MatchCardTitle>
           <Tabs
             value={String(matchCount)}
             onValueChange={handleMatchCountChange}
@@ -61,13 +63,15 @@ export function FormCard({
             </TabsList>
           </Tabs>
         </div>
-        <CardDescription>All competitions</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+        <MatchCardDescription>All competitions</MatchCardDescription>
+      </MatchCardHeader>
+      <MatchCardContent className="space-y-4">
         <div className="space-y-2">
           <h3 className="text-sm font-medium">{homeTeamName}</h3>
           <TeamFormPanel
+            fixture={fixture}
             teamName={homeTeamName}
+            teamExternalId={fixture.homeTeam.externalId}
             form5={homeForm5}
             form10={homeForm10}
             matchCount={matchCount}
@@ -76,13 +80,15 @@ export function FormCard({
         <div className="space-y-2">
           <h3 className="text-sm font-medium">{awayTeamName}</h3>
           <TeamFormPanel
+            fixture={fixture}
             teamName={awayTeamName}
+            teamExternalId={fixture.awayTeam.externalId}
             form5={awayForm5}
             form10={awayForm10}
             matchCount={matchCount}
           />
         </div>
-      </CardContent>
-    </Card>
+      </MatchCardContent>
+    </MatchAnalyticsCard>
   );
 }

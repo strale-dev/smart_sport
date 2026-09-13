@@ -451,3 +451,81 @@ export async function fixtureHasMatchDetails(
   throwIfError(error, "Failed to check fixture events");
   return (count ?? 0) > 0;
 }
+
+export const LINEUP_SYNC_COMPLETE_STARTERS = 11;
+export const LINEUP_SYNC_FINAL_POLL_MINUTES = 60;
+
+export type LineupSyncTeamSnapshot = {
+  startingCount: number;
+};
+
+export type LineupSyncDbSnapshot = {
+  teams: LineupSyncTeamSnapshot[];
+};
+
+/** Pure helper: true when provider lineups should be fetched for this fixture. */
+export function evaluateLineupSyncNeed(
+  snapshot: LineupSyncDbSnapshot,
+  kickoffAt: string | Date,
+  now: Date = new Date(),
+  finalPollMinutes = LINEUP_SYNC_FINAL_POLL_MINUTES,
+  completeStarterThreshold = LINEUP_SYNC_COMPLETE_STARTERS
+): boolean {
+  const kickoffMs =
+    kickoffAt instanceof Date ? kickoffAt.getTime() : Date.parse(kickoffAt);
+  const minutesToKickoff = (kickoffMs - now.getTime()) / 60_000;
+
+  if (minutesToKickoff <= finalPollMinutes) {
+    return true;
+  }
+
+  const completeTeams = snapshot.teams.filter(
+    (team) => team.startingCount >= completeStarterThreshold
+  ).length;
+
+  return completeTeams < 2;
+}
+
+type LineupPlayerStartingRow = {
+  is_starting: boolean;
+};
+
+type LineupSyncRow = {
+  lineup_players: LineupPlayerStartingRow[] | null;
+};
+
+export async function loadLineupSyncSnapshot(
+  client: AdminClient,
+  fixtureId: string
+): Promise<LineupSyncDbSnapshot> {
+  const { data, error } = await client
+    .from("lineups")
+    .select(
+      `
+      lineup_players (
+        is_starting
+      )
+    `
+    )
+    .eq("fixture_id", fixtureId);
+
+  throwIfError(error, "Failed to load lineups for sync need");
+
+  const teams = ((data ?? []) as LineupSyncRow[]).map((row) => ({
+    startingCount: (row.lineup_players ?? []).filter(
+      (player) => player.is_starting
+    ).length,
+  }));
+
+  return { teams };
+}
+
+export async function fixtureNeedsLineupSync(
+  client: AdminClient,
+  fixtureId: string,
+  kickoffAt: string,
+  now: Date = new Date()
+): Promise<boolean> {
+  const snapshot = await loadLineupSyncSnapshot(client, fixtureId);
+  return evaluateLineupSyncNeed(snapshot, kickoffAt, now);
+}

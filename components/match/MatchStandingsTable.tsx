@@ -1,13 +1,16 @@
 import { TrophyIcon } from "lucide-react";
 
 import { EmptyState } from "@/components/common/EmptyState";
+import { MatchEmptyStateFromFixture } from "@/components/match/MatchEmptyState";
+import { buildFixturesHref } from "@/lib/fixtures/url";
+import type { FixtureStatus } from "@/types/domain";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  MatchAnalyticsCard,
+  MatchCardContent,
+  MatchCardDescription,
+  MatchCardHeader,
+  MatchCardTitle,
+} from "@/components/match/MatchAnalyticsCard";
 import { cn } from "@/lib/utils";
 import { selectRelevantStandingsGroup } from "@/lib/standings/select-relevant-group";
 import { selectStandingsGroupForTeam } from "@/lib/standings/select-team-group";
@@ -19,6 +22,11 @@ type MatchStandingsTableProps = {
   homeTeamExternalId?: number;
   awayTeamExternalId?: number;
   highlightTeamExternalId?: number;
+  leagueExternalId?: number;
+  fixtureId?: number;
+  fixtureStatus?: FixtureStatus;
+  homeTeamName?: string;
+  awayTeamName?: string;
 };
 
 function isHighlightedRow(
@@ -48,34 +56,81 @@ export function MatchStandingsTable(props: MatchStandingsTableProps) {
         );
 
   if (!primaryGroup || primaryGroup.rows.length === 0) {
+    const matchEmptyFixture =
+      props.fixtureId != null &&
+      props.fixtureStatus != null &&
+      props.leagueExternalId != null &&
+      props.homeTeamExternalId != null &&
+      props.homeTeamName != null &&
+      props.awayTeamExternalId != null &&
+      props.awayTeamName != null
+        ? {
+            externalId: props.fixtureId,
+            status: props.fixtureStatus,
+            homeTeam: {
+              externalId: props.homeTeamExternalId,
+              name: props.homeTeamName,
+            },
+            awayTeam: {
+              externalId: props.awayTeamExternalId,
+              name: props.awayTeamName,
+            },
+            league: {
+              externalId: props.leagueExternalId,
+              name: leagueName,
+            },
+          }
+        : null;
+
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="font-heading text-base">Standings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon={TrophyIcon}
-            title="Standings unavailable"
-            description="Run standings sync or check back once the league table is ingested."
-          />
-        </CardContent>
-      </Card>
+      <MatchAnalyticsCard>
+        <MatchCardHeader>
+          <MatchCardTitle>Standings</MatchCardTitle>
+        </MatchCardHeader>
+        <MatchCardContent>
+          {matchEmptyFixture ? (
+            <MatchEmptyStateFromFixture
+              id="standings"
+              fixture={matchEmptyFixture}
+              icon={TrophyIcon}
+            />
+          ) : (
+            <EmptyState
+              icon={TrophyIcon}
+              title="League table not available yet"
+              description={`We do not have a standings table for ${leagueName} right now.`}
+              actions={
+                props.leagueExternalId != null
+                  ? [
+                      {
+                        label: "Browse fixtures",
+                        href: buildFixturesHref(
+                          {},
+                          { league: props.leagueExternalId }
+                        ),
+                      },
+                    ]
+                  : undefined
+              }
+            />
+          )}
+        </MatchCardContent>
+      </MatchAnalyticsCard>
     );
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="gap-2">
-        <CardTitle className="font-heading text-base">Standings</CardTitle>
-        <CardDescription>
+    <MatchAnalyticsCard>
+      <MatchCardHeader className="gap-2">
+        <MatchCardTitle>Standings</MatchCardTitle>
+        <MatchCardDescription>
           {leagueName}
           {primaryGroup.groupName && primaryGroup.groupName !== "Overall"
             ? ` · ${primaryGroup.groupName}`
             : ""}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="overflow-x-auto">
+        </MatchCardDescription>
+      </MatchCardHeader>
+      <MatchCardContent className="overflow-x-auto">
         <table className="w-full min-w-[320px] text-sm">
           <thead>
             <tr className="border-border/70 border-b text-left">
@@ -116,7 +171,7 @@ export function MatchStandingsTable(props: MatchStandingsTableProps) {
             })}
           </tbody>
         </table>
-      </CardContent>
-    </Card>
+      </MatchCardContent>
+    </MatchAnalyticsCard>
   );
 }

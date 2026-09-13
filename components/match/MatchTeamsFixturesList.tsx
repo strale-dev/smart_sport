@@ -1,11 +1,15 @@
 import { CalendarDaysIcon } from "lucide-react";
 
-import { EmptyState } from "@/components/common/EmptyState";
+import { MatchEmptyStateFromFixture } from "@/components/match/MatchEmptyState";
 import { MatchRow } from "@/components/match/MatchRow";
 import { splitFixturesByStatus } from "@/lib/teams/matches";
 import type { Fixture } from "@/types/domain";
 
 type MatchTeamsFixturesListProps = {
+  fixture: Pick<
+    Fixture,
+    "externalId" | "status" | "homeTeam" | "awayTeam" | "league"
+  >;
   fixtures: Fixture[];
 };
 
@@ -35,6 +39,7 @@ function MatchGroup({
 }
 
 export function MatchTeamsFixturesList({
+  fixture,
   fixtures,
 }: MatchTeamsFixturesListProps) {
   const groups = splitFixturesByStatus(fixtures);
@@ -45,10 +50,10 @@ export function MatchTeamsFixturesList({
     groups.past.length === 0
   ) {
     return (
-      <EmptyState
+      <MatchEmptyStateFromFixture
+        id="relatedFixtures"
+        fixture={fixture}
         icon={CalendarDaysIcon}
-        title="No related matches"
-        description="Fixtures for these teams will appear here once they are synced."
       />
     );
   }

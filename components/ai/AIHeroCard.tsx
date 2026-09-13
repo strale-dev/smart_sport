@@ -20,9 +20,9 @@ import { motionTransition, usePrefersReducedMotion } from "@/lib/motion";
 import type { TeamRef } from "@/types/domain";
 import { AI_DISCLAIMER } from "@/lib/marketing/copy";
 
+import { AIHeroShell } from "@/components/ai/AIHeroShell";
 import { Badge } from "@/components/ui/badge";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardFooter,
@@ -46,7 +46,7 @@ export function AIHeroCard({
   const prefersReducedMotion = usePrefersReducedMotion();
 
   return (
-    <Card className="border-primary/20 from-card/90 to-card/60 ring-primary/10 min-h-[min(28vh,14rem)] w-full bg-gradient-to-br ring-1">
+    <AIHeroShell variant="default">
       <CardHeader className="gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <SparklesIcon
@@ -139,6 +139,6 @@ export function AIHeroCard({
           How our model works
         </Link>
       </CardFooter>
-    </Card>
+    </AIHeroShell>
   );
 }

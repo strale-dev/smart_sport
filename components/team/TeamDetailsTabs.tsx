@@ -96,6 +96,7 @@ export function TeamDetailsTabs({
       <TabsContent value="details" className="space-y-4">
         <TeamDetailsFacts team={team} />
         <TeamFormCard
+          teamExternalId={team.externalId}
           teamName={team.name}
           form5All={form5All}
           form10All={form10All}

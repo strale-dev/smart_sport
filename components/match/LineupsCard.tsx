@@ -1,15 +1,15 @@
 import { UsersIcon } from "lucide-react";
 
-import { EmptyState } from "@/components/common/EmptyState";
+import { MatchEmptyStateFromFixture } from "@/components/match/MatchEmptyState";
 import { LineupPitch } from "@/components/match/LineupPitch";
 import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  MatchAnalyticsCard,
+  MatchCardContent,
+  MatchCardDescription,
+  MatchCardHeader,
+  MatchCardTitle,
+} from "@/components/match/MatchAnalyticsCard";
 import type { Fixture, Lineup } from "@/types/domain";
 
 type LineupsCardProps = {
@@ -64,18 +64,18 @@ export function LineupsCard({ fixture, lineups }: LineupsCardProps) {
 
   if (!homeLineup && !awayLineup) {
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="font-heading text-base">Lineups</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
+      <MatchAnalyticsCard>
+        <MatchCardHeader>
+          <MatchCardTitle>Lineups</MatchCardTitle>
+        </MatchCardHeader>
+        <MatchCardContent>
+          <MatchEmptyStateFromFixture
+            id="lineups"
+            fixture={fixture}
             icon={UsersIcon}
-            title="Lineups not confirmed yet"
-            description="Official or predicted lineups will appear here closer to kickoff."
           />
-        </CardContent>
-      </Card>
+        </MatchCardContent>
+      </MatchAnalyticsCard>
     );
   }
 
@@ -85,17 +85,17 @@ export function LineupsCard({ fixture, lineups }: LineupsCardProps) {
       : "Predicted lineup";
 
   return (
-    <Card className="w-full">
-      <CardHeader className="gap-2">
+    <MatchAnalyticsCard>
+      <MatchCardHeader className="gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="font-heading text-base">Lineups</CardTitle>
+          <MatchCardTitle>Lineups</MatchCardTitle>
           <Badge variant="outline">{statusLabel}</Badge>
         </div>
-        <CardDescription>
+        <MatchCardDescription>
           {homeLineup?.formation ?? "–"} vs {awayLineup?.formation ?? "–"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+        </MatchCardDescription>
+      </MatchCardHeader>
+      <MatchCardContent className="space-y-4">
         {homeLineup ? (
           <div className="space-y-4">
             <LineupPitch
@@ -116,7 +116,7 @@ export function LineupsCard({ fixture, lineups }: LineupsCardProps) {
             <BenchList lineup={awayLineup} />
           </div>
         ) : null}
-      </CardContent>
-    </Card>
+      </MatchCardContent>
+    </MatchAnalyticsCard>
   );
 }

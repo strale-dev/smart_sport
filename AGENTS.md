@@ -28,3 +28,14 @@ Rules:
 - Follow the architecture docs before introducing new patterns.
 - Follow the database schema before creating or changing tables.
 - Follow the design system from cursor rules before building UI.
+
+## API Key
+
+The project already has a valid API key configured in `.env.local`.
+
+- Do NOT ask the user for the API key.
+- Do NOT ask whether an API key is available.
+- Do NOT ask the user to create a new API key.
+- Use the existing environment variable automatically.
+- Never expose, print, log, hardcode, or commit the API key.
+- Only report an API key issue if the key is genuinely missing, invalid, or rejected.

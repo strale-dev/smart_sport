@@ -26,9 +26,14 @@ export async function MatchStandingsPanel({
   return (
     <MatchStandingsTable
       leagueName={fixture.league.name}
-      standings={standings}
+      leagueExternalId={fixture.league.externalId}
+      fixtureId={fixture.externalId}
+      fixtureStatus={fixture.status}
       homeTeamExternalId={fixture.homeTeam.externalId}
+      homeTeamName={fixture.homeTeam.name}
       awayTeamExternalId={fixture.awayTeam.externalId}
+      awayTeamName={fixture.awayTeam.name}
+      standings={standings}
     />
   );
 }

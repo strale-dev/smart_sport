@@ -1,32 +1,30 @@
 "use client";
 
 import { EmptyState } from "@/components/common/EmptyState";
+import { MatchEmptyStateFromFixture } from "@/components/match/MatchEmptyState";
+import { buildTeamHref } from "@/lib/teams/url";
 import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider";
-import { Badge } from "@/components/ui/badge";
+import { FormCompactSummary } from "@/components/match/form-display";
 import { formatFixtureKickoffDateTime } from "@/lib/fixtures/display";
-import type { FormSnapshot } from "@/types/domain";
+import type { Fixture, FormSnapshot } from "@/types/domain";
 import { TrendingUpIcon } from "lucide-react";
 
-function resultVariant(result: "W" | "D" | "L") {
-  switch (result) {
-    case "W":
-      return "default" as const;
-    case "D":
-      return "secondary" as const;
-    case "L":
-      return "outline" as const;
-  }
-}
-
 type TeamFormPanelProps = {
+  fixture?: Pick<
+    Fixture,
+    "externalId" | "status" | "homeTeam" | "awayTeam" | "league"
+  >;
   teamName: string;
+  teamExternalId?: number;
   form5: FormSnapshot;
   form10: FormSnapshot;
   matchCount: 5 | 10;
 };
 
 export function TeamFormPanel({
+  fixture,
   teamName,
+  teamExternalId,
   form5,
   form10,
   matchCount,
@@ -35,47 +33,42 @@ export function TeamFormPanel({
   const form = matchCount === 5 ? form5 : form10;
 
   if (form.results.length === 0) {
+    if (fixture && teamExternalId != null) {
+      return (
+        <MatchEmptyStateFromFixture
+          id="formTeam"
+          fixture={fixture}
+          teamName={teamName}
+          teamExternalId={teamExternalId}
+          icon={TrendingUpIcon}
+          className="py-4"
+        />
+      );
+    }
+
     return (
       <EmptyState
         icon={TrendingUpIcon}
-        title={`No recent form for ${teamName}`}
-        description="Finished matches will populate this section."
+        title={`No recent results for ${teamName}`}
+        description="Finished matches will show here once we have results in our window."
+        actions={
+          teamExternalId != null
+            ? [
+                {
+                  label: `${teamName} fixtures`,
+                  href: buildTeamHref(teamExternalId, "matches"),
+                },
+              ]
+            : undefined
+        }
+        className="py-4"
       />
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {form.results.map((entry) => (
-          <Badge
-            key={entry.fixtureExternalId}
-            variant={resultVariant(entry.result)}
-          >
-            {entry.result}
-          </Badge>
-        ))}
-      </div>
-      <div className="text-muted-foreground grid grid-cols-3 gap-3 text-center text-xs">
-        <div>
-          <p className="text-foreground font-mono text-lg tabular-nums">
-            {form.wins}
-          </p>
-          <p>Wins</p>
-        </div>
-        <div>
-          <p className="text-foreground font-mono text-lg tabular-nums">
-            {form.draws}
-          </p>
-          <p>Draws</p>
-        </div>
-        <div>
-          <p className="text-foreground font-mono text-lg tabular-nums">
-            {form.losses}
-          </p>
-          <p>Losses</p>
-        </div>
-      </div>
+      <FormCompactSummary form={form} />
       <div className="space-y-2">
         {form.results.map((entry) => (
           <div

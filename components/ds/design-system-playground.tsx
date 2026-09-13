@@ -6,7 +6,14 @@ import { InboxIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { AIHeroShell } from "@/components/ai/AIHeroShell";
 import { DataQualityChip } from "@/components/ai/DataQualityChip";
+import {
+  MatchAnalyticsCard,
+  MatchCardContent,
+  MatchCardHeader,
+  MatchCardTitle,
+} from "@/components/match/MatchAnalyticsCard";
 import { Wordmark } from "@/components/brand/Wordmark";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
@@ -80,6 +87,7 @@ const tokenSwatches = [
   { name: "Background", className: "bg-background border-border border" },
   { name: "Surface", className: "bg-card border-border border" },
   { name: "Primary", className: "bg-primary" },
+  { name: "Secondary", className: "bg-secondary" },
   { name: "Info", className: "bg-info" },
   { name: "Success", className: "bg-success" },
   { name: "Warning", className: "bg-warning" },
@@ -247,6 +255,32 @@ export function DesignSystemPlayground() {
             <Badge variant="destructive">Loss</Badge>
             <Badge variant="info">Analytics</Badge>
             <Badge variant="live">Live</Badge>
+          </div>
+        </Section>
+
+        <Separator />
+
+        <Section
+          title="Match density (UI-P1)"
+          description="Compact analytics cards and AI hero shell used on the match page."
+        >
+          <div className="grid gap-4 lg:grid-cols-2">
+            <MatchAnalyticsCard>
+              <MatchCardHeader>
+                <MatchCardTitle>Live stats</MatchCardTitle>
+              </MatchCardHeader>
+              <MatchCardContent className="text-muted-foreground text-sm">
+                Shots, possession, and xG in a dense card shell.
+              </MatchCardContent>
+            </MatchAnalyticsCard>
+            <AIHeroShell variant="default">
+              <MatchCardHeader>
+                <MatchCardTitle>AI match analysis</MatchCardTitle>
+              </MatchCardHeader>
+              <MatchCardContent className="text-muted-foreground text-sm">
+                Hero uses clamp(12rem, 28vh, 22rem) min-height.
+              </MatchCardContent>
+            </AIHeroShell>
           </div>
         </Section>
 

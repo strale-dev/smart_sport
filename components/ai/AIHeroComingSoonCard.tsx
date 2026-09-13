@@ -1,16 +1,12 @@
 import { SparklesIcon } from "lucide-react";
 
+import { AIHeroShell } from "@/components/ai/AIHeroShell";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function AIHeroComingSoonCard() {
   return (
-    <Card className="border-primary/20 bg-card/70 ring-primary/10 min-h-[min(28vh,14rem)] w-full ring-1">
+    <AIHeroShell variant="plain">
       <CardHeader className="gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <SparklesIcon
@@ -27,6 +23,6 @@ export function AIHeroComingSoonCard() {
           appear here once the AI engine launches in a future update.
         </CardDescription>
       </CardHeader>
-    </Card>
+    </AIHeroShell>
   );
 }

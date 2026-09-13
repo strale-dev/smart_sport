@@ -1,4 +1,8 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  MatchAnalyticsCard,
+  MatchCardContent,
+  MatchCardHeader,
+} from "@/components/match/MatchAnalyticsCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type ChartCardSkeletonProps = {
@@ -7,14 +11,14 @@ type ChartCardSkeletonProps = {
 
 export function ChartCardSkeleton({ title }: ChartCardSkeletonProps) {
   return (
-    <Card className="w-full">
-      <CardHeader>
+    <MatchAnalyticsCard>
+      <MatchCardHeader>
         <Skeleton className="h-5 w-40" aria-hidden="true" />
         <span className="sr-only">{title} loading</span>
-      </CardHeader>
-      <CardContent>
+      </MatchCardHeader>
+      <MatchCardContent>
         <Skeleton className="h-64 w-full" aria-hidden="true" />
-      </CardContent>
-    </Card>
+      </MatchCardContent>
+    </MatchAnalyticsCard>
   );
 }

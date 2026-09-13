@@ -141,6 +141,124 @@ export async function upsertSeason(
   return assertRow(data, "Failed to upsert season").id;
 }
 
+function isKnownVenueProviderId(
+  providerId: number | null
+): providerId is number {
+  return providerId != null && providerId > 0;
+}
+
+function normalizeVenueCity(city: string | null | undefined): string | null {
+  if (!city) {
+    return null;
+  }
+
+  const trimmed = city.trim();
+  return trimmed.length > 0 ? trimmed.toLowerCase() : null;
+}
+
+function citiesMatch(
+  left: string | null | undefined,
+  right: string | null | undefined
+): boolean {
+  const a = normalizeVenueCity(left);
+  const b = normalizeVenueCity(right);
+
+  if (!a || !b) {
+    return false;
+  }
+
+  return a === b || a.startsWith(b) || b.startsWith(a);
+}
+
+type VenueLookupRow = {
+  id: string;
+  provider_id: number | null;
+  city: string | null;
+};
+
+function pickBestVenueMatch(
+  rows: VenueLookupRow[],
+  city: string | null
+): VenueLookupRow | null {
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const withProviderId = rows.filter((row) =>
+    isKnownVenueProviderId(row.provider_id)
+  );
+  const pool = withProviderId.length > 0 ? withProviderId : rows;
+
+  if (city) {
+    const cityMatch = pool.find((row) => citiesMatch(row.city, city));
+    if (cityMatch) {
+      return cityMatch;
+    }
+  }
+
+  return pool[0] ?? null;
+}
+
+async function findExistingVenueId(
+  client: AdminClient,
+  name: string,
+  city: string | null
+): Promise<string | null> {
+  const { data, error } = await client
+    .from("venues")
+    .select("id, provider_id, city")
+    .eq("name", name)
+    .order("provider_id", { ascending: false, nullsFirst: true })
+    .limit(10);
+
+  throwIfError(error, "Failed to lookup venue");
+
+  const match = pickBestVenueMatch((data ?? []) as VenueLookupRow[], city);
+  return match?.id ?? null;
+}
+
+async function consolidateVenueDuplicatesByName(
+  client: AdminClient,
+  name: string,
+  keepId: string
+): Promise<void> {
+  const { data: duplicates, error: selectError } = await client
+    .from("venues")
+    .select("id")
+    .eq("name", name)
+    .neq("id", keepId);
+
+  throwIfError(selectError, "Failed to list duplicate venues");
+
+  const dropIds = (duplicates ?? []).map((row) => row.id);
+  if (dropIds.length === 0) {
+    return;
+  }
+
+  for (const dropId of dropIds) {
+    const { error: fixtureError } = await client
+      .from("fixtures")
+      .update({ venue_id: keepId })
+      .eq("venue_id", dropId);
+
+    throwIfError(fixtureError, "Failed to rewire fixture venue");
+
+    const { error: teamError } = await client
+      .from("teams")
+      .update({ venue_id: keepId })
+      .eq("venue_id", dropId);
+
+    throwIfError(teamError, "Failed to rewire team venue");
+
+    const { error: deleteError } = await client
+      .from("venues")
+      .delete()
+      .eq("id", dropId);
+
+    throwIfError(deleteError, "Failed to delete duplicate venue");
+  }
+}
+
 export async function upsertVenue(
   client: AdminClient,
   venue: VenueRef | null
@@ -151,7 +269,7 @@ export async function upsertVenue(
 
   const row = venueRefToInsert(venue);
 
-  if (row.provider_id !== null) {
+  if (isKnownVenueProviderId(row.provider_id)) {
     const { data, error } = await client
       .from("venues")
       .upsert(row, { onConflict: "provider_id" })
@@ -159,24 +277,19 @@ export async function upsertVenue(
       .single();
 
     throwIfError(error, "Failed to upsert venue");
-    return assertRow(data, "Failed to upsert venue").id;
+    const keepId = assertRow(data, "Failed to upsert venue").id;
+    await consolidateVenueDuplicatesByName(client, row.name, keepId);
+    return keepId;
   }
 
-  const { data: existing, error: selectError } = await client
-    .from("venues")
-    .select("id")
-    .eq("name", row.name)
-    .maybeSingle();
-
-  throwIfError(selectError, "Failed to lookup venue");
-
-  if (existing) {
-    return existing.id;
+  const existingId = await findExistingVenueId(client, row.name, row.city);
+  if (existingId) {
+    return existingId;
   }
 
   const { data, error } = await client
     .from("venues")
-    .insert(row)
+    .insert({ ...row, provider_id: null })
     .select("id")
     .single();
 

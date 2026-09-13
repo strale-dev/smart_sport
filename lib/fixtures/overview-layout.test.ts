@@ -46,12 +46,45 @@ describe("overview card visibility", () => {
     expect(isOverviewCardVisible("timeline", "pre")).toBe(false);
     expect(isOverviewCardVisible("momentum", "pre")).toBe(false);
     expect(isOverviewCardVisible("comparison", "pre")).toBe(true);
+    expect(isOverviewCardVisible("formPreview", "pre")).toBe(true);
+    expect(isOverviewCardVisible("h2hPreview", "pre")).toBe(true);
+    expect(isOverviewCardVisible("formPreview", "live")).toBe(false);
+    expect(isOverviewCardVisible("h2hPreview", "live")).toBe(false);
   });
 
-  it("prioritizes probability delta, timeline, and momentum after kickoff", () => {
-    expect(getOverviewCardOrder("live")[0]).toBe("probabilityDelta");
-    expect(getOverviewCardOrder("live")[1]).toBe("timeline");
-    expect(getOverviewCardOrder("live")[2]).toBe("momentum");
+  it("orders pre-match overview comparison then form/H2H (PRD §6.4 group)", () => {
+    expect(getOverviewCardOrder("pre")).toEqual([
+      "comparison",
+      "formPreview",
+      "h2hPreview",
+      "playersToWatch",
+      "lineupTeaser",
+    ]);
+  });
+
+  it("shows lineup teaser in pre and live modes", () => {
+    expect(isOverviewCardVisible("lineupTeaser", "pre")).toBe(true);
+    expect(isOverviewCardVisible("lineupTeaser", "live")).toBe(true);
+  });
+
+  it("orders live/FT overview stats before momentum, timeline after comparison", () => {
+    expect(getOverviewCardOrder("live")).toEqual([
+      "probabilityDelta",
+      "liveStats",
+      "momentum",
+      "comparison",
+      "timeline",
+      "playersToWatch",
+      "lineupTeaser",
+    ]);
+  });
+
+  it("shows B1 finished-overview cards when layout is live (FT uses live layout)", () => {
+    expect(getOverviewLayout("FT")).toBe("live");
+    expect(getMatchOverviewRenderMode("FT")).toBe("finished");
+    expect(isOverviewCardVisible("timeline", "live")).toBe(true);
+    expect(isOverviewCardVisible("liveStats", "live")).toBe(true);
+    expect(isOverviewCardVisible("momentum", "live")).toBe(true);
   });
 });
 
