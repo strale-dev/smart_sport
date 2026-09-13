@@ -82,11 +82,11 @@ Verify Postgres `fixtures` / `fixture_events` / scores and Redis keys `provider:
 
 ## Cron
 
-| Route                               | Purpose                                                                                      |
-| ----------------------------------- | -------------------------------------------------------------------------------------------- |
-| `GET /api/cron/sync-live-center`    | `live=all` ingest (no open browser tab required); skipped when `LIVE_POLLING_ENABLED` is off |
-| `GET /api/cron/sync-fixtures-today` | Re-sync UTC today’s allowlist fixtures into Postgres + date cache                            |
-| `GET /api/cron/reap-stale-locks`    | Restarts presence-gated workers when locks expire but viewers remain                         |
+| Route                               | Purpose                                                                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `GET /api/cron/sync-live-center`    | `live=all` ingest (no open browser tab required); skipped (HTTP 200) when `LIVE_POLLING_ENABLED` is off |
+| `GET /api/cron/sync-fixtures-today` | Re-sync UTC today’s allowlist fixtures into Postgres + date cache                                       |
+| `GET /api/cron/reap-stale-locks`    | Restarts presence-gated workers when locks expire but viewers remain                                    |
 
 On Vercel Hobby, `reap-stale-locks` in `vercel.json` runs once daily. Sub-daily live maintenance uses [`.github/workflows/ingestion-schedule.yml`](../.github/workflows/ingestion-schedule.yml) (`reap-stale-locks` every 5 minutes when live is enabled in Production).
 

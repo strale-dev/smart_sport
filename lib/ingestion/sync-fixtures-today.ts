@@ -1,8 +1,10 @@
 import { apiFootballFetchResponse } from "@/lib/api-football/client";
 import type { RawApiFootballFixture } from "@/lib/api-football/types";
+import { cronIngestBudgetExceeded } from "@/lib/ingestion/cron-budget";
 import {
   getIngestionConfig,
   isLeagueInAllowlist,
+  isTerminalFixtureStatus,
 } from "@/lib/ingestion/config";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import { ingestFixtureFromRaw } from "@/lib/ingestion/upsert";
@@ -21,8 +23,32 @@ export type SyncFixturesTodayResult = {
     apiRequests: number;
     fixturesUpserted: number;
     fixturesFilteredOut: number;
+    fixturesRemaining?: number;
+    stoppedForTimeBudget?: boolean;
   };
 };
+
+const LIVE_FIXTURE_STATUSES = new Set([
+  "1H",
+  "2H",
+  "HT",
+  "ET",
+  "BT",
+  "P",
+  "LIVE",
+  "INT",
+]);
+
+function fixtureTodaySyncPriority(raw: RawApiFootballFixture): number {
+  const status = raw.fixture.status.short;
+  if (LIVE_FIXTURE_STATUSES.has(status)) {
+    return 0;
+  }
+  if (!isTerminalFixtureStatus(status)) {
+    return 1;
+  }
+  return 2;
+}
 
 export async function syncFixturesToday(
   anchor = new Date()
@@ -31,6 +57,7 @@ export async function syncFixturesToday(
   const client = createAdminClient();
   const date = anchor.toISOString().slice(0, 10);
   const syncedAt = anchor.toISOString();
+  const startedAtMs = Date.now();
 
   await throttleProviderRequest();
   const rawFixtures = await apiFootballFetchResponse<RawApiFootballFixture>(
@@ -38,14 +65,20 @@ export async function syncFixturesToday(
     { date }
   );
 
-  const allowlisted = rawFixtures.filter((raw) =>
-    isLeagueInAllowlist(raw.league.id, config)
-  );
+  const allowlisted = rawFixtures
+    .filter((raw) => isLeagueInAllowlist(raw.league.id, config))
+    .sort((a, b) => fixtureTodaySyncPriority(a) - fixtureTodaySyncPriority(b));
   const fixturesFilteredOut = rawFixtures.length - allowlisted.length;
   const domainFixtures: Fixture[] = [];
   let fixturesUpserted = 0;
+  let stoppedForTimeBudget = false;
 
   for (const raw of allowlisted) {
+    if (cronIngestBudgetExceeded(startedAtMs)) {
+      stoppedForTimeBudget = true;
+      break;
+    }
+
     const { domain } = await ingestFixtureFromRaw(client, raw, syncedAt);
     domainFixtures.push(domain);
     fixturesUpserted += 1;
@@ -71,6 +104,12 @@ export async function syncFixturesToday(
       apiRequests: 1,
       fixturesUpserted,
       fixturesFilteredOut,
+      ...(stoppedForTimeBudget
+        ? {
+            fixturesRemaining: allowlisted.length - fixturesUpserted,
+            stoppedForTimeBudget: true,
+          }
+        : {}),
     },
   };
 }

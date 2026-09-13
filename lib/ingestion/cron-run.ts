@@ -12,6 +12,17 @@ export type CronJobResult = {
   stats?: Record<string, unknown>;
 };
 
+/** Skipped jobs are successful no-ops for schedulers (GitHub Actions, Vercel cron). */
+export function cronJobHttpStatus(
+  result: Pick<CronJobResult, "ok" | "skipped">
+): number {
+  if (result.skipped) {
+    return 200;
+  }
+
+  return result.ok ? 200 : 500;
+}
+
 type RunCronJobOptions = {
   jobName: string;
   lockTtlSeconds?: number;
@@ -45,7 +56,7 @@ export async function runCronRoute(
 
   try {
     const result = await options.run();
-    return NextResponse.json(result, { status: result.ok ? 200 : 500 });
+    return NextResponse.json(result, { status: cronJobHttpStatus(result) });
   } catch (error) {
     console.error(`[cron/${options.jobName}]`, error);
     return NextResponse.json(

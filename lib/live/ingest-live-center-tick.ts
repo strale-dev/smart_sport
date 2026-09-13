@@ -1,6 +1,7 @@
 import { apiFootballFetchResponse } from "@/lib/api-football/client";
 import type { RawApiFootballFixture } from "@/lib/api-football/types";
 import { isLivePollingEnabled } from "@/lib/env";
+import { cronIngestBudgetExceeded } from "@/lib/ingestion/cron-budget";
 import {
   getIngestionConfig,
   isLeagueInAllowlist,
@@ -20,13 +21,15 @@ export type IngestLiveCenterTickResult = {
     apiRequests: number;
     fixturesUpserted: number;
     fixturesFilteredOut: number;
+    fixturesRemaining?: number;
+    stoppedForTimeBudget?: boolean;
   };
 };
 
 export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult> {
   if (!isLivePollingEnabled()) {
     return {
-      ok: false,
+      ok: true,
       skipped: true,
       reason: "live_polling_disabled",
     };
@@ -35,6 +38,7 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
   const config = getIngestionConfig();
   const client = createAdminClient();
   const syncedAt = new Date().toISOString();
+  const startedAtMs = Date.now();
 
   await throttleProviderRequest();
   const rawFixtures = await apiFootballFetchResponse<RawApiFootballFixture>(
@@ -49,8 +53,14 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
   );
   const fixturesFilteredOut = rawFixtures.length - allowlisted.length;
   const domainFixtures: Fixture[] = [];
+  let stoppedForTimeBudget = false;
 
   for (const raw of allowlisted) {
+    if (cronIngestBudgetExceeded(startedAtMs)) {
+      stoppedForTimeBudget = true;
+      break;
+    }
+
     const { domain } = await ingestFixtureFromRaw(client, raw, syncedAt);
     domainFixtures.push(domain);
   }
@@ -70,6 +80,12 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
       apiRequests,
       fixturesUpserted: domainFixtures.length,
       fixturesFilteredOut,
+      ...(stoppedForTimeBudget
+        ? {
+            fixturesRemaining: allowlisted.length - domainFixtures.length,
+            stoppedForTimeBudget: true,
+          }
+        : {}),
     },
   };
 }

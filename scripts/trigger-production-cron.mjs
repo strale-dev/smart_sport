@@ -33,7 +33,7 @@ const siteUrl = normalizeSiteUrl(process.env.PRODUCTION_SITE_URL);
 const url = `${siteUrl}${cronPath}`;
 
 const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 55_000);
+const timeout = setTimeout(() => controller.abort(), 58_000);
 
 try {
   const response = await fetch(url, {
