@@ -8,11 +8,13 @@ Canonical runbook for **Vercel Production** environment variables and the **API-
 
 ## Vercel environment scope
 
-| Vercel target                   | Cron jobs                                          | Guidance                                                                                                                                             |
-| ------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Production** (`scorence.app`) | Yes — schedules in [`vercel.json`](../vercel.json) | Set the full matrix below; Pro cutover applies here.                                                                                                 |
-| **Preview** (PR deployments)    | No                                                 | Do not mirror Pro `API_FOOTBALL_KEY` or `NEXT_PUBLIC_APP_ENV=production` unless you intentionally burn quota. Prefer dev Supabase + no provider key. |
-| **Local** (`.env.local`)        | Manual scripts only                                | Free key, `API_FOOTBALL_INGEST_ONLY=true`, `NEXT_PUBLIC_APP_ENV=development`.                                                                        |
+| Vercel target                   | Cron jobs                                          | Guidance                                             |
+| ------------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
+| **Production** (`scorence.app`) | Yes — schedules in [`vercel.json`](../vercel.json) | Set the full matrix below; Pro cutover applies here. |
+
+**Vercel Hobby (current):** `vercel.json` must use **at most one run per cron job per day** or Production deploys fail at build time. Sub-daily **lineups** and **6h standings** are triggered from [`.github/workflows/ingestion-schedule.yml`](../.github/workflows/ingestion-schedule.yml) (repo secrets `PRODUCTION_SITE_URL`, `CRON_SECRET`). After upgrading to **Vercel Pro**, move schedules to `VERCEL_CRON_PRO_TARGETS` in [`lib/ingestion/vercel-cron-contract.ts`](../lib/ingestion/vercel-cron-contract.ts) and update `vercel.json`; CI runs `npm run validate:vercel-cron` on Hobby-safe schedules until then.
+| **Preview** (PR deployments) | No | Do not mirror Pro `API_FOOTBALL_KEY` or `NEXT_PUBLIC_APP_ENV=production` unless you intentionally burn quota. Prefer dev Supabase + no provider key. |
+| **Local** (`.env.local`) | Manual scripts only | Free key, `API_FOOTBALL_INGEST_ONLY=true`, `NEXT_PUBLIC_APP_ENV=development`. |
 
 Use the **Production** Supabase project (Scorence prod), not the dev project, for Production env vars.
 
