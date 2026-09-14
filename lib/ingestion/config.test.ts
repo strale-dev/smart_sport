@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { FIXTURES_WINDOW_DAYS } from "@/lib/fixtures/constants";
 import {
   buildFixtureDateWindow,
   getIngestionConfig,
@@ -17,16 +18,19 @@ const baseEnv = {
 };
 
 describe("ingestion config", () => {
-  it("uses a reduced fixture window in development", () => {
+  it("uses the fixtures UI window in development", () => {
     const config = getIngestionConfig({
       ...baseEnv,
       NEXT_PUBLIC_APP_ENV: "development",
     });
 
-    expect(config.fixtureWindowDays).toBe(1);
+    expect(config.fixtureWindowDays).toBe(FIXTURES_WINDOW_DAYS);
     expect(
-      buildFixtureDateWindow(new Date("2026-08-31T12:00:00.000Z"), 1)
-    ).toEqual(["2026-08-30", "2026-08-31", "2026-09-01"]);
+      buildFixtureDateWindow(
+        new Date("2026-08-31T12:00:00.000Z"),
+        FIXTURES_WINDOW_DAYS
+      )
+    ).toHaveLength(FIXTURES_WINDOW_DAYS * 2 + 1);
   });
 
   it("uses the production fixture window when app env is production", () => {

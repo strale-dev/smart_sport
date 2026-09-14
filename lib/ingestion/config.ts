@@ -1,3 +1,4 @@
+import { FIXTURES_WINDOW_DAYS } from "@/lib/fixtures/constants";
 import { parsePublicEnv } from "@/lib/env";
 
 /** API-Football league IDs synced during development (Free key budget). */
@@ -69,7 +70,7 @@ export function getIngestionConfig(
 
   return {
     leagueProviderIds: INGESTION_LEAGUE_PROVIDER_IDS,
-    fixtureWindowDays: isDevelopment ? 1 : 7,
+    fixtureWindowDays: isDevelopment ? FIXTURES_WINDOW_DAYS : 7,
     standingsFreshnessHours: isDevelopment ? 20 : 5,
     providerThrottleMs: isDevelopment ? 6_500 : 250,
     lineupsSyncEnabled: resolveLineupsSyncEnabled(isDevelopment, source),

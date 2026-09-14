@@ -7,6 +7,7 @@ import {
   readLeaguePrestigeMap,
   readStandingsRanksForFixtures,
 } from "@/lib/ingestion/db-read";
+import { filterAllowlistedFixtures } from "@/lib/fixtures/navigable";
 import {
   LIVE_PAGE_SIZE,
   LIVE_STATUS_FILTERS,
@@ -202,7 +203,9 @@ export async function getLiveCenterData(
   const liveFromToday = todayResult.data.filter((fixture) =>
     isLiveFixtureStatus(fixture.status)
   );
-  const liveCandidates = dedupeFixtures([...liveResult.data, ...liveFromToday]);
+  const liveCandidates = filterAllowlistedFixtures(
+    dedupeFixtures([...liveResult.data, ...liveFromToday])
+  );
   const filtered = filterLiveFixtures(liveCandidates, params);
   const withAi = await attachAiUpdatedAtToFixturesSafe(filtered, now);
   const context = await buildImportanceContext(withAi, now);

@@ -33,7 +33,13 @@ import {
   isOptionalProviderFailure,
   safeOptionalProviderFetch,
 } from "@/lib/api-football/safe-call";
+import { filterAllowlistedFixtures } from "@/lib/fixtures/navigable";
 import { addUtcDays, utcDateString } from "@/lib/fixtures/window";
+import { isLeagueInAllowlist } from "@/lib/ingestion/config";
+import {
+  fillFixturesForUtcDateFromProvider,
+  fillFixturesForUtcDateRangeFromProvider,
+} from "@/lib/services/fixture-provider-fill";
 import {
   persistPlayerProfile,
   upsertSquadPlayers,
@@ -55,6 +61,7 @@ import {
   readStandingsFromDb,
   readTeamByProviderIdFromDb,
   readTeamIdByProviderIdFromDb,
+  readTeamSquadFromDb,
 } from "@/lib/ingestion/db-read";
 import {
   cached,
@@ -186,9 +193,31 @@ async function cachedProviderOrDb<T>(options: {
   }
 }
 
+async function readFixturesForDateWithProviderFill(
+  date: string
+): Promise<Fixture[]> {
+  const fromDb = await readFixturesForDateFromDb(date);
+  if (fromDb.length > 0 || !isApiFootballIngestOnly()) {
+    return fromDb;
+  }
+
+  return fillFixturesForUtcDateFromProvider(date);
+}
+
 export async function getMatchesForDate(
   date: string
 ): Promise<ServiceResult<Fixture[]>> {
+  if (isApiFootballIngestOnly()) {
+    const result = await cached({
+      key: providerFixturesDateKey(date),
+      freshTtlSeconds: CACHE_TTL.fixturesDateFresh,
+      staleTtlSeconds: CACHE_TTL.fixturesDateStale,
+      fn: () => readFixturesForDateWithProviderFill(date),
+    });
+
+    return toServiceResult(result);
+  }
+
   const result = await cachedProviderOrDb({
     key: providerFixturesDateKey(date),
     freshTtlSeconds: CACHE_TTL.fixturesDateFresh,
@@ -201,6 +230,18 @@ export async function getMatchesForDate(
   return toServiceResult(result);
 }
 
+async function readFixturesInRangeWithProviderFill(
+  fromDate: string,
+  toDateExclusive: string
+): Promise<Fixture[]> {
+  const fromDb = await readFixturesInRangeFromDb(fromDate, toDateExclusive);
+  if (fromDb.length > 0 || !isApiFootballIngestOnly()) {
+    return fromDb;
+  }
+
+  return fillFixturesForUtcDateRangeFromProvider(fromDate, toDateExclusive);
+}
+
 export async function getMatchesInRange(
   fromDate: string,
   toDateExclusive: string
@@ -209,7 +250,7 @@ export async function getMatchesInRange(
     key: providerFixturesRangeKey(fromDate, toDateExclusive),
     freshTtlSeconds: CACHE_TTL.fixturesDateFresh,
     staleTtlSeconds: CACHE_TTL.fixturesDateStale,
-    fn: () => readFixturesInRangeFromDb(fromDate, toDateExclusive),
+    fn: () => readFixturesInRangeWithProviderFill(fromDate, toDateExclusive),
   });
 
   return toServiceResult(result);
@@ -218,6 +259,40 @@ export async function getMatchesInRange(
 export async function getFixtureById(
   id: number
 ): Promise<ServiceResult<Fixture | null>> {
+  if (isApiFootballIngestOnly()) {
+    const dbResult = await cached({
+      key: providerFixtureKey(id),
+      freshTtlSeconds: (fixture: Fixture | null) =>
+        fixture
+          ? fixtureFreshTtlSeconds(fixture.status)
+          : CACHE_TTL.fixtureNonLiveFresh,
+      staleTtlSeconds: CACHE_TTL.fixtureStale,
+      fn: async () => {
+        const fromDb = await readFixtureByProviderIdFromDb(id);
+        if (fromDb) {
+          return fromDb;
+        }
+
+        const fromProvider = await safeOptionalProviderFetch(
+          `fixture ${id}`,
+          () => getFixtureByIdEndpoint(id),
+          null
+        );
+
+        if (
+          fromProvider &&
+          isLeagueInAllowlist(fromProvider.league.externalId)
+        ) {
+          return fromProvider;
+        }
+
+        return null;
+      },
+    });
+
+    return toServiceResult(dbResult);
+  }
+
   const result = await cachedProviderOrDb({
     key: providerFixtureKey(id),
     freshTtlSeconds: (fixture) =>
@@ -238,13 +313,19 @@ export async function listLiveFixtures(): Promise<ServiceResult<Fixture[]>> {
     key: providerFixturesLiveKey(),
     freshTtlSeconds: CACHE_TTL.fixturesLiveFresh,
     staleTtlSeconds: CACHE_TTL.fixturesLiveStale,
-    providerFn: () => listLiveFixturesEndpoint(),
+    providerFn: async () =>
+      filterAllowlistedFixtures(await listLiveFixturesEndpoint()),
     dbFn: () => readLiveFixturesFromDb(),
     label: "listLiveFixtures",
     forceProvider: isLivePollingEnabled(),
   });
 
-  return toServiceResult(result);
+  const filtered = {
+    ...result,
+    value: filterAllowlistedFixtures(result.value),
+  };
+
+  return toServiceResult(filtered);
 }
 
 export async function getFixtureEvents(
@@ -696,19 +777,34 @@ export async function getLeagueTopStats(
   return toServiceResult(result);
 }
 
+async function fetchTeamSquad(teamProviderId: number): Promise<SquadPlayer[]> {
+  const fromDb = await readTeamSquadFromDb(teamProviderId);
+  if (fromDb.length > 0) {
+    return fromDb;
+  }
+
+  const fromProvider = await safeOptionalProviderFetch(
+    `team squad ${teamProviderId}`,
+    () => getTeamSquadEndpoint(teamProviderId),
+    []
+  );
+
+  if (fromProvider.length > 0) {
+    return fromProvider;
+  }
+
+  return fromDb;
+}
+
 export async function getTeamSquad(
   teamProviderId: number
 ): Promise<ServiceResult<SquadPlayer[]>> {
   const result = await cached({
     key: providerTeamSquadKey(teamProviderId),
-    freshTtlSeconds: CACHE_TTL.teamFresh,
+    freshTtlSeconds: (squad) =>
+      squad.length > 0 ? CACHE_TTL.teamFresh : CACHE_TTL.fixturesLiveFresh,
     staleTtlSeconds: CACHE_TTL.teamStale,
-    fn: () =>
-      safeOptionalProviderFetch(
-        `team squad ${teamProviderId}`,
-        () => getTeamSquadEndpoint(teamProviderId),
-        []
-      ),
+    fn: () => fetchTeamSquad(teamProviderId),
   });
 
   if (result.value.length > 0) {

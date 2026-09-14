@@ -2,6 +2,8 @@
 
 Operational guide for API-Football → Postgres sync and bootstrap. Use **Windows** `npm.cmd` (see root `AGENTS.md`).
 
+**Phase 8 shortcut:** [MATCH-DATA-OPS.md](../MATCH-DATA-OPS.md) — `match:qa-sync` + `match:verify`.
+
 ## Quick start (fresh dev DB)
 
 1. Copy `.env.example` → `.env.local` with at least:
@@ -12,13 +14,15 @@ Operational guide for API-Football → Postgres sync and bootstrap. Use **Window
 2. Run the smart helper (only steps that are missing):
 
    ```bash
-   npm.cmd run ingest:dev-qa
+   npm.cmd run match:qa-sync
    ```
+
+   (`match:qa-sync` = `ingest:dev-qa`)
 
 3. Verify:
 
    ```bash
-   npm.cmd run diagnose:ingestion -- --strict
+   npm.cmd run match:verify
    ```
 
 4. Open pinned QA match URLs (see below).
@@ -41,6 +45,8 @@ npm.cmd run ingest:dev-qa -- --force
 
 | npm script                     | Purpose                                                                                                 | Typical API cost                                 |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `match:qa-sync`                | Phase 8 golden path — alias of `ingest:dev-qa`                                                          | Variable                                         |
+| `match:verify`                 | Phase 8 strict QA — alias of `diagnose:ingestion --strict`                                              | 0–2 req                                          |
 | `diagnose:ingestion`           | Human-readable DB + pinned QA report; optional `--fixture-id=`, `--json`, `--strict`                    | 0 DB-only; +1–2 req if key present (quota probe) |
 | `ingest:dev-qa`                | Diagnose then run **only missing** bootstrap/sync steps                                                 | Variable (skips when data exists)                |
 | `verify:ingestion`             | **Phase 1 gate**: counts + fixtures UTC today (exit 1 if empty)                                         | 0                                                |

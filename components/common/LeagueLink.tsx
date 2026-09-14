@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 
+import { LEAGUE_LINK_LOGO_SIZES } from "@/lib/images/logo-dimensions";
 import { buildLeagueHref } from "@/lib/leagues/url";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +11,7 @@ type LeagueLinkProps = {
   leagueLogoUrl?: string | null;
   className?: string;
   onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+  logoPriority?: boolean;
 };
 
 export function LeagueLink({
@@ -17,6 +20,7 @@ export function LeagueLink({
   leagueLogoUrl,
   className,
   onClick,
+  logoPriority = false,
 }: LeagueLinkProps) {
   return (
     <Link
@@ -28,12 +32,15 @@ export function LeagueLink({
       )}
     >
       {leagueLogoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={leagueLogoUrl}
           alt=""
+          width={16}
+          height={16}
           className="size-4 shrink-0 object-contain"
-          loading="lazy"
+          priority={logoPriority}
+          loading={logoPriority ? undefined : "lazy"}
+          sizes={LEAGUE_LINK_LOGO_SIZES}
         />
       ) : null}
       <span className="truncate">{leagueName}</span>

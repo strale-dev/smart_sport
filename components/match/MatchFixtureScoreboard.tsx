@@ -7,8 +7,9 @@ import { TeamLogo } from "@/components/match/TeamLogo";
 import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider";
 import { Badge } from "@/components/ui/badge";
 import {
-  formatFixtureScore,
+  formatFixtureRowCenterLabel,
   isFinishedFixtureStatus,
+  shouldShowFixtureScore,
 } from "@/lib/fixtures/display";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,10 @@ type MatchFixtureScoreboardProps = {
   centerColumnClassName?: string;
   truncateTeamNames?: boolean;
   className?: string;
+  logoPriority?: boolean;
+  logoSizes?: string;
+  /** When set, scheduled rows show date+time for kickoffs after this viewer day. */
+  todayDateKey?: string;
 };
 
 const defaultTeamLinkClassName =
@@ -47,12 +52,19 @@ export function MatchFixtureScoreboard({
   centerColumnClassName,
   truncateTeamNames = true,
   className,
+  logoPriority = false,
+  logoSizes,
+  todayDateKey,
 }: MatchFixtureScoreboardProps) {
   const timeZone = useViewerTimezone();
   const isLive = isLiveFixtureStatus(fixture.status);
   const isFinished = isFinishedFixtureStatus(fixture.status);
-  const showScore = isLive || isFinished;
-  const scoreText = formatFixtureScore(fixture, timeZone);
+  const showScore = shouldShowFixtureScore(fixture);
+  const scoreText = formatFixtureRowCenterLabel(
+    fixture,
+    timeZone,
+    todayDateKey
+  );
 
   const homeCell = (
     <>
@@ -60,6 +72,8 @@ export function MatchFixtureScoreboard({
         name={fixture.homeTeam.name}
         logoUrl={fixture.homeTeam.logoUrl}
         className={logoClassName}
+        priority={logoPriority}
+        sizes={logoSizes}
       />
       <span
         className={cn(
@@ -90,6 +104,8 @@ export function MatchFixtureScoreboard({
         name={fixture.awayTeam.name}
         logoUrl={fixture.awayTeam.logoUrl}
         className={logoClassName}
+        priority={logoPriority}
+        sizes={logoSizes}
       />
     </>
   );
@@ -134,7 +150,8 @@ export function MatchFixtureScoreboard({
           <Badge
             variant="outline"
             className={cn(
-              "h-auto font-mono font-semibold tabular-nums",
+              "h-auto max-w-[10.5rem] font-mono text-xs font-semibold tabular-nums sm:max-w-none sm:text-sm",
+              scoreText.includes(",") && "leading-snug whitespace-normal",
               scheduledKickoffClassName
             )}
           >

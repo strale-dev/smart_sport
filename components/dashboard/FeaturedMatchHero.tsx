@@ -19,6 +19,7 @@ import {
   formatFixtureMinute,
   formatFixtureScore,
   isFinishedFixtureStatus,
+  shouldShowFixtureScore,
 } from "@/lib/fixtures/display";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import type { Fixture } from "@/types/domain";
@@ -35,7 +36,10 @@ function featuredStatusLabel(fixture: Fixture, timeZone: string): string {
     return formatFixtureMinute(fixture) ?? "Live";
   }
 
-  if (isFinishedFixtureStatus(fixture.status)) {
+  if (
+    isFinishedFixtureStatus(fixture.status) ||
+    shouldShowFixtureScore(fixture)
+  ) {
     return "Full time";
   }
 
@@ -45,8 +49,7 @@ function featuredStatusLabel(fixture: Fixture, timeZone: string): string {
 export function FeaturedMatchHero({ fixture }: FeaturedMatchHeroProps) {
   const timeZone = useViewerTimezone();
   const isLive = isLiveFixtureStatus(fixture.status);
-  const isFinished = isFinishedFixtureStatus(fixture.status);
-  const showScore = isLive || isFinished;
+  const showScore = shouldShowFixtureScore(fixture);
 
   return (
     <Card className="border-primary/20 bg-card/70 ring-primary/10 w-full ring-1 backdrop-blur-sm">

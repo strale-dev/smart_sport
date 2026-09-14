@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   formatFixtureKickoffDateTime,
   formatFixtureKickoffTime,
+  formatFixtureScheduledCenterLabel,
+  formatFixtureScore,
   formatMatchHeaderStatusLabel,
+  shouldShowFixtureScore,
 } from "@/lib/fixtures/display";
 import { mergeTeamFixtures } from "@/lib/match/merge-team-fixtures";
 import { selectRelevantStandingsGroup } from "@/lib/standings/select-relevant-group";
@@ -112,6 +115,89 @@ describe("formatMatchHeaderStatusLabel", () => {
         BELGRADE
       )
     ).toBe("Cancelled");
+  });
+});
+
+describe("shouldShowFixtureScore", () => {
+  it("shows score for finished status", () => {
+    const fixture = buildFixture(1, "2026-09-08T16:45:00.000Z", {
+      status: "FT",
+      score: { home: 2, away: 1 },
+    });
+    expect(shouldShowFixtureScore(fixture)).toBe(true);
+  });
+
+  it("shows score when goals exist but status is still NS", () => {
+    const fixture = buildFixture(1, "2026-09-08T16:45:00.000Z", {
+      status: "NS",
+      score: {
+        home: 2,
+        away: 1,
+        halftimeHome: null,
+        halftimeAway: null,
+        fulltimeHome: null,
+        fulltimeAway: null,
+        extratimeHome: null,
+        extratimeAway: null,
+        penaltyHome: null,
+        penaltyAway: null,
+      },
+    });
+    expect(shouldShowFixtureScore(fixture)).toBe(true);
+    expect(formatFixtureScore(fixture, BELGRADE)).toBe("2 – 1");
+  });
+
+  it("shows kickoff time for scheduled fixtures without goals", () => {
+    const fixture = buildFixture(1, "2026-09-08T16:45:00.000Z", {
+      status: "NS",
+    });
+    expect(shouldShowFixtureScore(fixture)).toBe(false);
+    expect(formatFixtureScore(fixture, BELGRADE)).toBe("18:45");
+  });
+});
+
+describe("formatFixtureScheduledCenterLabel", () => {
+  it("shows time only for kickoffs on today", () => {
+    const fixture = buildFixture(1, "2026-09-14T16:00:00.000Z", {
+      status: "NS",
+    });
+    expect(
+      formatFixtureScheduledCenterLabel(fixture, BELGRADE, "2026-09-14")
+    ).toMatch(/^\d{2}:\d{2}$/);
+  });
+
+  it("shows date and time for kickoffs after today", () => {
+    const fixture = buildFixture(1, "2026-09-15T18:30:00.000Z", {
+      status: "NS",
+    });
+    const label = formatFixtureScheduledCenterLabel(
+      fixture,
+      BELGRADE,
+      "2026-09-14"
+    );
+    expect(label).toContain(",");
+    expect(label).toMatch(/\d{2}:\d{2}/);
+  });
+
+  it("shows score for finished fixtures", () => {
+    const fixture = buildFixture(1, "2026-09-13T16:00:00.000Z", {
+      status: "FT",
+      score: {
+        home: 2,
+        away: 0,
+        halftimeHome: null,
+        halftimeAway: null,
+        fulltimeHome: null,
+        fulltimeAway: null,
+        extratimeHome: null,
+        extratimeAway: null,
+        penaltyHome: null,
+        penaltyAway: null,
+      },
+    });
+    expect(
+      formatFixtureScheduledCenterLabel(fixture, BELGRADE, "2026-09-14")
+    ).toBe("2 – 0");
   });
 });
 

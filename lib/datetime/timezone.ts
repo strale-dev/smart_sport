@@ -82,7 +82,7 @@ export function formatDayLabelInTimezone(
     weekday: "long",
     day: "numeric",
     month: "short",
-    timeZone: "UTC",
+    timeZone: safeTimeZone,
   }).format(new Date(`${dateKey}T12:00:00.000Z`));
 }
 

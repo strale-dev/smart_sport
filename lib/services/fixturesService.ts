@@ -1,11 +1,15 @@
 import {
+  buildUpcomingAndPastDayGroups,
   collectActiveLeagueIds,
   collectLiveLeagueIds,
+  collectUpcomingFixturesFromDayGroups,
   findNowAnchorFixtureId,
-  groupFixturesByDayAndLeagueInTimezone,
   type FixturesDayGroup,
 } from "@/lib/fixtures/grouping";
-import { FIXTURES_WINDOW_DAYS } from "@/lib/fixtures/constants";
+import {
+  FIXTURES_PAST_DAYS,
+  FIXTURES_WINDOW_DAYS,
+} from "@/lib/fixtures/constants";
 import { buildTimezoneWindow } from "@/lib/datetime/timezone";
 import {
   parseFixturesParams,
@@ -15,6 +19,9 @@ import { getMatchesInRange } from "@/lib/services/footballService";
 import type { Fixture } from "@/types/domain";
 
 export type FixturesData = {
+  upcomingDayGroups: FixturesDayGroup[];
+  pastDayGroups: FixturesDayGroup[];
+  /** Primary upcoming groups (alias for anchors / legacy callers). */
   dayGroups: FixturesDayGroup[];
   liveLeagueIds: number[];
   activeLeagueIds: number[];
@@ -42,25 +49,33 @@ export async function getFixturesData(
   const { fromUtc, toUtcExclusive, todayDateKey } = buildTimezoneWindow(
     now,
     timeZone,
-    0,
+    FIXTURES_PAST_DAYS,
     FIXTURES_WINDOW_DAYS
   );
   const result = await getMatchesInRange(fromUtc, toUtcExclusive);
   const allFixtures = result.data;
   const filtered = filterByLeague(allFixtures, params.league);
 
+  const { upcomingDayGroups, pastDayGroups } = buildUpcomingAndPastDayGroups(
+    filtered,
+    now,
+    timeZone,
+    todayDateKey,
+    params.league
+  );
+
+  const upcomingFixtures =
+    collectUpcomingFixturesFromDayGroups(upcomingDayGroups);
+
   return {
-    dayGroups: groupFixturesByDayAndLeagueInTimezone(
-      filtered,
-      now,
-      timeZone,
-      params.league
-    ),
+    upcomingDayGroups,
+    pastDayGroups,
+    dayGroups: upcomingDayGroups,
     liveLeagueIds: collectLiveLeagueIds(allFixtures),
     activeLeagueIds: collectActiveLeagueIds(allFixtures),
-    nowAnchorFixtureId: findNowAnchorFixtureId(filtered),
+    nowAnchorFixtureId: findNowAnchorFixtureId(upcomingFixtures),
     todayDateKey,
     filters: { league: params.league },
-    isEmpty: filtered.length === 0,
+    isEmpty: upcomingDayGroups.length === 0 && pastDayGroups.length === 0,
   };
 }

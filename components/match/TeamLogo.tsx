@@ -1,9 +1,19 @@
+import Image from "next/image";
+
+import {
+  MATCH_HEADER_LOGO_SIZES,
+  MATCH_ROW_LOGO_SIZES,
+  resolveLogoPixelSize,
+} from "@/lib/images/logo-dimensions";
 import { cn } from "@/lib/utils";
 
 type TeamLogoProps = {
   name: string;
   logoUrl: string | null;
   className?: string;
+  priority?: boolean;
+  loading?: "lazy" | "eager";
+  sizes?: string;
 };
 
 function teamInitials(name: string): string {
@@ -19,15 +29,28 @@ function teamInitials(name: string): string {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
-export function TeamLogo({ name, logoUrl, className }: TeamLogoProps) {
+export function TeamLogo({
+  name,
+  logoUrl,
+  className,
+  priority = false,
+  loading,
+  sizes,
+}: TeamLogoProps) {
   if (logoUrl) {
+    const pixelSize = resolveLogoPixelSize(className);
+    const imageLoading = priority ? undefined : (loading ?? "lazy");
+
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- remote CDN logos without next/image config yet
-      <img
+      <Image
         src={logoUrl}
         alt=""
+        width={pixelSize}
+        height={pixelSize}
         className={cn("size-8 shrink-0 object-contain", className)}
-        loading="lazy"
+        priority={priority}
+        loading={imageLoading}
+        sizes={sizes ?? MATCH_ROW_LOGO_SIZES}
       />
     );
   }
@@ -44,3 +67,5 @@ export function TeamLogo({ name, logoUrl, className }: TeamLogoProps) {
     </span>
   );
 }
+
+export { MATCH_HEADER_LOGO_SIZES, MATCH_ROW_LOGO_SIZES };

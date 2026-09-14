@@ -1,7 +1,21 @@
 import {
+  assertNoPastFinishedInTodayPool,
+  buildForwardFallbackFixtures,
+  buildRecentResultsFixtures,
+  dedupeFixtures,
+  mergeLiveIntoImportantCandidates,
+  resolveTodayCandidates,
+  takeImportantTodayFixtures,
+} from "@/lib/dashboard/dashboard-candidates";
+import {
   rankFixturesByImportance,
   type ImportanceContext,
 } from "@/lib/dashboard/importance-score";
+import {
+  isFinishedFixtureStatus,
+  shouldShowFixtureScore,
+} from "@/lib/fixtures/display";
+import { filterAllowlistedFixtures } from "@/lib/fixtures/navigable";
 import {
   readH2hInterestForFixtures,
   readLeaguePrestigeMap,
@@ -20,13 +34,14 @@ const LIVE_LIMIT = 6;
 const TODAY_LIMIT = 8;
 const UPCOMING_LIMIT = 8;
 const UPCOMING_DAYS = 7;
-const FALLBACK_WINDOW_DAYS = 7;
+const RECENT_RESULTS_LIMIT = 6;
 
 export type DashboardData = {
   featured: Fixture | null;
   live: Fixture[];
   todayImportant: Fixture[];
   upcoming: Fixture[];
+  recentResults: Fixture[];
   isTodayFallback: boolean;
   fallbackFixtures: Fixture[];
   aiInsights: PredictionChangeSummary[];
@@ -40,22 +55,6 @@ function addUtcDays(date: string, days: number): string {
   const next = new Date(`${date}T00:00:00.000Z`);
   next.setUTCDate(next.getUTCDate() + days);
   return next.toISOString().slice(0, 10);
-}
-
-function dedupeFixtures(fixtures: Fixture[]): Fixture[] {
-  const seen = new Set<number>();
-  const result: Fixture[] = [];
-
-  for (const fixture of fixtures) {
-    if (seen.has(fixture.externalId)) {
-      continue;
-    }
-
-    seen.add(fixture.externalId);
-    result.push(fixture);
-  }
-
-  return result;
 }
 
 async function fetchFixturesForDates(dates: string[]): Promise<Fixture[]> {
@@ -126,40 +125,46 @@ export async function getDashboardData(
     readRecentPredictionChanges(5).catch(() => [] as PredictionChangeSummary[]),
   ]);
 
-  const liveFixtures = liveResult.data;
-  let fallbackFixtures = dedupeFixtures([
-    ...yesterdayFixtures,
-    ...tomorrowFixtures,
+  const liveFixtures = filterAllowlistedFixtures(liveResult.data);
+  const forwardFallback = buildForwardFallbackFixtures({
+    todayUtc: today,
+    tomorrowFixtures,
+    upcomingFixtures,
+  });
+
+  const { todayCandidates, isTodayFallback } = resolveTodayCandidates({
+    todayFixtures,
+    forwardFallback,
+  });
+
+  const importantCandidates = mergeLiveIntoImportantCandidates(
+    todayCandidates,
+    liveFixtures
+  );
+
+  assertNoPastFinishedInTodayPool(today, importantCandidates);
+  assertNoPastFinishedInTodayPool(today, todayCandidates);
+
+  const featuredCandidates = dedupeFixtures([
+    ...liveFixtures.filter((fixture) => isLiveFixtureStatus(fixture.status)),
+    ...todayCandidates,
   ]);
+  assertNoPastFinishedInTodayPool(today, featuredCandidates);
 
-  if (todayFixtures.length === 0 && fallbackFixtures.length === 0) {
-    const extendedDates = Array.from(
-      { length: FALLBACK_WINDOW_DAYS * 2 + 1 },
-      (_, index) => addUtcDays(today, index - FALLBACK_WINDOW_DAYS)
-    ).filter(
-      (date) => date !== today && date !== yesterday && date !== tomorrow
-    );
-
-    fallbackFixtures = await fetchFixturesForDates(extendedDates);
-  }
-
-  const isTodayFallback =
-    todayFixtures.length === 0 && fallbackFixtures.length > 0;
-  const todayCandidates = isTodayFallback ? fallbackFixtures : todayFixtures;
+  const recentResults = buildRecentResultsFixtures(
+    yesterdayFixtures,
+    RECENT_RESULTS_LIMIT
+  );
 
   const allCandidates = dedupeFixtures([
     ...liveFixtures,
-    ...todayCandidates,
+    ...importantCandidates,
     ...upcomingFixtures,
   ]);
 
   const context = await buildImportanceContext(allCandidates, now);
   const usedIds = new Set<number>();
 
-  const featuredCandidates = dedupeFixtures([
-    ...liveFixtures,
-    ...todayCandidates,
-  ]);
   const featured =
     takeRankedFixtures(featuredCandidates, context, 1)[0] ?? null;
 
@@ -177,8 +182,8 @@ export async function getDashboardData(
     usedIds.add(fixture.externalId);
   }
 
-  const todayImportant = takeRankedFixtures(
-    todayCandidates,
+  const todayImportant = takeImportantTodayFixtures(
+    importantCandidates,
     context,
     TODAY_LIMIT,
     usedIds
@@ -187,8 +192,20 @@ export async function getDashboardData(
     usedIds.add(fixture.externalId);
   }
 
+  const upcomingCandidates = upcomingFixtures.filter((fixture) => {
+    if (isFinishedFixtureStatus(fixture.status)) {
+      return false;
+    }
+
+    if (shouldShowFixtureScore(fixture)) {
+      return false;
+    }
+
+    return new Date(fixture.kickoffAt).getTime() > now.getTime();
+  });
+
   const upcoming = takeRankedFixtures(
-    upcomingFixtures,
+    upcomingCandidates,
     context,
     UPCOMING_LIMIT,
     usedIds
@@ -199,8 +216,9 @@ export async function getDashboardData(
     live,
     todayImportant,
     upcoming,
+    recentResults,
     isTodayFallback,
-    fallbackFixtures,
+    fallbackFixtures: forwardFallback,
     aiInsights,
   };
 }

@@ -4,10 +4,11 @@ import Link from "next/link";
 
 import { LiveStatusChip } from "@/components/match/LiveStatusChip";
 import { MatchFixtureScoreboard } from "@/components/match/MatchFixtureScoreboard";
-import { LeagueLink } from "@/components/common/LeagueLink";
+import { MatchMetaBar } from "@/components/match/MatchMetaBar";
 import { formatFixtureMinute } from "@/lib/fixtures/display";
 import { formatRelativeTime } from "@/lib/ai/format";
 import { isAiUpdatedMarkerFresh } from "@/lib/live/ai-updated-marker";
+import { getMatchScoreboardPreset } from "@/lib/match/scoreboard-presets";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import { cn } from "@/lib/utils";
 import type { Fixture } from "@/types/domain";
@@ -18,7 +19,10 @@ type MatchRowProps = {
   highlight?: boolean;
   showLeague?: boolean;
   anchorId?: string;
+  todayDateKey?: string;
 };
+
+const rowScoreboardPreset = getMatchScoreboardPreset("row");
 
 export function MatchRow({
   fixture,
@@ -26,6 +30,7 @@ export function MatchRow({
   highlight = false,
   showLeague = true,
   anchorId,
+  todayDateKey,
 }: MatchRowProps) {
   const isLive = isLiveFixtureStatus(fixture.status);
   const minuteLabel = formatFixtureMinute(fixture);
@@ -35,29 +40,31 @@ export function MatchRow({
   return (
     <div
       className={cn(
-        "border-border/70 scroll-mt-24 rounded-xl border",
-        highlight && "border-primary/40 bg-card/60 ring-primary/10 ring-1",
+        "glass-card border-border/80 ring-foreground/5 scroll-mt-24 overflow-hidden rounded-xl border py-0 ring-1",
+        highlight && "border-primary/40 bg-card/60 ring-primary/10",
         className
       )}
     >
       {showLeague ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 px-3 pt-3">
-          <LeagueLink
+        <div className="px-3 pt-3">
+          <MatchMetaBar
+            density="row"
             leagueExternalId={fixture.league.externalId}
             leagueName={fixture.league.name}
             leagueLogoUrl={fixture.league.logoUrl}
-            className="text-muted-foreground text-xs"
+            trailing={
+              <>
+                {showAiUpdated ? (
+                  <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                    AI updated {formatRelativeTime(fixture.aiUpdatedAt!)}
+                  </span>
+                ) : null}
+                {isLive ? (
+                  <LiveStatusChip minuteLabel={minuteLabel} animate />
+                ) : null}
+              </>
+            }
           />
-          <div className="flex items-center gap-2">
-            {showAiUpdated ? (
-              <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                AI updated {formatRelativeTime(fixture.aiUpdatedAt!)}
-              </span>
-            ) : null}
-            {isLive ? (
-              <LiveStatusChip minuteLabel={minuteLabel} animate />
-            ) : null}
-          </div>
         </div>
       ) : null}
 
@@ -66,7 +73,11 @@ export function MatchRow({
         href={`/matches/${fixture.externalId}`}
         className="hover:bg-muted/40 focus-visible:ring-ring/50 block rounded-xl px-3 py-3 transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
       >
-        <MatchFixtureScoreboard fixture={fixture} linkTeams={false} />
+        <MatchFixtureScoreboard
+          fixture={fixture}
+          {...rowScoreboardPreset}
+          todayDateKey={todayDateKey}
+        />
       </Link>
     </div>
   );

@@ -4,7 +4,7 @@
 > **Timeline:** 8 weeks to MVP launch.
 > **Team:** Solo developer (with AI pair-programming).
 > **Version:** 1.0
-> **Last updated:** 2026-08-26
+> **Last updated:** 2026-09-13
 
 ---
 
@@ -25,6 +25,7 @@
 13. [Risk register](#13-risk-register)
 14. [Weekly time budget](#14-weekly-time-budget)
 15. [Cross-cutting deliverables (parallel to phases)](#15-cross-cutting-deliverables-parallel-to-phases)
+16. [Phase 8 — Product experience & launch readiness](#16-phase-8--product-experience--launch-readiness-post-phase-5)
 
 ---
 
@@ -52,6 +53,7 @@ Week 5  Phase 4  Prediction engine + AI pre-match insight (structured, cached)
 Week 6  Phase 5  Live engine (polling loop, Realtime broadcast, live AI refresh)
 Week 7  Phase 6  Premium subscription, entitlement gating, notifications, sound
 Week 8  Phase 7  Polish, legal, PostHog dashboards, soft launch, public launch
+Post-5  Phase 8  Product experience, data ops, PRD visual parity, launch gate (see §16)
 ```
 
 Each phase has:
@@ -827,3 +829,117 @@ Some items span multiple phases; keep them visible.
 - **Cost dashboard.** A Notion or Sheet with daily spend on Supabase, API-Football, OpenAI, LemonSqueezy, Vercel, Upstash, Resend, PostHog, Sentry.
 - **Founder log.** Public build-in-public log (weekly, optional) — helps with marketing and self-accountability.
 - **Cursor rules.** Update `AGENTS.md` and `.cursor/rules/`* any time a new pattern emerges (services, cache keys, RLS conventions).
+- **Phase 8 track.** After Phase 5 code, use [§16](#16-phase-8--product-experience--launch-readiness-post-phase-5) as the source of truth for “PRD-ready SaaS” (not Phase 3 checkboxes alone). Golden path: [MATCH-DATA-OPS.md](./MATCH-DATA-OPS.md).
+
+---
+
+## 16. Phase 8 — Product experience & launch readiness (post-Phase 5)
+
+> **Why this phase exists:** Phases 0–5 can be "code complete" while Match Details still shows empty cards in dev/prod. Phase 8 closes the gap between **engineering DoD** (smoke + bootstrapped IDs) and **PRD §6 + §14 product DoD** (allowlist matches feel like a premium SaaS). Work **16.1** before UI polish.
+>
+> **PRD anchors:** §6.4 Match Details hierarchy, §6.2 Dashboard, §6.3 Live/Fixtures, §14 Design system, §5 MVP scope (billing, notifications, Predictions Center).
+>
+> **Relationship to UI-B1 … UI-P4:** Those slices are inputs to Phase 8; they **do not** satisfy Phase 8 overall DoD.
+
+### Goal
+
+A founder can open **typical allowlist fixtures** (FT, live, or NS near kickoff) and see **real stats, timeline, lineups when the provider has them**, AI hero where entitled, and **consistent premium dark UI** across Dashboard → Match → Team → Player — without explaining manual bootstrap every demo.
+
+### 16.1 — Match data pipeline (blocking)
+
+**Owner:** Agent + founder (Pro key when noted). **Without this, Match UI will look broken.**
+
+- [x] **P8-DATA-1** — Dev golden path documented in [MATCH-DATA-OPS.md](./MATCH-DATA-OPS.md) (extends [scripts/INGESTION.md](./scripts/INGESTION.md) + [ING-3-pro-cutover.md](./ING-3-pro-cutover.md)).
+- [x] **P8-DATA-2** — One command: `npm.cmd run match:qa-sync` (alias of `ingest:dev-qa`) — sync + bootstrap + print QA URLs.
+- [x] **P8-DATA-3** — Verify: `npm.cmd run match:verify` (`diagnose:ingestion --strict`) and `npm.cmd run match:verify -- --fixture-id=<id>`.
+- [ ] **P8-DATA-4** — Founder run: `match:qa-sync` on dev Supabase; `match:verify` green for pinned FT fixtures.
+- [ ] **P8-DATA-5** — API-Football **Pro** key in `.env.local` + Vercel Production (see [ING-3-pro-cutover.md](./ING-3-pro-cutover.md)).
+- [ ] **P8-DATA-6** — `sync:standings` succeeds for current season; team/league standings tabs non-empty for ≥1 allowlist league.
+- [ ] **P8-DATA-7** — `API_FOOTBALL_LINEUPS_SYNC_ENABLED=true` in dev; `sync-lineups` ingests lineups for fixture ≤90 min pre-kickoff (real upcoming match).
+- [ ] **P8-DATA-8** — Production crons + `API_FOOTBALL_INGEST_ONLY=false` on Production (Vercel + GitHub schedule per ING-3).
+- [ ] **P8-DATA-9** — Historical depth: `backfill:historical-fixtures` (or extended bootstrap) so Form/H2H are not empty for top teams.
+- [ ] **P8-DATA-10** — Live: two-tab manual DoD from [LIVE_POLLING.md](./LIVE_POLLING.md).
+
+**Definition of Done (16.1):**
+
+- [ ] Incognito: pinned FT URLs show **non-empty** Timeline + Live stats + Lineups tab (when provider had data).
+- [ ] Pinned NS URL shows **correct** empty/partial states + Form/H2H when history exists.
+- [ ] No match section shows generic empty without **actionable copy** (sync/kickoff-relative lineup message).
+
+### 16.2 — Flagship Match Details (PRD §6.4)
+
+**Owner:** Agent. **Depends on 16.1 for verification.**
+
+- [ ] **P8-MATCH-1** — Information hierarchy audit vs PRD §6.4 (Header → AI Hero → Stats → Momentum → Form/H2H → Timeline → Lineups → Follow).
+- [ ] **P8-MATCH-2** — AI Hero ~25–30% desktop; JetBrains Mono probabilities; confidence + data quality + "AI updated Xs ago".
+- [ ] **P8-MATCH-3** — Guest: AI locked only; stats/timeline/lineups visible.
+- [ ] **P8-MATCH-4** — Timeline: icons, order, live append; provider-aware empty states.
+- [ ] **P8-MATCH-5** — Lineups: confirmed/predicted, pitch SVG, player profile links.
+- [ ] **P8-MATCH-6** — Form/H2H: last 10 default, same-competition toggle; visible without hunting tabs.
+- [ ] **P8-MATCH-7** — Favorite match + Follow team/player on match page (Phase 6 wiring).
+- [ ] **P8-MATCH-8** — Pre-match AI: 24h + 60 min regen documented/enforced (`warm-ai-prematch` + lineups).
+- [ ] **P8-MATCH-9** — Manual walkthrough on **daily fixture**, not only pinned IDs.
+
+### 16.3 — Design system & PRD §14 (premium SaaS look)
+
+**Owner:** Agent. **After 16.1 smoke passes.**
+
+- [ ] **P8-UI-1** — Token audit vs PRD §14.2 (`globals.css`, cards).
+- [ ] **P8-UI-2** — Typography: Inter / JetBrains Mono / Space Grotesk (§14.3).
+- [ ] **P8-UI-3** — MatchRow ↔ Match ↔ Dashboard parity (§14.4).
+- [ ] **P8-UI-4** — AI cards + global disclaimer (§5, §14.1).
+- [ ] **P8-UI-5** — Motion + `prefers-reduced-motion` (§14.7).
+- [ ] **P8-UI-6** — Mobile §14.6 on match, team, player.
+- [ ] **P8-UI-7** — Lighthouse match ≥80 mobile on Vercel preview (§15.1).
+- [ ] **P8-UI-8** — `axe` — no critical a11y on match, dashboard, landing.
+
+### 16.4 — Core surfaces (PRD §6.2–6.3, §6.5–6.7)
+
+**Owner:** Agent.
+
+- [ ] **P8-SURF-1** — Dashboard §6.2 (featured, follows, Predictions Center link).
+- [ ] **P8-SURF-2** — Live Center §6.3 (filters, URL state, pagination, AI updated marker).
+- [ ] **P8-SURF-3** — Fixtures §6.3.1 verified on prod-like data.
+- [ ] **P8-SURF-4** — Team profile §6.5 tabs.
+- [ ] **P8-SURF-5** — Player profile §6.6.
+- [ ] **P8-SURF-6** — League page §6.7.
+- [ ] **P8-SURF-7** — Predictions Center §6.8 (Top 10 picks).
+
+### 16.5 — SaaS accounts, billing, entitlements (PRD §5, Phase 6)
+
+**Owner:** Agent + founder (LemonSqueezy).
+
+- [ ] **P8-BILL-1** — `/pricing` €2.99/mo + trial copy.
+- [ ] **P8-BILL-2** — Checkout + LemonSqueezy webhook + entitlements.
+- [ ] **P8-BILL-3** — Free AI cap + premium unlimited (server-enforced).
+- [ ] **P8-BILL-4** — Profile + preferences (timezone, league, notification/sound).
+- [ ] **P8-BILL-5** — Notification bell + MVP triggers (§13.1).
+- [ ] **P8-BILL-6** — Sound assets + toggles; default off (§13.2).
+- [ ] **P8-BILL-7** — E2E: signup → trial → webhook → unlimited AI on match.
+
+### 16.6 — Launch gate
+
+**Owner:** Founder + Agent (reuses Phase 7 where open).
+
+- [ ] **P8-LAUNCH-1** — Landing with real Phase 8 screenshots (§6.1).
+- [ ] **P8-LAUNCH-2** — Legal, cookie, PostHog funnels (Phase 7).
+- [ ] **P8-LAUNCH-3** — Soft launch 10–20 users; 48h critical fixes.
+- [ ] **P8-LAUNCH-4** — Public launch checklist (Phase 7).
+
+### Phase 8 — Overall Definition of Done
+
+Phase 8 is **not** complete until **all** are true:
+
+1. **16.1** passed on preview/production, not only local bootstrap.
+2. Match page matches **PRD §6.4** hierarchy and **§14** on desktop + mobile.
+3. **P8-BILL-7** trial E2E works.
+4. **Predictions Center** live.
+5. Founder **15 min demo recording**: Dashboard → Live → FT match (full cards) → NS match (honest states) → AI → pricing — **without** "run a script first."
+
+### Suggested work order (one task per session)
+
+1. P8-DATA-4 → P8-DATA-5 → P8-DATA-7 → P8-DATA-8
+2. P8-MATCH-1 … P8-MATCH-6
+3. P8-UI-1 → P8-UI-3 → P8-UI-7
+4. P8-SURF-7 + P8-BILL-*
+5. P8-LAUNCH-*

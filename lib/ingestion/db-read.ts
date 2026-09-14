@@ -1,5 +1,6 @@
 import { getIngestionConfig } from "@/lib/ingestion/config";
 import { buildPlayerContributionBadges } from "@/lib/players/badges";
+import { ageFromDateOfBirth } from "@/lib/players/display";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   Fixture,
@@ -14,6 +15,7 @@ import type {
   PlayerMatchAppearance,
   PlayerPosition,
   Season,
+  SquadPlayer,
   StandingsGroup,
   Team,
   TeamRef,
@@ -491,6 +493,69 @@ export async function readTeamIdByProviderIdFromDb(
   }
 
   return data?.id ?? null;
+}
+
+export async function readTeamSquadFromDb(
+  teamProviderId: number
+): Promise<SquadPlayer[]> {
+  const teamId = await readTeamIdByProviderIdFromDb(teamProviderId);
+  if (!teamId) {
+    return [];
+  }
+
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("player_team_history")
+    .select(
+      `
+      shirt_number,
+      player:players (
+        provider_id,
+        full_name,
+        date_of_birth,
+        position,
+        photo_url
+      )
+    `
+    )
+    .eq("team_id", teamId)
+    .is("left_on", null);
+
+  if (error) {
+    throw new Error(
+      `Failed to read squad for team ${teamProviderId}: ${error.message}`
+    );
+  }
+
+  const squad: SquadPlayer[] = [];
+
+  for (const row of data ?? []) {
+    const playerRow = Array.isArray(row.player) ? row.player[0] : row.player;
+    if (!playerRow?.provider_id || !playerRow.full_name?.trim()) {
+      continue;
+    }
+
+    squad.push({
+      externalId: playerRow.provider_id,
+      name: playerRow.full_name.trim(),
+      age: ageFromDateOfBirth(playerRow.date_of_birth),
+      shirtNumber: row.shirt_number,
+      position: mapPlayerPosition(playerRow.position),
+      photoUrl: playerRow.photo_url,
+    });
+  }
+
+  squad.sort((left, right) => {
+    const leftNum = left.shirtNumber ?? 999;
+    const rightNum = right.shirtNumber ?? 999;
+    if (leftNum !== rightNum) {
+      return leftNum - rightNum;
+    }
+
+    return left.name.localeCompare(right.name);
+  });
+
+  return squad;
 }
 
 function mapPlayerFoot(value: string | null): PlayerFoot {

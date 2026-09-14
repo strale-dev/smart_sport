@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { AIHeroSection } from "@/components/ai/AIHeroSection";
 import { AIInsightProvider } from "@/components/ai/AIInsightProvider";
+import { MatchAIHeroSection } from "@/components/match/MatchAIHeroSection";
 import { MatchDetailsTabsSection } from "@/components/match/MatchDetailsTabsSection";
 import { MatchLiveSession } from "@/components/match/MatchLiveSession";
 import { MatchHeader } from "@/components/match/MatchHeader";
@@ -82,17 +82,17 @@ export default async function MatchPage({ params }: MatchPageProps) {
   }
 
   return (
-    <AIInsightProvider
-      key={`${fixture.externalId}-${fixture.status}-${isGuest ? "guest" : "user"}`}
-      fixtureId={fixture.externalId}
-      fixtureStatus={fixture.status}
-      isGuest={isGuest}
-    >
-      <MatchLiveSession fixture={fixture} initialSnapshot={initialLiveSnapshot}>
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-          <MatchHeader fixture={fixture} />
+    <MatchLiveSession fixture={fixture} initialSnapshot={initialLiveSnapshot}>
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+        <MatchHeader fixture={fixture} />
 
-          <AIHeroSection
+        <AIInsightProvider
+          key={`${fixture.externalId}-${fixture.status}-${isGuest ? "guest" : "user"}`}
+          fixtureId={fixture.externalId}
+          fixtureStatus={fixture.status}
+          isGuest={isGuest}
+        >
+          <MatchAIHeroSection
             homeTeam={fixture.homeTeam}
             awayTeam={fixture.awayTeam}
             returnTo={returnTo}
@@ -126,10 +126,10 @@ export default async function MatchPage({ params }: MatchPageProps) {
               </Suspense>
             }
           />
+        </AIInsightProvider>
 
-          <MatchViewAnalytics fixture={fixture} isGuest={isGuest} />
-        </div>
-      </MatchLiveSession>
-    </AIInsightProvider>
+        <MatchViewAnalytics fixture={fixture} isGuest={isGuest} />
+      </div>
+    </MatchLiveSession>
   );
 }

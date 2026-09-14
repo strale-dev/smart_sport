@@ -18,6 +18,10 @@ import { Wordmark } from "@/components/brand/Wordmark";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { LiveStatusChip } from "@/components/match/LiveStatusChip";
+import { MatchHeader } from "@/components/match/MatchHeader";
+import { MatchLiveSession } from "@/components/match/MatchLiveSession";
+import { MatchRow } from "@/components/match/MatchRow";
+import { makeMatchTestFixture } from "@/components/match/match-test-fixtures";
 import { StaleBadge } from "@/components/common/StaleBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -278,6 +282,20 @@ export function DesignSystemPlayground() {
                 Hero uses clamp(12rem, 28vh, 22rem) min-height.
               </MatchCardContent>
             </AIHeroShell>
+          </div>
+        </Section>
+
+        <Separator />
+
+        <Section
+          title="Match row alignment (UI-P4)"
+          description="List row and match header share MatchMetaBar + scoreboard presets."
+        >
+          <div className="mx-auto grid w-full max-w-3xl gap-4">
+            <MatchRow fixture={makeMatchTestFixture("LIVE")} />
+            <MatchLiveSession fixture={makeMatchTestFixture("LIVE")}>
+              <MatchHeader fixture={makeMatchTestFixture("LIVE")} />
+            </MatchLiveSession>
           </div>
         </Section>
 

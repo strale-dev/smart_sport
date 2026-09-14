@@ -34,7 +34,7 @@ export default async function FixturesPage({
           Fixtures
         </h1>
         <p className="text-muted-foreground text-sm">
-          Upcoming matches across your leagues for the next 7 days.
+          Past week and next 7 days across your synced leagues.
         </p>
       </header>
 

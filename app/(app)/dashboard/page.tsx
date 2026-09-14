@@ -7,13 +7,19 @@ import { FeaturedMatchHero } from "@/components/dashboard/FeaturedMatchHero";
 import { FollowedSection } from "@/components/dashboard/FollowedSection";
 import { DashboardLiveSection } from "@/components/dashboard/DashboardLiveSection";
 import { MatchRow } from "@/components/match/MatchRow";
+import { formatDateKeyInTimezone } from "@/lib/datetime/timezone";
+import { resolveViewerTimezone } from "@/lib/datetime/viewer-timezone.server";
 import { getDashboardData } from "@/lib/services/dashboardService";
+import { getCurrentUser } from "@/lib/supabase/user";
 
 export const metadata: Metadata = {
   title: "Dashboard",
 };
 
 export default async function DashboardPage() {
+  const user = await getCurrentUser();
+  const timeZone = await resolveViewerTimezone(user?.id ?? null);
+  const todayDateKey = formatDateKeyInTimezone(new Date(), timeZone);
   const data = await getDashboardData();
 
   return (
@@ -25,17 +31,23 @@ export default async function DashboardPage() {
       <DashboardLiveSection initialLive={data.live} />
 
       <DashboardSection
-        title={data.isTodayFallback ? "Nearby matches" : "Important today"}
+        title={
+          data.isTodayFallback ? "Next synced fixtures" : "Important today"
+        }
         description={
           data.isTodayFallback
-            ? "No matches today. Showing the most recent synced fixtures nearby."
+            ? "No matches today. Showing the next allowlisted fixtures in your sync window."
             : undefined
         }
       >
         {data.todayImportant.length > 0 ? (
           <div className="space-y-2">
             {data.todayImportant.map((fixture) => (
-              <MatchRow key={fixture.externalId} fixture={fixture} />
+              <MatchRow
+                key={fixture.externalId}
+                fixture={fixture}
+                todayDateKey={todayDateKey}
+              />
             ))}
           </div>
         ) : (
@@ -43,11 +55,25 @@ export default async function DashboardPage() {
         )}
       </DashboardSection>
 
+      {data.recentResults.length > 0 ? (
+        <DashboardSection title="Recent results">
+          <div className="space-y-2">
+            {data.recentResults.map((fixture) => (
+              <MatchRow key={fixture.externalId} fixture={fixture} />
+            ))}
+          </div>
+        </DashboardSection>
+      ) : null}
+
       <DashboardSection title="Upcoming high-interest">
         {data.upcoming.length > 0 ? (
           <div className="space-y-2">
             {data.upcoming.map((fixture) => (
-              <MatchRow key={fixture.externalId} fixture={fixture} />
+              <MatchRow
+                key={fixture.externalId}
+                fixture={fixture}
+                todayDateKey={todayDateKey}
+              />
             ))}
           </div>
         ) : (

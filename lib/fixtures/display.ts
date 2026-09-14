@@ -1,4 +1,7 @@
-import { sanitizeTimezone } from "@/lib/datetime/timezone";
+import {
+  formatDateKeyInTimezone,
+  sanitizeTimezone,
+} from "@/lib/datetime/timezone";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import type { Fixture, FixtureStatus } from "@/types/domain";
 
@@ -40,17 +43,69 @@ export function formatFixtureKickoffDateTime(
   }).format(new Date(kickoffAt));
 }
 
-export function formatFixtureScore(fixture: Fixture, timeZone: string): string {
+function fixtureHasRecordedScore(fixture: Fixture): boolean {
+  const { home, away, fulltimeHome, fulltimeAway } = fixture.score;
+  if (home != null && away != null) {
+    return true;
+  }
+  return fulltimeHome != null && fulltimeAway != null;
+}
+
+/** Whether list/hero scoreboards should show goals instead of kickoff time. */
+export function shouldShowFixtureScore(fixture: Fixture): boolean {
   if (
     isLiveFixtureStatus(fixture.status) ||
     isFinishedFixtureStatus(fixture.status)
   ) {
-    const home = fixture.score.home ?? "–";
-    const away = fixture.score.away ?? "–";
-    return `${home} – ${away}`;
+    return true;
+  }
+
+  return fixtureHasRecordedScore(fixture);
+}
+
+function formatFixtureScoreText(fixture: Fixture): string {
+  const home = fixture.score.home ?? fixture.score.fulltimeHome ?? "–";
+  const away = fixture.score.away ?? fixture.score.fulltimeAway ?? "–";
+  return `${home} – ${away}`;
+}
+
+export function formatFixtureScore(fixture: Fixture, timeZone: string): string {
+  if (shouldShowFixtureScore(fixture)) {
+    return formatFixtureScoreText(fixture);
   }
 
   return formatFixtureKickoffTime(fixture.kickoffAt, timeZone);
+}
+
+/** Center label for list rows: score when live/finished; date+time for future days. */
+export function formatFixtureScheduledCenterLabel(
+  fixture: Fixture,
+  timeZone: string,
+  todayDateKey: string
+): string {
+  if (shouldShowFixtureScore(fixture)) {
+    return formatFixtureScoreText(fixture);
+  }
+
+  const kickoffDay = formatDateKeyInTimezone(fixture.kickoffAt, timeZone);
+  if (kickoffDay === todayDateKey) {
+    return formatFixtureKickoffTime(fixture.kickoffAt, timeZone);
+  }
+
+  return formatFixtureKickoffDateTime(fixture.kickoffAt, timeZone);
+}
+
+/** Row center text; uses scheduled label when todayDateKey is provided. */
+export function formatFixtureRowCenterLabel(
+  fixture: Fixture,
+  timeZone: string,
+  todayDateKey?: string
+): string {
+  if (todayDateKey) {
+    return formatFixtureScheduledCenterLabel(fixture, timeZone, todayDateKey);
+  }
+
+  return formatFixtureScore(fixture, timeZone);
 }
 
 export function formatFixtureStatusLabel(

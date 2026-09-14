@@ -174,11 +174,28 @@ export function groupFixturesByDayAndLeague(
   });
 }
 
-export function groupFixturesByDayAndLeagueInTimezone(
+function resolveUpcomingDayKey(
+  fixture: Fixture,
+  todayDateKey: string,
+  timeZone: string
+): string {
+  const kickoffDay = formatDateKeyInTimezone(fixture.kickoffAt, timeZone);
+  if (isLiveFixtureStatus(fixture.status) && kickoffDay < todayDateKey) {
+    return todayDateKey;
+  }
+
+  return kickoffDay;
+}
+
+function buildSortedDayGroupsInTimezone(
   fixtures: Fixture[],
-  now: Date,
-  timeZone: string,
-  leagueFilter?: number
+  options: {
+    now: Date;
+    timeZone: string;
+    leagueFilter?: number;
+    resolveDayKey: (fixture: Fixture) => string;
+    daySort: "asc" | "desc";
+  }
 ): FixturesDayGroup[] {
   const sorted = [...fixtures].sort(
     (left, right) =>
@@ -188,16 +205,26 @@ export function groupFixturesByDayAndLeagueInTimezone(
   const byDay = new Map<string, Fixture[]>();
 
   for (const fixture of sorted) {
-    const dayKey = formatDateKeyInTimezone(fixture.kickoffAt, timeZone);
+    const dayKey = options.resolveDayKey(fixture);
     const list = byDay.get(dayKey) ?? [];
     list.push(fixture);
     byDay.set(dayKey, list);
   }
 
-  return Array.from(byDay.entries()).map(([dateKey, dayFixtures]) => {
-    const label = formatDayLabelInTimezone(dateKey, now, timeZone);
+  const entries = Array.from(byDay.entries()).sort(([leftKey], [rightKey]) =>
+    options.daySort === "asc"
+      ? leftKey.localeCompare(rightKey)
+      : rightKey.localeCompare(leftKey)
+  );
 
-    if (leagueFilter != null) {
+  return entries.map(([dateKey, dayFixtures]) => {
+    const label = formatDayLabelInTimezone(
+      dateKey,
+      options.now,
+      options.timeZone
+    );
+
+    if (options.leagueFilter != null) {
       return { dateKey, label, fixtures: dayFixtures };
     }
 
@@ -207,4 +234,120 @@ export function groupFixturesByDayAndLeagueInTimezone(
       leagues: groupFixturesByLeague(dayFixtures),
     };
   });
+}
+
+export function partitionFixturesByTodayWindow(
+  fixtures: Fixture[],
+  todayDateKey: string,
+  timeZone: string
+): { upcomingFixtures: Fixture[]; pastFixtures: Fixture[] } {
+  const upcomingFixtures: Fixture[] = [];
+  const pastFixtures: Fixture[] = [];
+
+  for (const fixture of fixtures) {
+    if (isLiveFixtureStatus(fixture.status)) {
+      upcomingFixtures.push(fixture);
+      continue;
+    }
+
+    const kickoffDay = formatDateKeyInTimezone(fixture.kickoffAt, timeZone);
+    if (kickoffDay >= todayDateKey) {
+      upcomingFixtures.push(fixture);
+    } else {
+      pastFixtures.push(fixture);
+    }
+  }
+
+  return { upcomingFixtures, pastFixtures };
+}
+
+export function buildUpcomingAndPastDayGroups(
+  fixtures: Fixture[],
+  now: Date,
+  timeZone: string,
+  todayDateKey: string,
+  leagueFilter?: number
+): {
+  upcomingDayGroups: FixturesDayGroup[];
+  pastDayGroups: FixturesDayGroup[];
+} {
+  const { upcomingFixtures, pastFixtures } = partitionFixturesByTodayWindow(
+    fixtures,
+    todayDateKey,
+    timeZone
+  );
+
+  const upcomingDayGroups = buildSortedDayGroupsInTimezone(upcomingFixtures, {
+    now,
+    timeZone,
+    leagueFilter,
+    daySort: "asc",
+    resolveDayKey: (fixture) =>
+      resolveUpcomingDayKey(fixture, todayDateKey, timeZone),
+  });
+
+  const pastDayGroups = buildSortedDayGroupsInTimezone(pastFixtures, {
+    now,
+    timeZone,
+    leagueFilter,
+    daySort: "desc",
+    resolveDayKey: (fixture) =>
+      formatDateKeyInTimezone(fixture.kickoffAt, timeZone),
+  });
+
+  return { upcomingDayGroups, pastDayGroups };
+}
+
+/** @deprecated Use buildUpcomingAndPastDayGroups for fixtures page split. */
+export function splitFixturesDayGroupsByToday(
+  groups: FixturesDayGroup[],
+  todayDateKey: string
+): {
+  upcomingDayGroups: FixturesDayGroup[];
+  pastDayGroups: FixturesDayGroup[];
+} {
+  const upcomingDayGroups = groups
+    .filter((group) => group.dateKey >= todayDateKey)
+    .sort((left, right) => left.dateKey.localeCompare(right.dateKey));
+
+  const pastDayGroups = groups
+    .filter((group) => group.dateKey < todayDateKey)
+    .sort((left, right) => right.dateKey.localeCompare(left.dateKey));
+
+  return { upcomingDayGroups, pastDayGroups };
+}
+
+export function groupFixturesByDayAndLeagueInTimezone(
+  fixtures: Fixture[],
+  now: Date,
+  timeZone: string,
+  leagueFilter?: number
+): FixturesDayGroup[] {
+  return buildSortedDayGroupsInTimezone(fixtures, {
+    now,
+    timeZone,
+    leagueFilter,
+    daySort: "asc",
+    resolveDayKey: (fixture) =>
+      formatDateKeyInTimezone(fixture.kickoffAt, timeZone),
+  });
+}
+
+export function collectUpcomingFixturesFromDayGroups(
+  groups: FixturesDayGroup[]
+): Fixture[] {
+  const fixtures: Fixture[] = [];
+
+  for (const group of groups) {
+    if (group.fixtures) {
+      fixtures.push(...group.fixtures);
+      continue;
+    }
+
+    for (const league of group.leagues ?? []) {
+      fixtures.push(...league.fixtures);
+    }
+  }
+
+  return fixtures;
 }
