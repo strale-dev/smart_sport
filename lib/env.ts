@@ -28,6 +28,36 @@ export const serverEnvSchema = publicEnvSchema.extend({
     .int()
     .positive()
     .optional(),
+  FREE_TIER_AI_DEEP_ANALYSES_PER_DAY: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional(),
+  FREE_TIER_AI_GENERATIONS_PER_DAY: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional(),
+  FREE_TIER_LIVE_AI_MATCHES_PER_DAY: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional(),
+  FREE_TIER_LIVE_AI_MIN_INTERVAL_SEC: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional(),
+  FREE_TIER_LIVE_MATCHES_SIMULTANEOUS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional(),
+  PREMIUM_AI_SOFT_CAP_PER_DAY: z.coerce.number().int().positive().optional(),
+  LEMONSQUEEZY_API_KEY: z.string().min(1).optional(),
+  LEMONSQUEEZY_STORE_ID: z.string().min(1).optional(),
+  LEMONSQUEEZY_WEBHOOK_SECRET: z.string().min(1).optional(),
+  LEMONSQUEEZY_VARIANT_ID_PREMIUM_299: z.string().min(1).optional(),
   AI_PREMATCH_CACHE_TTL_SEC: z.coerce.number().int().positive().optional(),
   AI_PROMPT_VERSION: z.string().min(1).optional(),
   RESEND_API_KEY: z.string().min(1),
@@ -88,6 +118,32 @@ function readServerEnvSource(
     OPENAI_MODEL_DEFAULT: emptyToUndefined(source.OPENAI_MODEL_DEFAULT),
     FREE_TIER_AI_PREDICTIONS_PER_DAY: emptyToUndefined(
       source.FREE_TIER_AI_PREDICTIONS_PER_DAY
+    ),
+    FREE_TIER_AI_DEEP_ANALYSES_PER_DAY: emptyToUndefined(
+      source.FREE_TIER_AI_DEEP_ANALYSES_PER_DAY
+    ),
+    FREE_TIER_AI_GENERATIONS_PER_DAY: emptyToUndefined(
+      source.FREE_TIER_AI_GENERATIONS_PER_DAY
+    ),
+    FREE_TIER_LIVE_AI_MATCHES_PER_DAY: emptyToUndefined(
+      source.FREE_TIER_LIVE_AI_MATCHES_PER_DAY
+    ),
+    FREE_TIER_LIVE_AI_MIN_INTERVAL_SEC: emptyToUndefined(
+      source.FREE_TIER_LIVE_AI_MIN_INTERVAL_SEC
+    ),
+    FREE_TIER_LIVE_MATCHES_SIMULTANEOUS: emptyToUndefined(
+      source.FREE_TIER_LIVE_MATCHES_SIMULTANEOUS
+    ),
+    PREMIUM_AI_SOFT_CAP_PER_DAY: emptyToUndefined(
+      source.PREMIUM_AI_SOFT_CAP_PER_DAY
+    ),
+    LEMONSQUEEZY_API_KEY: emptyToUndefined(source.LEMONSQUEEZY_API_KEY),
+    LEMONSQUEEZY_STORE_ID: emptyToUndefined(source.LEMONSQUEEZY_STORE_ID),
+    LEMONSQUEEZY_WEBHOOK_SECRET: emptyToUndefined(
+      source.LEMONSQUEEZY_WEBHOOK_SECRET
+    ),
+    LEMONSQUEEZY_VARIANT_ID_PREMIUM_299: emptyToUndefined(
+      source.LEMONSQUEEZY_VARIANT_ID_PREMIUM_299
     ),
     AI_PREMATCH_CACHE_TTL_SEC: emptyToUndefined(
       source.AI_PREMATCH_CACHE_TTL_SEC
@@ -206,16 +262,109 @@ export function getOpenAiModelDefault(
   return emptyToUndefined(source.OPENAI_MODEL_DEFAULT) ?? "gpt-4o-mini";
 }
 
-export function getFreeTierAiPredictionsPerDay(
-  source: Record<string, string | undefined> = process.env
+function parsePositiveIntEnv(
+  raw: string | undefined,
+  fallback: number
 ): number {
-  const raw = emptyToUndefined(source.FREE_TIER_AI_PREDICTIONS_PER_DAY);
   if (!raw) {
-    return 5;
+    return fallback;
   }
 
   const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export function getFreeTierAiPredictionsPerDay(
+  source: Record<string, string | undefined> = process.env
+): number {
+  return parsePositiveIntEnv(
+    emptyToUndefined(source.FREE_TIER_AI_PREDICTIONS_PER_DAY),
+    5
+  );
+}
+
+export function getFreeTierAiDeepAnalysesPerDay(
+  source: Record<string, string | undefined> = process.env
+): number {
+  return parsePositiveIntEnv(
+    emptyToUndefined(source.FREE_TIER_AI_DEEP_ANALYSES_PER_DAY),
+    3
+  );
+}
+
+export function getFreeTierAiGenerationsPerDay(
+  source: Record<string, string | undefined> = process.env
+): number {
+  return parsePositiveIntEnv(
+    emptyToUndefined(source.FREE_TIER_AI_GENERATIONS_PER_DAY),
+    10
+  );
+}
+
+export function getFreeTierLiveAiMatchesPerDay(
+  source: Record<string, string | undefined> = process.env
+): number {
+  return parsePositiveIntEnv(
+    emptyToUndefined(source.FREE_TIER_LIVE_AI_MATCHES_PER_DAY),
+    3
+  );
+}
+
+export function getFreeTierLiveAiMinIntervalSec(
+  source: Record<string, string | undefined> = process.env
+): number {
+  return parsePositiveIntEnv(
+    emptyToUndefined(source.FREE_TIER_LIVE_AI_MIN_INTERVAL_SEC),
+    60
+  );
+}
+
+export function getFreeTierLiveMatchesSimultaneous(
+  source: Record<string, string | undefined> = process.env
+): number {
+  return parsePositiveIntEnv(
+    emptyToUndefined(source.FREE_TIER_LIVE_MATCHES_SIMULTANEOUS),
+    2
+  );
+}
+
+export function getPremiumAiSoftCapPerDay(
+  source: Record<string, string | undefined> = process.env
+): number | null {
+  const raw = emptyToUndefined(source.PREMIUM_AI_SOFT_CAP_PER_DAY);
+  if (!raw) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function hasLemonSqueezyConfig(
+  source: Record<string, string | undefined> = process.env
+): boolean {
+  return Boolean(
+    emptyToUndefined(source.LEMONSQUEEZY_API_KEY) &&
+    emptyToUndefined(source.LEMONSQUEEZY_STORE_ID) &&
+    emptyToUndefined(source.LEMONSQUEEZY_VARIANT_ID_PREMIUM_299)
+  );
+}
+
+export function getLemonSqueezyWebhookSecret(
+  source: Record<string, string | undefined> = process.env
+): string | undefined {
+  return emptyToUndefined(source.LEMONSQUEEZY_WEBHOOK_SECRET);
+}
+
+export function assertLemonSqueezyConfiguredInProduction(
+  source: Record<string, string | undefined> = process.env
+): void {
+  const { NEXT_PUBLIC_APP_ENV } = parsePublicEnv(source);
+  if (NEXT_PUBLIC_APP_ENV === "production" && !hasLemonSqueezyConfig(source)) {
+    throw new Error(
+      "LemonSqueezy billing env vars are required in production."
+    );
+  }
 }
 
 export function getAiPrematchCacheTtlSec(

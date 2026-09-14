@@ -14,6 +14,7 @@ type MarketingHeaderProps = {
 
 const marketingLinks = [
   { label: "Features", href: "/#features" },
+  { label: "Pricing", href: "/pricing" },
   { label: "Waitlist", href: "/#waitlist" },
 ] as const;
 

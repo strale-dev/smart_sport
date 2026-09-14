@@ -8,9 +8,24 @@ import {
   recordAiGeneration,
 } from "@/lib/ai/usage-gate";
 
-vi.mock("@/lib/ai/db", () => ({
-  readAiUsage: vi.fn(),
-  incrementAiUsage: vi.fn(),
+vi.mock("@/lib/entitlements/entitlementService", () => ({
+  AiLimitReachedError: class AiLimitReachedError extends Error {
+    readonly code = "AI_LIMIT_REACHED" as const;
+    readonly limit: number;
+    readonly used: number;
+    readonly kind: string;
+
+    constructor(kind: string, limit: number, used: number) {
+      super("Daily AI limit reached");
+      this.name = "AiLimitReachedError";
+      this.kind = kind;
+      this.limit = limit;
+      this.used = used;
+    }
+  },
+  assertCanGenerateAI: vi.fn(),
+  getAiUsageSummary: vi.fn(),
+  recordAIUsage: vi.fn(),
 }));
 
 vi.mock("@/lib/ratelimit/ai", () => ({
@@ -27,14 +42,6 @@ vi.mock("@/lib/ratelimit/ai", () => ({
   isAiRateLimitAvailable: vi.fn(),
 }));
 
-vi.mock("@/lib/env", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/env")>();
-  return {
-    ...actual,
-    getFreeTierAiPredictionsPerDay: () => 5,
-  };
-});
-
 const mockEnv = vi.hoisted(() => ({
   NEXT_PUBLIC_APP_ENV: "development" as "development" | "production",
 }));
@@ -43,7 +50,11 @@ vi.mock("@/lib/env.server", () => ({
   env: mockEnv,
 }));
 
-import { readAiUsage, incrementAiUsage } from "@/lib/ai/db";
+import {
+  assertCanGenerateAI,
+  getAiUsageSummary,
+  recordAIUsage,
+} from "@/lib/entitlements/entitlementService";
 import {
   consumeAiGeneration,
   getAiRateLimitStatus,
@@ -53,11 +64,13 @@ import {
 describe("usage gate", () => {
   beforeEach(() => {
     mockEnv.NEXT_PUBLIC_APP_ENV = "development";
-    vi.mocked(readAiUsage).mockReset();
-    vi.mocked(incrementAiUsage).mockReset();
+    vi.mocked(assertCanGenerateAI).mockReset();
+    vi.mocked(getAiUsageSummary).mockReset();
+    vi.mocked(recordAIUsage).mockReset();
     vi.mocked(getAiRateLimitStatus).mockReset();
     vi.mocked(consumeAiGeneration).mockReset();
     vi.mocked(isAiRateLimitAvailable).mockReset();
+    vi.mocked(assertCanGenerateAI).mockResolvedValue(undefined);
   });
 
   it("allows generation below the daily cap via redis", async () => {
@@ -71,7 +84,7 @@ describe("usage gate", () => {
     await expect(assertCanGenerateAi("user-1")).resolves.toBeUndefined();
   });
 
-  it("blocks the sixth generation when redis remaining is zero", async () => {
+  it("blocks when redis remaining is zero", async () => {
     vi.mocked(isAiRateLimitAvailable).mockReturnValue(true);
     vi.mocked(getAiRateLimitStatus).mockResolvedValue({
       limit: 5,
@@ -84,30 +97,15 @@ describe("usage gate", () => {
     );
   });
 
-  it("falls back to postgres in development when redis is unavailable", async () => {
+  it("uses entitlement summary when redis is unavailable", async () => {
     vi.mocked(isAiRateLimitAvailable).mockReturnValue(false);
-    vi.mocked(readAiUsage).mockResolvedValue(2);
-
-    await expect(assertCanGenerateAi("user-1")).resolves.toBeUndefined();
-  });
-
-  it("throws when redis is unavailable in production", async () => {
-    mockEnv.NEXT_PUBLIC_APP_ENV = "production";
-    vi.mocked(isAiRateLimitAvailable).mockReturnValue(false);
-
-    await expect(assertCanGenerateAi("user-1")).rejects.toBeInstanceOf(
-      AiRateLimitUnavailableError
-    );
-  });
-
-  it("returns redis-backed usage status when available", async () => {
-    vi.mocked(isAiRateLimitAvailable).mockReturnValue(true);
-    vi.mocked(getAiRateLimitStatus).mockResolvedValue({
+    vi.mocked(getAiUsageSummary).mockResolvedValue({
       limit: 5,
       used: 2,
       remaining: 3,
     });
 
+    await expect(assertCanGenerateAi("user-1")).resolves.toBeUndefined();
     await expect(getAiUsageStatus("user-1")).resolves.toEqual({
       limit: 5,
       used: 2,
@@ -115,9 +113,22 @@ describe("usage gate", () => {
     });
   });
 
-  it("records postgres usage and consumes redis token after success", async () => {
+  it("allows postgres entitlements in production when redis is unavailable", async () => {
+    mockEnv.NEXT_PUBLIC_APP_ENV = "production";
+    vi.mocked(isAiRateLimitAvailable).mockReturnValue(false);
+
+    await expect(assertCanGenerateAi("user-1")).resolves.toBeUndefined();
+  });
+
+  it("records usage and consumes redis token after success", async () => {
     vi.mocked(isAiRateLimitAvailable).mockReturnValue(true);
-    vi.mocked(incrementAiUsage).mockResolvedValue(3);
+    vi.mocked(recordAIUsage).mockResolvedValue({
+      ai_predictions_count: 3,
+      ai_deep_analyses_count: 0,
+      ai_generations_count: 3,
+      live_ai_matches: [],
+      last_live_ai_at: {},
+    });
     vi.mocked(consumeAiGeneration).mockResolvedValue({
       limit: 5,
       used: 3,
@@ -125,7 +136,11 @@ describe("usage gate", () => {
     });
 
     await expect(recordAiGeneration("user-1")).resolves.toBe(3);
-    expect(incrementAiUsage).toHaveBeenCalledWith("user-1");
+    expect(recordAIUsage).toHaveBeenCalledWith(
+      "user-1",
+      "prediction",
+      undefined
+    );
     expect(consumeAiGeneration).toHaveBeenCalledWith("user-1");
   });
 });

@@ -162,10 +162,19 @@ export function TermsContent() {
         </p>
       </LegalSection>
 
-      <LegalSection title="7. Subscriptions (future)">
+      <LegalSection title="7. Subscriptions">
         <p>
-          Paid plans, trials, and billing will be governed by additional terms
-          shown at checkout. Prices and features may change with notice.
+          {BRAND.name} Premium is billed at €2.99/month (EUR) via Lemon Squeezy
+          unless another price is shown at checkout. New subscribers may receive
+          a 7-day free trial; a valid payment method is required upfront. Early
+          adopters on the launch price keep that rate while the subscription
+          remains active (grandfathering).
+        </p>
+        <p>
+          Cancel anytime from the customer billing portal. When Premium ends,
+          paid features stop immediately; follows, favorites, and account data
+          are retained. Refunds are not offered during the MVP period unless
+          required by law.
         </p>
       </LegalSection>
 

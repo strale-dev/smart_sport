@@ -150,7 +150,7 @@ export function PrivacyContent() {
           <li>Sentry — error monitoring (EU region)</li>
           <li>Vercel — hosting</li>
           <li>OpenAI — AI analysis (server-side only)</li>
-          <li>LemonSqueezy — subscription billing (future)</li>
+          <li>LemonSqueezy — subscription billing and payment processing</li>
           <li>Upstash — rate limiting (Redis)</li>
         </ul>
         <p>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutDashboardIcon, UserIcon } from "lucide-react";
+import { CreditCardIcon, LayoutDashboardIcon, UserIcon } from "lucide-react";
 
 import { SignOutMenuItem } from "@/components/auth/SignOutMenuItem";
 import { Button } from "@/components/ui/button";
@@ -109,6 +109,10 @@ export function AccountMenu({
           <DropdownMenuItem render={<Link href="/profile" />}>
             <UserIcon />
             Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem render={<Link href="/profile/subscription" />}>
+            <CreditCardIcon />
+            Subscription
           </DropdownMenuItem>
           <SignOutMenuItem />
         </DropdownMenuGroup>

@@ -1,6 +1,12 @@
 import * as Sentry from "@sentry/nextjs";
 
-import { readAiUsage, incrementAiUsage } from "@/lib/ai/db";
+import {
+  AiLimitReachedError,
+  assertCanGenerateAI,
+  getAiUsageSummary,
+  recordAIUsage,
+} from "@/lib/entitlements/entitlementService";
+import type { AiUsageContext, AiUsageKind } from "@/lib/entitlements/limits";
 import { getFreeTierAiPredictionsPerDay } from "@/lib/env";
 import { env } from "@/lib/env.server";
 import {
@@ -10,20 +16,9 @@ import {
   isAiRateLimitAvailable,
 } from "@/lib/ratelimit/ai";
 
+export { AiLimitReachedError } from "@/lib/entitlements/entitlementService";
 export { AiRateLimitUnavailableError } from "@/lib/ratelimit/ai";
-
-export class AiLimitReachedError extends Error {
-  readonly code = "AI_LIMIT_REACHED" as const;
-  readonly limit: number;
-  readonly used: number;
-
-  constructor(limit: number, used: number) {
-    super("Daily AI prediction limit reached");
-    this.name = "AiLimitReachedError";
-    this.limit = limit;
-    this.used = used;
-  }
-}
+export type { AiUsageKind } from "@/lib/entitlements/limits";
 
 function isProduction(): boolean {
   return env.NEXT_PUBLIC_APP_ENV === "production";
@@ -33,22 +28,11 @@ export function getAiDailyLimit(): number {
   return getFreeTierAiPredictionsPerDay();
 }
 
-async function assertCanGenerateAiViaPostgres(userId: string): Promise<void> {
-  const limit = getAiDailyLimit();
-  const used = await readAiUsage(userId);
-
-  if (used >= limit) {
-    throw new AiLimitReachedError(limit, used);
-  }
-}
-
 export async function getAiUsageStatus(userId: string): Promise<{
   limit: number;
   used: number;
   remaining: number;
 }> {
-  const limit = getAiDailyLimit();
-
   if (isAiRateLimitAvailable()) {
     const status = await getAiRateLimitStatus(userId);
     if (status) {
@@ -57,48 +41,40 @@ export async function getAiUsageStatus(userId: string): Promise<{
   }
 
   if (!isProduction()) {
-    const used = await readAiUsage(userId);
-    return {
-      limit,
-      used,
-      remaining: Math.max(0, limit - used),
-    };
+    return getAiUsageSummary(userId);
   }
 
-  throw new AiRateLimitUnavailableError();
+  return getAiUsageSummary(userId);
 }
 
-export async function assertCanGenerateAi(userId: string): Promise<void> {
+export async function assertCanGenerateAi(
+  userId: string,
+  kind: AiUsageKind = "prediction",
+  ctx?: AiUsageContext
+): Promise<void> {
+  await assertCanGenerateAI(userId, kind, ctx);
+
   if (isAiRateLimitAvailable()) {
     const status = await getAiRateLimitStatus(userId);
     if (!status) {
       if (isProduction()) {
         throw new AiRateLimitUnavailableError();
       }
-
-      await assertCanGenerateAiViaPostgres(userId);
       return;
     }
 
     if (status.remaining <= 0) {
-      throw new AiLimitReachedError(status.limit, status.used);
+      throw new AiLimitReachedError("prediction", status.limit, status.used);
     }
-
-    return;
   }
-
-  if (isProduction()) {
-    throw new AiRateLimitUnavailableError();
-  }
-
-  console.warn(
-    "[usage-gate] Redis is not configured — falling back to Postgres AI usage in development."
-  );
-  await assertCanGenerateAiViaPostgres(userId);
 }
 
-export async function recordAiGeneration(userId: string): Promise<number> {
-  const pgCount = await incrementAiUsage(userId);
+export async function recordAiGeneration(
+  userId: string,
+  kind: AiUsageKind = "prediction",
+  ctx?: AiUsageContext
+): Promise<number> {
+  const row = await recordAIUsage(userId, kind, ctx);
 
   if (isAiRateLimitAvailable()) {
     try {
@@ -112,5 +88,5 @@ export async function recordAiGeneration(userId: string): Promise<number> {
     }
   }
 
-  return pgCount;
+  return row.ai_predictions_count;
 }

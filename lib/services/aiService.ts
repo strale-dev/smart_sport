@@ -216,7 +216,7 @@ export async function generatePrematchInsight(
     }
 
     try {
-      await assertCanGenerateAi(options.userId);
+      await assertCanGenerateAi(options.userId, "prediction");
     } catch (error) {
       if (error instanceof AiLimitReachedError) {
         return {
@@ -267,7 +267,7 @@ export async function generatePrematchInsight(
     );
 
     if (options.trigger === "user" && options.userId) {
-      await recordAiGeneration(options.userId);
+      await recordAiGeneration(options.userId, "prediction");
     }
 
     return {
@@ -333,6 +333,8 @@ export type GenerateLiveInsightInput = {
     redCardsHome: number;
     redCardsAway: number;
   };
+  /** When set, free-tier live quotas are enforced for this generation. */
+  userId?: string | null;
 };
 
 export type GenerateLiveInsightResult =
@@ -364,6 +366,25 @@ export async function generateLiveInsight(
   );
   if (existing) {
     return { ok: true, contextHash, cached: true };
+  }
+
+  if (input.userId) {
+    try {
+      await assertCanGenerateAi(input.userId, "live_interval", {
+        fixtureUuid: fixture.id,
+      });
+      await assertCanGenerateAi(input.userId, "live_match", {
+        fixtureUuid: fixture.id,
+      });
+    } catch (error) {
+      if (error instanceof AiLimitReachedError) {
+        return {
+          ok: false,
+          reason: error.code,
+        };
+      }
+      throw error;
+    }
   }
 
   try {
@@ -404,6 +425,12 @@ export async function generateLiveInsight(
       await writeLiveInsightCache(input.fixtureExternalId, contextHash, stored);
       return stored;
     });
+
+    if (input.userId) {
+      await recordAiGeneration(input.userId, "live_match", {
+        fixtureUuid: fixture.id,
+      });
+    }
 
     return { ok: true, contextHash, cached: false };
   } catch (error) {
