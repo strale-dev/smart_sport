@@ -10,15 +10,36 @@ import {
 } from "@/lib/fixtures/display";
 import { mergeTeamFixtures } from "@/lib/match/merge-team-fixtures";
 import { selectRelevantStandingsGroup } from "@/lib/standings/select-relevant-group";
-import type { Fixture, StandingsGroup } from "@/types/domain";
+import type { Fixture, ScoreSnapshot, StandingsGroup } from "@/types/domain";
 
 const BELGRADE = "Europe/Belgrade";
+
+type BuildFixtureOverrides = Omit<Partial<Fixture>, "score"> & {
+  score?: Partial<ScoreSnapshot>;
+};
+
+function emptyScore(): ScoreSnapshot {
+  return {
+    home: null,
+    away: null,
+    halftimeHome: null,
+    halftimeAway: null,
+    fulltimeHome: null,
+    fulltimeAway: null,
+    extratimeHome: null,
+    extratimeAway: null,
+    penaltyHome: null,
+    penaltyAway: null,
+  };
+}
 
 function buildFixture(
   externalId: number,
   kickoffAt: string,
-  overrides: Partial<Fixture> = {}
+  overrides: BuildFixtureOverrides = {}
 ): Fixture {
+  const { score: scoreOverrides, ...restOverrides } = overrides;
+
   return {
     externalId,
     league: {
@@ -46,22 +67,11 @@ function buildFixture(
     kickoffAt,
     status: "NS",
     minute: null,
-    score: {
-      home: null,
-      away: null,
-      halftimeHome: null,
-      halftimeAway: null,
-      fulltimeHome: null,
-      fulltimeAway: null,
-      extratimeHome: null,
-      extratimeAway: null,
-      penaltyHome: null,
-      penaltyAway: null,
-    },
     venue: null,
     referee: null,
     round: null,
-    ...overrides,
+    ...restOverrides,
+    score: { ...emptyScore(), ...scoreOverrides },
   };
 }
 

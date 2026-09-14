@@ -9,6 +9,7 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "typecheck": "tsc --noEmit",
+    "check:ci": "npm run typecheck && npm run lint && npm run test:ci",
     "test": "vitest",
     "test:ci": "vitest run",
     "format": "prettier --write .",

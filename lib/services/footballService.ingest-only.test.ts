@@ -6,6 +6,7 @@ import * as fixtureEndpoints from "@/lib/api-football/endpoints/fixtures";
 import * as playerEndpoints from "@/lib/api-football/endpoints/players";
 import { resetCacheForTests } from "@/lib/redis/cache";
 import * as footballService from "@/lib/services/footballService";
+import type { Fixture } from "@/types/domain";
 
 describe("footballService ingest-only mode", () => {
   const baseEnv = {
@@ -36,7 +37,7 @@ describe("footballService ingest-only mode", () => {
 
     const dbSpy = vi
       .spyOn(dbRead, "readFixturesForDateFromDb")
-      .mockResolvedValue([]);
+      .mockResolvedValue([{ externalId: 1 } as Fixture]);
     const apiSpy = vi.spyOn(fixtureEndpoints, "listFixturesByDate");
 
     await footballService.getMatchesForDate("2026-08-31");
