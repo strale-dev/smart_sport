@@ -32,6 +32,14 @@ export const LIVE_PRESENCE_GRACE_MS = 60_000;
 /** Watch token TTL; extended on heartbeat. */
 export const LIVE_WATCH_TOKEN_TTL_SEC = 120;
 
+/** Client heartbeat while watching live (match / live-center). */
+export const LIVE_USER_ACTIVE_WATCH_HEARTBEAT_MS = 30_000;
+
+export const LIVE_USER_ACTIVE_WATCH_HEARTBEAT_SEC = 30;
+
+/** Redis TTL for live:user:{userId}:active (2× heartbeat). */
+export const LIVE_USER_ACTIVE_WATCH_TTL_SEC = 60;
+
 export const LIVE_INTERNAL_POLL_TICK_PATH = "/api/internal/live/poll-tick";
 export const LIVE_INTERNAL_POLL_CENTER_TICK_PATH =
   "/api/internal/live/poll-center-tick";

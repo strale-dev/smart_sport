@@ -1,8 +1,17 @@
 "use client";
 
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
+import { MatchLiveWatchLimitBanner } from "@/components/match/MatchLiveWatchLimitBanner";
 import { useLiveMatch } from "@/hooks/useLiveMatch";
+import type { LiveWatchResult } from "@/lib/live/watch-client";
 import type { MatchLiveSnapshot } from "@/lib/live/live-fetch";
 import type { MeaningfulEventBroadcastPayload } from "@/lib/live/event-detector-types";
 import type {
@@ -33,8 +42,17 @@ export function MatchLiveSession({
   initialSnapshot,
   children,
 }: MatchLiveSessionProps) {
+  const [watchError, setWatchError] = useState<
+    (LiveWatchResult & { ok: false }) | null
+  >(null);
+
+  const onWatchError = useCallback((error: LiveWatchResult & { ok: false }) => {
+    setWatchError(error);
+  }, []);
+
   const live = useLiveMatch(fixture.externalId, fixture.status, {
     initialSnapshot,
+    onWatchError,
   });
 
   const value = useMemo<MatchLiveContextValue>(
@@ -59,6 +77,15 @@ export function MatchLiveSession({
 
   return (
     <MatchLiveContext.Provider value={value}>
+      {watchError ? (
+        <div className="mb-4">
+          <MatchLiveWatchLimitBanner
+            code={watchError.code}
+            limit={watchError.limit}
+            used={watchError.used}
+          />
+        </div>
+      ) : null}
       {children}
     </MatchLiveContext.Provider>
   );

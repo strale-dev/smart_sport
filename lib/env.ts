@@ -54,6 +54,7 @@ export const serverEnvSchema = publicEnvSchema.extend({
     .positive()
     .optional(),
   PREMIUM_AI_SOFT_CAP_PER_DAY: z.coerce.number().int().positive().optional(),
+  PREMIUM_AI_ABUSE_LIMIT_PER_DAY: z.coerce.number().int().positive().optional(),
   LEMONSQUEEZY_API_KEY: z.string().min(1).optional(),
   LEMONSQUEEZY_STORE_ID: z.string().min(1).optional(),
   LEMONSQUEEZY_WEBHOOK_SECRET: z.string().min(1).optional(),
@@ -136,6 +137,9 @@ function readServerEnvSource(
     ),
     PREMIUM_AI_SOFT_CAP_PER_DAY: emptyToUndefined(
       source.PREMIUM_AI_SOFT_CAP_PER_DAY
+    ),
+    PREMIUM_AI_ABUSE_LIMIT_PER_DAY: emptyToUndefined(
+      source.PREMIUM_AI_ABUSE_LIMIT_PER_DAY
     ),
     LEMONSQUEEZY_API_KEY: emptyToUndefined(source.LEMONSQUEEZY_API_KEY),
     LEMONSQUEEZY_STORE_ID: emptyToUndefined(source.LEMONSQUEEZY_STORE_ID),
@@ -338,6 +342,26 @@ export function getPremiumAiSoftCapPerDay(
 
   const parsed = Number.parseInt(raw, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+/** Redis anti-abuse daily cap for premium (falls back to soft cap, then 500). */
+export function getPremiumAiAbuseLimitPerDay(
+  source: Record<string, string | undefined> = process.env
+): number {
+  const abuse = emptyToUndefined(source.PREMIUM_AI_ABUSE_LIMIT_PER_DAY);
+  if (abuse) {
+    const parsed = Number.parseInt(abuse, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  const softCap = getPremiumAiSoftCapPerDay(source);
+  if (softCap != null) {
+    return softCap;
+  }
+
+  return 500;
 }
 
 export function hasLemonSqueezyConfig(

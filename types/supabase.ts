@@ -1886,6 +1886,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      increment_ai_usage: {
+        Args: {
+          p_user_id: string
+          p_usage_day: string
+          p_predictions?: number
+          p_deep_analyses?: number
+          p_generations?: number
+          p_live_fixture_uuid?: string | null
+          p_live_touch_at?: string | null
+        }
+        Returns: Database["public"]["Tables"]["ai_usage"]["Row"]
+      }
+      merge_ai_usage_from_redis: {
+        Args: {
+          p_user_id: string
+          p_usage_day: string
+          p_predictions: number
+          p_deep_analyses: number
+          p_generations: number
+          p_live_ai_matches: string[]
+          p_last_live_ai_at: Json
+        }
+        Returns: Database["public"]["Tables"]["ai_usage"]["Row"]
+      }
       search_players: {
         Args: { max_results?: number; q: string }
         Returns: {

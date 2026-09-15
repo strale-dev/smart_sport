@@ -272,6 +272,7 @@ FREE_TIER_AI_GENERATIONS_PER_DAY=10
 FREE_TIER_LIVE_AI_MATCHES_PER_DAY=3
 FREE_TIER_LIVE_AI_MIN_INTERVAL_SEC=60
 FREE_TIER_LIVE_MATCHES_SIMULTANEOUS=2
+PREMIUM_AI_ABUSE_LIMIT_PER_DAY=500
 ```
 
 ---
@@ -324,7 +325,8 @@ app/
       sync-fixtures/route.ts      # Vercel Cron
       sync-standings/route.ts
       sync-lineups/route.ts       # 60 min pre-kickoff sweep
-      cleanup-ai-usage/route.ts   # Reset daily counters
+      cleanup-ai-usage/route.ts   # Delete ai_usage rows older than yesterday (UTC)
+      reconcile-ai-usage/route.ts # Every 5 min: Redis → Postgres max-merge
       poll-live/route.ts          # Fallback poller for background/no-viewer matches (unused by default in MVP)
   layout.tsx
   globals.css
@@ -994,7 +996,8 @@ Optional hardening (not required for Phase 0): in Sentry → Project Settings �
     { "path": "/api/cron/sync-fixtures", "schedule": "0 4 * * *" },
     { "path": "/api/cron/sync-standings", "schedule": "0 */6 * * *" },
     { "path": "/api/cron/sync-lineups", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/cleanup-ai-usage", "schedule": "5 0 * * *" }
+    { "path": "/api/cron/cleanup-ai-usage", "schedule": "5 0 * * *" },
+    { "path": "/api/cron/reconcile-ai-usage", "schedule": "*/5 * * * *" }
   ]
 }
 ```

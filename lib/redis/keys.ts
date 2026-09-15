@@ -300,6 +300,30 @@ export function liveActiveMatchWatchesKey(): string {
   return "live:active-match-watches";
 }
 
+/** Per-user simultaneous live match watches (fixture provider ids). */
+export function liveUserActiveWatchesKey(userId: string): string {
+  return `live:user:${userId}:active`;
+}
+
+export function aiUsageHashKey(userId: string, usageDay: string): string {
+  return `ai:usage:${userId}:${usageDay}`;
+}
+
+export function aiUsageLiveMatchesKey(
+  userId: string,
+  usageDay: string
+): string {
+  return `ai:usage:${userId}:${usageDay}:live_matches`;
+}
+
+export function aiUsageLastLiveKey(userId: string, usageDay: string): string {
+  return `ai:usage:${userId}:${usageDay}:last_live`;
+}
+
+export function aiUsageActiveUsersKey(usageDay: string): string {
+  return `ai:usage:active:${usageDay}`;
+}
+
 export function liveDetectorSnapshotKey(fixtureProviderId: number): string {
   return `live:detector:snapshot:${fixtureProviderId}`;
 }

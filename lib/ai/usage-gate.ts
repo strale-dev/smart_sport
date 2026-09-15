@@ -4,24 +4,24 @@ import {
   AiLimitReachedError,
   assertCanGenerateAI,
   getAiUsageSummary,
+  getUserEntitlement,
+  isPremiumEntitlement,
   recordAIUsage,
 } from "@/lib/entitlements/entitlementService";
 import type { AiUsageContext, AiUsageKind } from "@/lib/entitlements/limits";
 import { getFreeTierAiPredictionsPerDay } from "@/lib/env";
-import { env } from "@/lib/env.server";
-import {
-  AiRateLimitUnavailableError,
-  consumeAiGeneration,
-  getAiRateLimitStatus,
-  isAiRateLimitAvailable,
-} from "@/lib/ratelimit/ai";
 
 export { AiLimitReachedError } from "@/lib/entitlements/entitlementService";
-export { AiRateLimitUnavailableError } from "@/lib/ratelimit/ai";
 export type { AiUsageKind } from "@/lib/entitlements/limits";
 
-function isProduction(): boolean {
-  return env.NEXT_PUBLIC_APP_ENV === "production";
+/** @deprecated Production paths use Postgres + Redis mirror; kept for API compatibility. */
+export class AiRateLimitUnavailableError extends Error {
+  readonly code = "RATE_LIMIT_UNAVAILABLE" as const;
+
+  constructor() {
+    super("AI rate limiting is unavailable");
+    this.name = "AiRateLimitUnavailableError";
+  }
 }
 
 export function getAiDailyLimit(): number {
@@ -33,17 +33,6 @@ export async function getAiUsageStatus(userId: string): Promise<{
   used: number;
   remaining: number;
 }> {
-  if (isAiRateLimitAvailable()) {
-    const status = await getAiRateLimitStatus(userId);
-    if (status) {
-      return status;
-    }
-  }
-
-  if (!isProduction()) {
-    return getAiUsageSummary(userId);
-  }
-
   return getAiUsageSummary(userId);
 }
 
@@ -53,20 +42,6 @@ export async function assertCanGenerateAi(
   ctx?: AiUsageContext
 ): Promise<void> {
   await assertCanGenerateAI(userId, kind, ctx);
-
-  if (isAiRateLimitAvailable()) {
-    const status = await getAiRateLimitStatus(userId);
-    if (!status) {
-      if (isProduction()) {
-        throw new AiRateLimitUnavailableError();
-      }
-      return;
-    }
-
-    if (status.remaining <= 0) {
-      throw new AiLimitReachedError("prediction", status.limit, status.used);
-    }
-  }
 }
 
 export async function recordAiGeneration(
@@ -74,19 +49,19 @@ export async function recordAiGeneration(
   kind: AiUsageKind = "prediction",
   ctx?: AiUsageContext
 ): Promise<number> {
+  const entitlement = await getUserEntitlement(userId);
+  const premium = isPremiumEntitlement(
+    entitlement.tier,
+    entitlement.subscriptionStatus
+  );
+
   const row = await recordAIUsage(userId, kind, ctx);
 
-  if (isAiRateLimitAvailable()) {
-    try {
-      await consumeAiGeneration(userId);
-    } catch (error) {
-      Sentry.captureException(error);
-      console.error(
-        "[usage-gate] Redis consume failed after successful generation:",
-        error
-      );
-    }
+  if (premium) {
+    return row.ai_generations_count;
   }
 
-  return row.ai_predictions_count;
+  return kind === "prediction"
+    ? row.ai_predictions_count
+    : row.ai_generations_count;
 }

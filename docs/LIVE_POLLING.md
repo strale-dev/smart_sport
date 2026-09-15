@@ -111,6 +111,7 @@ After each successful **match** poll tick, `lib/live/eventDetector.ts` compares 
 
 - **Triggers:** goal (event feed + score-diff fallback), red card (including _Second Yellow card_), penalty (scored penalty goal or VAR penalty signal), team xG delta ≥ **0.5** (only when both snapshots already had xG), significant substitution (starter off before minute **70**), probability swing ≥ **10pp** vs last stored prediction (via live model preview in pipeline).
 - **On trigger:** inserts a `LIVE` row in `predictions`, then regenerates shared **`LIVE` `ai_insights`** (Redis cache key `ai:insight:live:{fixtureId}:{contextHash}`). Poller `generateLiveInsight` does **not** consume per-user daily AI quota.
+- **Per-user live quota (FREE):** charged when an authenticated user **opens** a live match watch (`POST /api/live/watch`, charge-on-view). Distinct fixtures/day and max 2 simultaneous live tabs are enforced server-side; shared poller LLM remains cache-shared.
 
 **Redis keys**
 

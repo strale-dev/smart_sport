@@ -14,11 +14,14 @@ import {
   liveWatchersLiveCenterKey,
   liveWatchersMatchKey,
 } from "@/lib/redis/keys";
+import { releaseLiveMatchView } from "@/lib/entitlements/live-view-gate";
+import { renewActiveLiveWatchForUser } from "@/lib/entitlements/live-active-watches";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type LiveWatchRegistration = {
   surface: LiveWatchSurface;
   fixtureProviderId?: number;
+  userId?: string;
 };
 
 export type RegisterWatchResult = {
@@ -158,6 +161,9 @@ export async function heartbeatLiveWatch(watchToken: string): Promise<boolean> {
     }
 
     await redis.expire(liveWatchTokenKey(watchToken), LIVE_WATCH_TOKEN_TTL_SEC);
+    if (record.userId && record.surface === "match") {
+      await renewActiveLiveWatchForUser(record.userId);
+    }
     return true;
   }
 
@@ -217,6 +223,9 @@ export async function unregisterLiveWatch(watchToken: string): Promise<void> {
       await redis.srem(liveWatchersMatchKey(fixtureProviderId), watchToken);
       const count = await redis.scard(liveWatchersMatchKey(fixtureProviderId));
       await syncMatchActiveViewers(fixtureProviderId, count);
+      if (record.userId) {
+        await releaseLiveMatchView(record.userId, fixtureProviderId);
+      }
       if (count === 0) {
         await startGraceForMatch(fixtureProviderId);
       }
@@ -242,6 +251,9 @@ export async function unregisterLiveWatch(watchToken: string): Promise<void> {
     memoryMatchWatchers.get(fixtureProviderId)?.delete(watchToken);
     const count = memoryMatchCount(fixtureProviderId);
     await syncMatchActiveViewers(fixtureProviderId, count);
+    if (record.userId) {
+      await releaseLiveMatchView(record.userId, fixtureProviderId);
+    }
     if (count === 0) {
       await startGraceForMatch(fixtureProviderId);
     }

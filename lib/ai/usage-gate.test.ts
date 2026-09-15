@@ -1,12 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  AiLimitReachedError,
-  AiRateLimitUnavailableError,
-  assertCanGenerateAi,
-  getAiUsageStatus,
-  recordAiGeneration,
-} from "@/lib/ai/usage-gate";
+import { assertCanGenerateAi, recordAiGeneration } from "@/lib/ai/usage-gate";
 
 vi.mock("@/lib/entitlements/entitlementService", () => ({
   AiLimitReachedError: class AiLimitReachedError extends Error {
@@ -25,114 +19,50 @@ vi.mock("@/lib/entitlements/entitlementService", () => ({
   },
   assertCanGenerateAI: vi.fn(),
   getAiUsageSummary: vi.fn(),
+  getUserEntitlement: vi.fn(),
+  isPremiumEntitlement: vi.fn(),
   recordAIUsage: vi.fn(),
-}));
-
-vi.mock("@/lib/ratelimit/ai", () => ({
-  AiRateLimitUnavailableError: class AiRateLimitUnavailableError extends Error {
-    readonly code = "RATE_LIMIT_UNAVAILABLE" as const;
-
-    constructor() {
-      super("AI rate limiting is unavailable");
-      this.name = "AiRateLimitUnavailableError";
-    }
-  },
-  consumeAiGeneration: vi.fn(),
-  getAiRateLimitStatus: vi.fn(),
-  isAiRateLimitAvailable: vi.fn(),
-}));
-
-const mockEnv = vi.hoisted(() => ({
-  NEXT_PUBLIC_APP_ENV: "development" as "development" | "production",
-}));
-
-vi.mock("@/lib/env.server", () => ({
-  env: mockEnv,
 }));
 
 import {
   assertCanGenerateAI,
-  getAiUsageSummary,
+  getUserEntitlement,
+  isPremiumEntitlement,
   recordAIUsage,
 } from "@/lib/entitlements/entitlementService";
-import {
-  consumeAiGeneration,
-  getAiRateLimitStatus,
-  isAiRateLimitAvailable,
-} from "@/lib/ratelimit/ai";
 
 describe("usage gate", () => {
   beforeEach(() => {
-    mockEnv.NEXT_PUBLIC_APP_ENV = "development";
     vi.mocked(assertCanGenerateAI).mockReset();
-    vi.mocked(getAiUsageSummary).mockReset();
     vi.mocked(recordAIUsage).mockReset();
-    vi.mocked(getAiRateLimitStatus).mockReset();
-    vi.mocked(consumeAiGeneration).mockReset();
-    vi.mocked(isAiRateLimitAvailable).mockReset();
+    vi.mocked(getUserEntitlement).mockReset();
+    vi.mocked(isPremiumEntitlement).mockReset();
     vi.mocked(assertCanGenerateAI).mockResolvedValue(undefined);
+    vi.mocked(getUserEntitlement).mockResolvedValue({
+      userId: "user-1",
+      tier: "FREE",
+      subscriptionStatus: null,
+      premiumUntil: null,
+    });
+    vi.mocked(isPremiumEntitlement).mockReturnValue(false);
   });
 
-  it("allows generation below the daily cap via redis", async () => {
-    vi.mocked(isAiRateLimitAvailable).mockReturnValue(true);
-    vi.mocked(getAiRateLimitStatus).mockResolvedValue({
-      limit: 5,
-      used: 4,
-      remaining: 1,
-    });
-
+  it("delegates allowance checks to entitlementService", async () => {
     await expect(assertCanGenerateAi("user-1")).resolves.toBeUndefined();
-  });
-
-  it("blocks when redis remaining is zero", async () => {
-    vi.mocked(isAiRateLimitAvailable).mockReturnValue(true);
-    vi.mocked(getAiRateLimitStatus).mockResolvedValue({
-      limit: 5,
-      used: 5,
-      remaining: 0,
-    });
-
-    await expect(assertCanGenerateAi("user-1")).rejects.toBeInstanceOf(
-      AiLimitReachedError
+    expect(assertCanGenerateAI).toHaveBeenCalledWith(
+      "user-1",
+      "prediction",
+      undefined
     );
   });
 
-  it("uses entitlement summary when redis is unavailable", async () => {
-    vi.mocked(isAiRateLimitAvailable).mockReturnValue(false);
-    vi.mocked(getAiUsageSummary).mockResolvedValue({
-      limit: 5,
-      used: 2,
-      remaining: 3,
-    });
-
-    await expect(assertCanGenerateAi("user-1")).resolves.toBeUndefined();
-    await expect(getAiUsageStatus("user-1")).resolves.toEqual({
-      limit: 5,
-      used: 2,
-      remaining: 3,
-    });
-  });
-
-  it("allows postgres entitlements in production when redis is unavailable", async () => {
-    mockEnv.NEXT_PUBLIC_APP_ENV = "production";
-    vi.mocked(isAiRateLimitAvailable).mockReturnValue(false);
-
-    await expect(assertCanGenerateAi("user-1")).resolves.toBeUndefined();
-  });
-
-  it("records usage and consumes redis token after success", async () => {
-    vi.mocked(isAiRateLimitAvailable).mockReturnValue(true);
+  it("records usage through entitlementService", async () => {
     vi.mocked(recordAIUsage).mockResolvedValue({
       ai_predictions_count: 3,
       ai_deep_analyses_count: 0,
       ai_generations_count: 3,
       live_ai_matches: [],
       last_live_ai_at: {},
-    });
-    vi.mocked(consumeAiGeneration).mockResolvedValue({
-      limit: 5,
-      used: 3,
-      remaining: 2,
     });
 
     await expect(recordAiGeneration("user-1")).resolves.toBe(3);
@@ -141,6 +71,18 @@ describe("usage gate", () => {
       "prediction",
       undefined
     );
-    expect(consumeAiGeneration).toHaveBeenCalledWith("user-1");
+  });
+
+  it("returns generation count for premium users", async () => {
+    vi.mocked(isPremiumEntitlement).mockReturnValue(true);
+    vi.mocked(recordAIUsage).mockResolvedValue({
+      ai_predictions_count: 99,
+      ai_deep_analyses_count: 0,
+      ai_generations_count: 120,
+      live_ai_matches: [],
+      last_live_ai_at: {},
+    });
+
+    await expect(recordAiGeneration("user-1")).resolves.toBe(120);
   });
 });

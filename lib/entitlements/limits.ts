@@ -5,8 +5,12 @@ import {
   getFreeTierLiveAiMatchesPerDay,
   getFreeTierLiveAiMinIntervalSec,
   getFreeTierLiveMatchesSimultaneous,
+  getPremiumAiAbuseLimitPerDay,
   getPremiumAiSoftCapPerDay,
 } from "@/lib/env";
+import type { Database } from "@/types/supabase";
+
+type AppTier = Database["public"]["Enums"]["app_tier"];
 
 export type AiUsageKind =
   | "prediction"
@@ -39,4 +43,16 @@ export function getFreeTierLimits(): FreeTierLimits {
     liveMatchesSimultaneous: getFreeTierLiveMatchesSimultaneous(),
     premiumSoftCapPerDay: getPremiumAiSoftCapPerDay(),
   };
+}
+
+/** Daily generation cap enforced in Redis for tier (premium uses abuse limit, not FREE env). */
+export function getDailyGenerationCapForTier(
+  tier: AppTier,
+  premiumActive: boolean
+): number {
+  if (tier === "PREMIUM" || premiumActive) {
+    return getPremiumAiAbuseLimitPerDay();
+  }
+
+  return getFreeTierAiGenerationsPerDay();
 }

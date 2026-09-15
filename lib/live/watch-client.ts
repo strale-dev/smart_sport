@@ -1,11 +1,24 @@
-const HEARTBEAT_INTERVAL_MS = 60_000;
+import { LIVE_USER_ACTIVE_WATCH_HEARTBEAT_MS } from "@/lib/live/constants";
+
+const HEARTBEAT_INTERVAL_MS = LIVE_USER_ACTIVE_WATCH_HEARTBEAT_MS;
 
 export type LiveWatchRegistrationBody =
   { surface: "match"; fixtureProviderId: number } | { surface: "live-center" };
 
+export type LiveWatchErrorCode =
+  | "LIVE_SIMULTANEOUS_LIMIT"
+  | "LIVE_DAILY_LIMIT"
+  | "AI_LIMIT_REACHED"
+  | "live_polling_disabled"
+  | "network";
+
+export type LiveWatchResult =
+  | { ok: true; watchToken: string }
+  | { ok: false; code: LiveWatchErrorCode; limit?: number; used?: number };
+
 async function postWatch(
   body: LiveWatchRegistrationBody
-): Promise<{ watchToken: string } | null> {
+): Promise<LiveWatchResult> {
   try {
     const response = await fetch("/api/live/watch", {
       method: "POST",
@@ -14,22 +27,37 @@ async function postWatch(
       cache: "no-store",
     });
 
-    if (!response.ok) {
-      return null;
-    }
-
     const data = (await response.json()) as {
       ok?: boolean;
       watchToken?: string;
+      code?: LiveWatchErrorCode;
+      error?: string;
+      limit?: number;
+      used?: number;
     };
 
-    if (!data.ok || !data.watchToken) {
-      return null;
+    if (response.status === 429 && data.code) {
+      return {
+        ok: false,
+        code: data.code,
+        limit: data.limit,
+        used: data.used,
+      };
     }
 
-    return { watchToken: data.watchToken };
+    if (!response.ok || !data.ok || !data.watchToken) {
+      return {
+        ok: false,
+        code:
+          data.error === "live_polling_disabled"
+            ? "live_polling_disabled"
+            : "network",
+      };
+    }
+
+    return { ok: true, watchToken: data.watchToken };
   } catch {
-    return null;
+    return { ok: false, code: "network" };
   }
 }
 
@@ -54,34 +82,68 @@ async function postHeartbeat(watchToken: string): Promise<boolean> {
 }
 
 function sendUnwatchBeacon(watchToken: string): void {
-  if (typeof navigator === "undefined" || !navigator.sendBeacon) {
-    void fetch("/api/live/unwatch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ watchToken }),
-      keepalive: true,
-    });
+  const payload = JSON.stringify({ watchToken });
+
+  if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+    navigator.sendBeacon(
+      "/api/live/unwatch",
+      new Blob([payload], {
+        type: "application/json",
+      })
+    );
     return;
   }
 
-  navigator.sendBeacon(
-    "/api/live/unwatch",
-    new Blob([JSON.stringify({ watchToken })], {
-      type: "application/json",
-    })
-  );
+  void fetch("/api/live/unwatch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload,
+    keepalive: true,
+  });
 }
 
+export type StartLiveWatchSessionOptions = {
+  onWatchError?: (result: Extract<LiveWatchResult, { ok: false }>) => void;
+};
+
 export function startLiveWatchSession(
-  body: LiveWatchRegistrationBody
+  body: LiveWatchRegistrationBody,
+  options: StartLiveWatchSessionOptions = {}
 ): () => void {
   let watchToken: string | null = null;
   let heartbeatId: number | null = null;
   let cancelled = false;
 
+  const unwatch = () => {
+    if (watchToken) {
+      sendUnwatchBeacon(watchToken);
+      watchToken = null;
+    }
+  };
+
+  const onPageHide = () => {
+    unwatch();
+  };
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "hidden") {
+      unwatch();
+    }
+  };
+
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", onPageHide);
+  }
+
   void (async () => {
     const registered = await postWatch(body);
-    if (cancelled || !registered) {
+    if (cancelled) {
+      return;
+    }
+
+    if (!registered.ok) {
+      options.onWatchError?.(registered);
       return;
     }
 
@@ -95,8 +157,10 @@ export function startLiveWatchSession(
       void postHeartbeat(watchToken).then((alive) => {
         if (!alive && watchToken) {
           void postWatch(body).then((next) => {
-            if (next) {
+            if (next.ok) {
               watchToken = next.watchToken;
+            } else {
+              options.onWatchError?.(next);
             }
           });
         }
@@ -109,8 +173,10 @@ export function startLiveWatchSession(
     if (heartbeatId != null) {
       window.clearInterval(heartbeatId);
     }
-    if (watchToken) {
-      sendUnwatchBeacon(watchToken);
+    unwatch();
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pagehide", onPageHide);
     }
   };
 }

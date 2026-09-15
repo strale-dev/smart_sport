@@ -44,6 +44,10 @@ const PREMIUM_ACTIVE_STATUSES: SubscriptionStatus[] = [
   "PAST_DUE",
 ];
 
+export function canViewAI(userId: string | null | undefined): boolean {
+  return Boolean(userId);
+}
+
 export function isPremiumEntitlement(
   tier: AppTier,
   subscriptionStatus: SubscriptionStatus | null

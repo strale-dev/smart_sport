@@ -1,6 +1,13 @@
 import type { Json } from "@/types/supabase";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+import { parseLastLiveAiAtFromJson } from "@/lib/entitlements/merge-usage";
+import {
+  incrementRedisUsageCounters,
+  readMergedUsageRow,
+  readRedisUsageRow,
+} from "@/lib/entitlements/redis-usage";
+
 export type AiUsageRow = {
   ai_predictions_count: number;
   ai_deep_analyses_count: number;
@@ -13,20 +20,6 @@ function utcDayString(date = new Date()): string {
   return date.toISOString().slice(0, 10);
 }
 
-function parseLastLiveAiAt(value: Json): Record<string, string> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-
-  const out: Record<string, string> = {};
-  for (const [key, raw] of Object.entries(value)) {
-    if (typeof raw === "string") {
-      out[key] = raw;
-    }
-  }
-  return out;
-}
-
 function emptyUsageRow(): AiUsageRow {
   return {
     ai_predictions_count: 0,
@@ -37,7 +30,23 @@ function emptyUsageRow(): AiUsageRow {
   };
 }
 
-export async function readAiUsageRow(
+function mapPgRow(data: {
+  ai_predictions_count: number;
+  ai_deep_analyses_count: number;
+  ai_generations_count: number;
+  live_ai_matches: string[] | null;
+  last_live_ai_at: Json;
+}): AiUsageRow {
+  return {
+    ai_predictions_count: data.ai_predictions_count,
+    ai_deep_analyses_count: data.ai_deep_analyses_count,
+    ai_generations_count: data.ai_generations_count,
+    live_ai_matches: data.live_ai_matches ?? [],
+    last_live_ai_at: parseLastLiveAiAtFromJson(data.last_live_ai_at),
+  };
+}
+
+export async function readPostgresUsageRow(
   userId: string,
   usageDay = utcDayString()
 ): Promise<AiUsageRow> {
@@ -59,59 +68,15 @@ export async function readAiUsageRow(
     return emptyUsageRow();
   }
 
-  return {
-    ai_predictions_count: data.ai_predictions_count,
-    ai_deep_analyses_count: data.ai_deep_analyses_count,
-    ai_generations_count: data.ai_generations_count,
-    live_ai_matches: data.live_ai_matches ?? [],
-    last_live_ai_at: parseLastLiveAiAt(data.last_live_ai_at),
-  };
+  return mapPgRow(data);
 }
 
-async function ensureUsageRow(userId: string, usageDay: string): Promise<void> {
-  const client = createAdminClient();
-  const { error } = await client.from("ai_usage").upsert(
-    {
-      user_id: userId,
-      usage_day: usageDay,
-      ai_predictions_count: 0,
-      ai_deep_analyses_count: 0,
-      ai_generations_count: 0,
-      live_ai_matches: [],
-      last_live_ai_at: {},
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,usage_day", ignoreDuplicates: true }
-  );
-
-  if (error) {
-    throw new Error(`Failed to ensure AI usage row: ${error.message}`);
-  }
-}
-
-export async function writeAiUsageRow(
+export async function readAiUsageRow(
   userId: string,
-  row: AiUsageRow,
   usageDay = utcDayString()
-): Promise<void> {
-  const client = createAdminClient();
-  const { error } = await client.from("ai_usage").upsert(
-    {
-      user_id: userId,
-      usage_day: usageDay,
-      ai_predictions_count: row.ai_predictions_count,
-      ai_deep_analyses_count: row.ai_deep_analyses_count,
-      ai_generations_count: row.ai_generations_count,
-      live_ai_matches: row.live_ai_matches,
-      last_live_ai_at: row.last_live_ai_at as Json,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,usage_day" }
-  );
-
-  if (error) {
-    throw new Error(`Failed to write AI usage: ${error.message}`);
-  }
+): Promise<AiUsageRow> {
+  const postgresRow = await readPostgresUsageRow(userId, usageDay);
+  return readMergedUsageRow(userId, usageDay, postgresRow);
 }
 
 export type UsageIncrement = {
@@ -121,34 +86,49 @@ export type UsageIncrement = {
   liveFixtureUuid?: string;
 };
 
+async function persistIncrementToPostgres(
+  userId: string,
+  increment: UsageIncrement,
+  usageDay: string
+): Promise<AiUsageRow> {
+  const client = createAdminClient();
+  const touchAt =
+    increment.liveFixtureUuid != null ? new Date().toISOString() : null;
+
+  const { data, error } = await client.rpc("increment_ai_usage", {
+    p_user_id: userId,
+    p_usage_day: usageDay,
+    p_predictions: increment.predictions ?? 0,
+    p_deep_analyses: increment.deepAnalyses ?? 0,
+    p_generations: increment.generations ?? 0,
+    p_live_fixture_uuid: increment.liveFixtureUuid ?? null,
+    p_live_touch_at: touchAt,
+  });
+
+  if (error) {
+    throw new Error(`Failed to increment AI usage: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error("Failed to increment AI usage: empty response");
+  }
+
+  return mapPgRow(data);
+}
+
 export async function incrementAiUsageCounters(
   userId: string,
   increment: UsageIncrement,
   usageDay = utcDayString()
 ): Promise<AiUsageRow> {
-  await ensureUsageRow(userId, usageDay);
-  const current = await readAiUsageRow(userId, usageDay);
-
-  const next: AiUsageRow = {
-    ai_predictions_count:
-      current.ai_predictions_count + (increment.predictions ?? 0),
-    ai_deep_analyses_count:
-      current.ai_deep_analyses_count + (increment.deepAnalyses ?? 0),
-    ai_generations_count:
-      current.ai_generations_count + (increment.generations ?? 0),
-    live_ai_matches: [...current.live_ai_matches],
-    last_live_ai_at: { ...current.last_live_ai_at },
-  };
-
-  if (increment.liveFixtureUuid) {
-    if (!next.live_ai_matches.includes(increment.liveFixtureUuid)) {
-      next.live_ai_matches.push(increment.liveFixtureUuid);
-    }
-    next.last_live_ai_at[increment.liveFixtureUuid] = new Date().toISOString();
+  await incrementRedisUsageCounters(userId, increment, usageDay);
+  const pgRow = await persistIncrementToPostgres(userId, increment, usageDay);
+  const redisRow = await readRedisUsageRow(userId, usageDay);
+  if (!redisRow) {
+    return pgRow;
   }
 
-  await writeAiUsageRow(userId, next, usageDay);
-  return next;
+  return readMergedUsageRow(userId, usageDay, pgRow);
 }
 
 export { utcDayString as getUtcUsageDay };

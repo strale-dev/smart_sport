@@ -225,8 +225,8 @@ Koraci (samo env + schedule + uključivanje već predviđenih sync funkcija — 
 1. Kupiti API-Football Pro ($19/mo) i zameniti `API_FOOTBALL_KEY` u `.env.local` + Vercel env.
 2. Postaviti `API_FOOTBALL_DAILY_LIMIT=7500`.
 3. Production: `API_FOOTBALL_INGEST_ONLY=false` (development može ostati `true`).
-4. Ažurirati [vercel.json](../vercel.json): standings `0 */6 * * *` (**ING-3**; lineups `*/15 * * * *` već u **ING-2**).
-5. ~~Implementirati `sync-lineups` body~~ — urađeno (**ING-1**); upcoming fixtures ≤ 90 min.
+4. Ažurirati [vercel.json](../vercel.json): standings `0 */6 * * *` (**ING-3**; lineups `*/15 * * * `* već u **ING-2**).
+5. ~~Implementirati~~ `sync-lineups` ~~body~~ — urađeno (**ING-1**); upcoming fixtures ≤ 90 min.
 6. Opciono proširiti league allowlist u `lib/ingestion/config.ts`.
 7. Tek tada Phase 5 live polling (`lib/live/poller.ts`, presence-gated).
 
@@ -588,19 +588,20 @@ Users can start a 7-day trial (card required), become paying subscribers, and hi
 
 **Billing**
 
-- [ ] `/pricing` page — €2.99/mo with 7-day trial + grandfathering explanation.
-- [ ] Server action `createCheckoutSession` → LemonSqueezy signed URL.
-- [ ] `app/api/webhooks/lemonsqueezy/route.ts` — signature verify, upsert `subscriptions`, sync `entitlements`.
-- [ ] Handles events: `subscription_created`, `subscription_updated`, `subscription_payment_success`, `subscription_payment_failed`, `subscription_cancelled`, `subscription_expired`.
-- [ ] `subscription/page.tsx` in profile — manage subscription, portal link.
+- [x] `/pricing` page — €2.99/mo with 7-day trial + grandfathering explanation.
+- [x] Server action `createCheckoutSession` → LemonSqueezy signed URL.
+- [x] `app/api/webhooks/lemonsqueezy/route.ts` — signature verify, upsert `subscriptions`, sync `entitlements`.
+- [x] Handles events: `subscription_created`, `subscription_updated`, `subscription_payment_success`, `subscription_payment_failed`, `subscription_cancelled`, `subscription_expired`.
+- [x] `subscription/page.tsx` in profile — manage subscription, portal link.
 
 **Entitlements & rate limits**
 
-- [ ] `lib/entitlements/limits.ts` — all limits loaded from env.
-- [ ] `entitlementService.canGenerateAI(userId, kind)` checks tier + usage.
-- [ ] `ai_usage` increments atomically (Redis + Postgres reconciliation).
-- [ ] Every AI/live endpoint enforces entitlements server-side.
-- [ ] Nightly cron `cleanup-ai-usage` resets daily counters to yesterday's date (rollover safety).
+- [x] `lib/entitlements/limits.ts` — all limits loaded from env.
+- [x] `entitlementService.canGenerateAI(userId, kind)` checks tier + usage.
+- [x] `ai_usage` increments atomically (Redis + Postgres reconciliation).
+- [x] Every AI/live endpoint enforces entitlements server-side.
+- [x] Nightly cron `cleanup-ai-usage` resets daily counters to yesterday's date (rollover safety).
+- [x] Cron `reconcile-ai-usage` every 5 min — Redis→Postgres max-merge.
 
 **Follows & favorites (fully wired)**
 

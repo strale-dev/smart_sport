@@ -18,6 +18,9 @@ import { isLiveFixtureStatus } from "@/lib/redis/keys";
 
 type UseLiveMatchOptions = {
   initialSnapshot?: MatchLiveSnapshot;
+  onWatchError?: (
+    error: import("@/lib/live/watch-client").LiveWatchResult & { ok: false }
+  ) => void;
 };
 
 export function useLiveMatch(
@@ -49,10 +52,13 @@ export function useLiveMatch(
       return;
     }
 
-    const stopWatch = startLiveWatchSession({
-      surface: "match",
-      fixtureProviderId,
-    });
+    const stopWatch = startLiveWatchSession(
+      {
+        surface: "match",
+        fixtureProviderId,
+      },
+      { onWatchError: options.onWatchError }
+    );
 
     const stopBroadcast = subscribeMatchBroadcast(
       fixtureProviderId,
@@ -74,7 +80,7 @@ export function useLiveMatch(
       stopBroadcast();
       stopWatch();
     };
-  }, [debouncedInvalidate, fixtureProviderId, isLive]);
+  }, [debouncedInvalidate, fixtureProviderId, isLive, options.onWatchError]);
 
   const fixture =
     snapshotQuery.data?.fixture ?? options.initialSnapshot?.fixture ?? null;
