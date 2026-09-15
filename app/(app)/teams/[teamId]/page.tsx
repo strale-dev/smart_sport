@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { FollowToggle } from "@/components/follow/FollowToggle";
 import { TeamDetailsTabsSection } from "@/components/team/TeamDetailsTabsSection";
 import { TeamHeader } from "@/components/team/TeamHeader";
 import { TeamViewAnalytics } from "@/components/team/TeamViewAnalytics";
@@ -19,6 +20,7 @@ import {
   buildTeamPrimaryContext,
   resolvePrimaryLeagueFromFixtures,
 } from "@/lib/teams/resolve-primary-league";
+import { isFollowingProvider } from "@/lib/services/followService";
 import { getCurrentUser } from "@/lib/supabase/user";
 import type {
   FormScope,
@@ -166,9 +168,29 @@ export default async function TeamPage({ params }: TeamPageProps) {
     seasonsResult.data
   );
 
+  const returnTo = `/teams/${id}`;
+  const initialFollowing = user
+    ? await isFollowingProvider(user.id, {
+        objectType: "TEAM",
+        providerId: id,
+      }).catch(() => false)
+    : false;
+
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
-      <TeamHeader team={team} primaryContext={primaryContext} />
+      <TeamHeader
+        team={team}
+        primaryContext={primaryContext}
+        followControl={
+          <FollowToggle
+            objectType="TEAM"
+            providerId={id}
+            initialFollowing={initialFollowing}
+            isAuthenticated={Boolean(user)}
+            returnTo={returnTo}
+          />
+        }
+      />
       <TeamDetailsTabsSection
         team={team}
         fixtures={fixtures}

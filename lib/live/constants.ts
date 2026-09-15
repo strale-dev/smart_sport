@@ -13,6 +13,9 @@ export const LIVE_POLL_INTERVAL_MS = 30_000;
 /** React Query fallback when Realtime broadcast is missed (tab visible). */
 export const LIVE_FALLBACK_REFETCH_MS = 60_000;
 
+/** Snapshot polling while Supabase Realtime is unhealthy (match page). */
+export const LIVE_REALTIME_DOWN_REFETCH_MS = 45_000;
+
 /** Per-fixture lock while running detector + ingest tick (prevents overlapping reads). */
 export const LIVE_DETECTOR_TICK_LOCK_SEC = 8;
 

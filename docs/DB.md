@@ -383,6 +383,9 @@ create table public.fixtures (
   kickoff_at        timestamptz not null,
   status            fixture_status not null default 'NS',
   minute            integer,                       -- current live minute
+  status_extra_minute integer,                   -- API status.extra (stoppage)
+  period_first_start_at timestamptz,             -- API periods.first (unix → timestamptz)
+  period_second_start_at timestamptz,            -- API periods.second
   score_home        integer,
   score_away        integer,
   ht_home           integer,
@@ -862,6 +865,8 @@ create index follows_team_idx   on public.follows (team_id)   where team_id   is
 create index follows_player_idx on public.follows (player_id) where player_id is not null;
 create index follows_league_idx on public.follows (league_id) where league_id is not null;
 ```
+
+**FREE cap (migration `0024_follows_free_cap`):** `BEFORE INSERT` trigger `tg_follows_free_cap` uses a per-user advisory lock, reads cap from `platform_limits.free_tier_follows_total` (default **20**, keep in sync with `FREE_TIER_FOLLOWS_TOTAL` env), skips Premium / active subscription, and raises `FOLLOW_LIMIT_REACHED` (`23514`) when a FREE user would exceed the cap.
 
 ### 11.2 `favorites`
 

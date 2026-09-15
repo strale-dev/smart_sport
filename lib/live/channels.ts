@@ -1,4 +1,5 @@
 import type { MeaningfulEventBroadcastPayload } from "@/lib/live/event-detector-types";
+import type { MatchLiveSnapshot } from "@/lib/live/live-fetch";
 
 export type { MeaningfulEventBroadcastPayload };
 
@@ -15,4 +16,6 @@ export type LiveBroadcastPayload = {
   syncedAt: string;
   source: "match" | "live-center";
   meaningfulEvents?: MeaningfulEventBroadcastPayload[];
+  /** Full authoritative match state (match channel only). */
+  snapshot?: MatchLiveSnapshot;
 };

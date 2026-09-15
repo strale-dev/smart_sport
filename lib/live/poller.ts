@@ -214,9 +214,13 @@ export async function runFixturePollChainTick(
     const prevSnapshot = await readDetectorSnapshot(fixtureProviderId);
     const ingestResult = await ingestLiveFixtureTick(fixtureProviderId);
 
-    if (ingestResult.ok) {
-      const syncedAt = new Date().toISOString();
+    if (ingestResult.ok && ingestResult.changed) {
+      const syncedAt = ingestResult.syncedAt ?? new Date().toISOString();
       const nextSnapshot = await buildLiveDetectorSnapshot(fixtureProviderId);
+
+      let meaningfulEvents:
+        | import("@/lib/live/event-detector-types").MeaningfulEventBroadcastPayload[]
+        | undefined;
 
       if (nextSnapshot) {
         const pipelineResult = await runMeaningfulEventPipeline({
@@ -255,19 +259,16 @@ export async function runFixturePollChainTick(
 
         await writeDetectorSnapshot(nextSnapshot);
 
-        const meaningfulEvents =
+        meaningfulEvents =
           pipelineResult.broadcastEvents.length > 0
             ? pipelineResult.broadcastEvents
             : undefined;
-
-        await broadcastMatchUpdate(
-          fixtureProviderId,
-          syncedAt,
-          meaningfulEvents
-        );
-      } else {
-        await broadcastMatchUpdate(fixtureProviderId, syncedAt);
       }
+
+      await broadcastMatchUpdate(fixtureProviderId, syncedAt, {
+        meaningfulEvents,
+        snapshot: ingestResult.snapshot,
+      });
     }
 
     await writeLastPollAt(lastAtKey, Date.now());

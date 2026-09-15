@@ -4,6 +4,7 @@ import {
   getFreeTierAiPredictionsPerDay,
   getFreeTierLiveAiMatchesPerDay,
   getFreeTierLiveAiMinIntervalSec,
+  getFreeTierFollowsTotal,
   getFreeTierLiveMatchesSimultaneous,
   getPremiumAiAbuseLimitPerDay,
   getPremiumAiSoftCapPerDay,
@@ -32,6 +33,10 @@ export type FreeTierLimits = {
   liveMatchesSimultaneous: number;
   premiumSoftCapPerDay: number | null;
 };
+
+export function getFreeTierFollowsTotalLimit(): number {
+  return getFreeTierFollowsTotal();
+}
 
 export function getFreeTierLimits(): FreeTierLimits {
   return {

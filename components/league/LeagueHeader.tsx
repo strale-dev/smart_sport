@@ -18,18 +18,22 @@ import {
 } from "@/components/ui/card";
 import { buildLeagueHref } from "@/lib/leagues/url";
 import { parseLeagueTab } from "@/lib/leagues/url";
+import type { ReactNode } from "react";
+
 import type { League, Season } from "@/types/domain";
 
 type LeagueHeaderProps = {
   league: League;
   seasons: Season[];
   seasonYear: number | null;
+  followControl?: ReactNode;
 };
 
 export function LeagueHeader({
   league,
   seasons,
   seasonYear,
+  followControl,
 }: LeagueHeaderProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,24 +88,29 @@ export function LeagueHeader({
             </div>
           </div>
 
-          {seasons.length > 0 ? (
-            <Select
-              value={seasonYear != null ? String(seasonYear) : undefined}
-              onValueChange={handleSeasonChange}
-            >
-              <SelectTrigger className="w-full sm:w-[160px]">
-                <SelectValue placeholder="Season" />
-              </SelectTrigger>
-              <SelectContent>
-                {seasons.map((season) => (
-                  <SelectItem key={season.year} value={String(season.year)}>
-                    {season.year}
-                    {season.isCurrent ? " (current)" : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null}
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            {followControl ? (
+              <div className="shrink-0">{followControl}</div>
+            ) : null}
+            {seasons.length > 0 ? (
+              <Select
+                value={seasonYear != null ? String(seasonYear) : undefined}
+                onValueChange={handleSeasonChange}
+              >
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="Season" />
+                </SelectTrigger>
+                <SelectContent>
+                  {seasons.map((season) => (
+                    <SelectItem key={season.year} value={String(season.year)}>
+                      {season.year}
+                      {season.isCurrent ? " (current)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+          </div>
         </div>
       </CardHeader>
     </Card>

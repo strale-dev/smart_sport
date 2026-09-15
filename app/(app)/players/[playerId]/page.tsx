@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { FollowToggle } from "@/components/follow/FollowToggle";
 import { PlayerDetailsTabsSection } from "@/components/player/PlayerDetailsTabsSection";
 import { PlayerHeader } from "@/components/player/PlayerHeader";
 import { PlayerViewAnalytics } from "@/components/player/PlayerViewAnalytics";
@@ -16,6 +17,7 @@ import {
   getPlayerSeasonStatistics,
   pickPrimarySeasonStatistics,
 } from "@/lib/services/playerProfileService";
+import { isFollowingProvider } from "@/lib/services/followService";
 import { getCurrentUser } from "@/lib/supabase/user";
 import type { PlayerCareerEntry, PlayerSeasonStatistics } from "@/types/domain";
 
@@ -105,9 +107,28 @@ export default async function PlayerPage({
     }
   );
 
+  const returnTo = `/players/${id}`;
+  const initialFollowing = user
+    ? await isFollowingProvider(user.id, {
+        objectType: "PLAYER",
+        providerId: id,
+      }).catch(() => false)
+    : false;
+
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
-      <PlayerHeader player={enrichedPlayer} />
+      <PlayerHeader
+        player={enrichedPlayer}
+        followControl={
+          <FollowToggle
+            objectType="PLAYER"
+            providerId={id}
+            initialFollowing={initialFollowing}
+            isAuthenticated={Boolean(user)}
+            returnTo={returnTo}
+          />
+        }
+      />
       <PlayerDetailsTabsSection
         player={enrichedPlayer}
         seasonStats={seasonStats}

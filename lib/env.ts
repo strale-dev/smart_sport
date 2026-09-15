@@ -53,6 +53,7 @@ export const serverEnvSchema = publicEnvSchema.extend({
     .int()
     .positive()
     .optional(),
+  FREE_TIER_FOLLOWS_TOTAL: z.coerce.number().int().positive().optional(),
   PREMIUM_AI_SOFT_CAP_PER_DAY: z.coerce.number().int().positive().optional(),
   PREMIUM_AI_ABUSE_LIMIT_PER_DAY: z.coerce.number().int().positive().optional(),
   LEMONSQUEEZY_API_KEY: z.string().min(1).optional(),
@@ -135,6 +136,7 @@ function readServerEnvSource(
     FREE_TIER_LIVE_MATCHES_SIMULTANEOUS: emptyToUndefined(
       source.FREE_TIER_LIVE_MATCHES_SIMULTANEOUS
     ),
+    FREE_TIER_FOLLOWS_TOTAL: emptyToUndefined(source.FREE_TIER_FOLLOWS_TOTAL),
     PREMIUM_AI_SOFT_CAP_PER_DAY: emptyToUndefined(
       source.PREMIUM_AI_SOFT_CAP_PER_DAY
     ),
@@ -329,6 +331,15 @@ export function getFreeTierLiveMatchesSimultaneous(
   return parsePositiveIntEnv(
     emptyToUndefined(source.FREE_TIER_LIVE_MATCHES_SIMULTANEOUS),
     2
+  );
+}
+
+export function getFreeTierFollowsTotal(
+  source: Record<string, string | undefined> = process.env
+): number {
+  return parsePositiveIntEnv(
+    emptyToUndefined(source.FREE_TIER_FOLLOWS_TOTAL),
+    20
   );
 }
 

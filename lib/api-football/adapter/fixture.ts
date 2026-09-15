@@ -88,6 +88,27 @@ export function mapLeagueRef(
   };
 }
 
+export function periodUnixSecondsToIso(
+  unixSeconds: number | null | undefined
+): string | null {
+  if (unixSeconds == null) {
+    return null;
+  }
+  return new Date(unixSeconds * 1000).toISOString();
+}
+
+export function mapFixtureLiveClockFromRaw(
+  raw: RawApiFootballFixture,
+  lastProviderSyncAt: string | null = null
+): Fixture["liveClock"] {
+  return {
+    statusExtraMinute: raw.fixture.status.extra,
+    lastProviderSyncAt,
+    periodFirstStartAt: periodUnixSecondsToIso(raw.fixture.periods.first),
+    periodSecondStartAt: periodUnixSecondsToIso(raw.fixture.periods.second),
+  };
+}
+
 export function mapScore(raw: RawApiFootballFixture): ScoreSnapshot {
   return {
     home: raw.goals.home,
@@ -117,6 +138,7 @@ export function mapFixture(raw: RawApiFootballFixture): Fixture {
     venue: mapVenueRef(raw.fixture.venue),
     referee: raw.fixture.referee,
     round: raw.league.round ?? null,
+    liveClock: mapFixtureLiveClockFromRaw(raw),
   };
 }
 

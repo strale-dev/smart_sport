@@ -1,4 +1,8 @@
-import { mapFixture, mapLeague } from "@/lib/api-football/adapter";
+import {
+  mapFixture,
+  mapFixtureLiveClockFromRaw,
+  mapLeague,
+} from "@/lib/api-football/adapter";
 import type { RawApiFootballFixture } from "@/lib/api-football/types";
 import {
   countryRefToInsert,
@@ -410,7 +414,10 @@ export async function ingestFixtureFromRaw(
   raw: RawApiFootballFixture,
   syncedAt = new Date().toISOString()
 ): Promise<{ fixtureId: string; domain: Fixture }> {
-  const domain = mapFixture(raw);
+  const domain: Fixture = {
+    ...mapFixture(raw),
+    liveClock: mapFixtureLiveClockFromRaw(raw, syncedAt),
+  };
 
   const leagueId = await resolveLeagueRefFromFixture(
     client,

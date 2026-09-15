@@ -78,6 +78,14 @@ export type ScoreSnapshot = {
   penaltyAway: number | null;
 };
 
+/** Authoritative live clock fields synced from the provider (for local client tick). */
+export type FixtureLiveClock = {
+  statusExtraMinute: number | null;
+  lastProviderSyncAt: string | null;
+  periodFirstStartAt: string | null;
+  periodSecondStartAt: string | null;
+};
+
 export type Fixture = {
   externalId: number;
   league: LeagueRef;
@@ -91,6 +99,7 @@ export type Fixture = {
   venue: VenueRef | null;
   referee: string | null;
   round: string | null;
+  liveClock?: FixtureLiveClock | null;
 };
 
 export type FixtureEvent = {

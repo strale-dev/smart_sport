@@ -40,7 +40,12 @@ describe("subscribeMatchBroadcast", () => {
 
   it("forwards broadcast payload to callback", () => {
     const onUpdate = vi.fn();
-    const cleanup = subscribeMatchBroadcast(1035037, onUpdate);
+    const onStatusChange = vi.fn();
+    const cleanup = subscribeMatchBroadcast(1035037, onUpdate, {
+      onStatusChange,
+    });
+
+    expect(onStatusChange).toHaveBeenCalledWith("SUBSCRIBED");
 
     const payload = {
       fixtureProviderId: 1035037,

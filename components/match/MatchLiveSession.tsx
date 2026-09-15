@@ -11,6 +11,7 @@ import {
 
 import { MatchLiveWatchLimitBanner } from "@/components/match/MatchLiveWatchLimitBanner";
 import { useLiveMatch } from "@/hooks/useLiveMatch";
+import { useMatchLocalClock } from "@/hooks/useMatchLocalClock";
 import type { LiveWatchResult } from "@/lib/live/watch-client";
 import type { MatchLiveSnapshot } from "@/lib/live/live-fetch";
 import type { MeaningfulEventBroadcastPayload } from "@/lib/live/event-detector-types";
@@ -27,6 +28,7 @@ type MatchLiveContextValue = {
   isLive: boolean;
   isFetching: boolean;
   lastMeaningfulEvent: MeaningfulEventBroadcastPayload | null;
+  displayMinuteLabel: string | null;
 };
 
 const MatchLiveContext = createContext<MatchLiveContextValue | null>(null);
@@ -55,23 +57,27 @@ export function MatchLiveSession({
     onWatchError,
   });
 
+  const mergedFixture = live.fixture ?? fixture;
+  const displayMinuteLabel = useMatchLocalClock(mergedFixture, live.isLive);
+
   const value = useMemo<MatchLiveContextValue>(
     () => ({
-      fixture: live.fixture ?? fixture,
+      fixture: mergedFixture,
       events: live.events,
       statistics: live.statistics,
       isLive: live.isLive,
       isFetching: live.isFetching,
       lastMeaningfulEvent: live.lastMeaningfulEvent,
+      displayMinuteLabel,
     }),
     [
-      fixture,
+      displayMinuteLabel,
       live.events,
-      live.fixture,
       live.isFetching,
       live.isLive,
       live.lastMeaningfulEvent,
       live.statistics,
+      mergedFixture,
     ]
   );
 

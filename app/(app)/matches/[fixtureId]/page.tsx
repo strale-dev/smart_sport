@@ -6,6 +6,7 @@ import { AIInsightProvider } from "@/components/ai/AIInsightProvider";
 import { MatchAIHeroSection } from "@/components/match/MatchAIHeroSection";
 import { MatchDetailsTabsSection } from "@/components/match/MatchDetailsTabsSection";
 import { MatchLiveSession } from "@/components/match/MatchLiveSession";
+import { FavoriteMatchToggle } from "@/components/follow/FavoriteMatchToggle";
 import { MatchHeader } from "@/components/match/MatchHeader";
 import { MatchViewAnalytics } from "@/components/match/MatchViewAnalytics";
 import { MatchLineupsPanel } from "@/components/match/panels/MatchLineupsPanel";
@@ -21,6 +22,7 @@ import {
   getFixtureStatistics,
 } from "@/lib/services/footballService";
 import type { MatchLiveSnapshot } from "@/lib/live/live-fetch";
+import { isFixtureFavorited } from "@/lib/services/followService";
 import { getCurrentUser } from "@/lib/supabase/user";
 
 type MatchPageProps = {
@@ -67,6 +69,9 @@ export default async function MatchPage({ params }: MatchPageProps) {
 
   const returnTo = `/matches/${id}`;
   const isGuest = !user;
+  const initialFavorited = user
+    ? await isFixtureFavorited(user.id, id).catch(() => false)
+    : false;
 
   let initialLiveSnapshot: MatchLiveSnapshot | undefined;
   if (isLiveFixtureStatus(fixture.status)) {
@@ -84,7 +89,17 @@ export default async function MatchPage({ params }: MatchPageProps) {
   return (
     <MatchLiveSession fixture={fixture} initialSnapshot={initialLiveSnapshot}>
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-        <MatchHeader fixture={fixture} />
+        <MatchHeader
+          fixture={fixture}
+          favoriteControl={
+            <FavoriteMatchToggle
+              fixtureProviderId={id}
+              initialFavorited={initialFavorited}
+              isAuthenticated={!isGuest}
+              returnTo={returnTo}
+            />
+          }
+        />
 
         <AIInsightProvider
           key={`${fixture.externalId}-${fixture.status}-${isGuest ? "guest" : "user"}`}

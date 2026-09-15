@@ -11,14 +11,21 @@ import {
   formatTeamStandingLabel,
   type TeamPrimaryContext,
 } from "@/lib/teams/resolve-primary-league";
+import type { ReactNode } from "react";
+
 import type { Team } from "@/types/domain";
 
 type TeamHeaderProps = {
   team: Team;
   primaryContext: TeamPrimaryContext | null;
+  followControl?: ReactNode;
 };
 
-export function TeamHeader({ team, primaryContext }: TeamHeaderProps) {
+export function TeamHeader({
+  team,
+  primaryContext,
+  followControl,
+}: TeamHeaderProps) {
   const standingLabel = primaryContext
     ? formatTeamStandingLabel(primaryContext)
     : null;
@@ -26,24 +33,29 @@ export function TeamHeader({ team, primaryContext }: TeamHeaderProps) {
   return (
     <Card className="w-full">
       <CardHeader>
-        <div className="flex min-w-0 items-center gap-3">
-          <TeamLogo
-            name={team.name}
-            logoUrl={team.logoUrl}
-            className="size-14"
-          />
-          <div className="min-w-0 space-y-1">
-            <CardTitle className="font-heading text-xl sm:text-2xl">
-              {team.name}
-            </CardTitle>
-            <CardDescription className="flex flex-wrap items-center gap-2">
-              {team.country?.name ? <span>{team.country.name}</span> : null}
-              {standingLabel ? <span>{standingLabel}</span> : null}
-              <Badge variant="outline">
-                {team.isNational ? "National team" : "Club"}
-              </Badge>
-            </CardDescription>
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <TeamLogo
+              name={team.name}
+              logoUrl={team.logoUrl}
+              className="size-14"
+            />
+            <div className="min-w-0 space-y-1">
+              <CardTitle className="font-heading text-xl sm:text-2xl">
+                {team.name}
+              </CardTitle>
+              <CardDescription className="flex flex-wrap items-center gap-2">
+                {team.country?.name ? <span>{team.country.name}</span> : null}
+                {standingLabel ? <span>{standingLabel}</span> : null}
+                <Badge variant="outline">
+                  {team.isNational ? "National team" : "Club"}
+                </Badge>
+              </CardDescription>
+            </div>
           </div>
+          {followControl ? (
+            <div className="shrink-0">{followControl}</div>
+          ) : null}
         </div>
       </CardHeader>
       {team.code ? (

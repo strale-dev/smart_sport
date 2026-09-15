@@ -26,6 +26,10 @@ type FixtureRow = {
   kickoff_at: string;
   status: Fixture["status"];
   minute: number | null;
+  status_extra_minute: number | null;
+  period_first_start_at: string | null;
+  period_second_start_at: string | null;
+  last_provider_sync_at: string | null;
   referee: string | null;
   round: string | null;
   score_home: number | null;
@@ -141,6 +145,12 @@ function mapFixtureRow(row: FixtureRow): Fixture {
       : null,
     referee: row.referee,
     round: row.round,
+    liveClock: {
+      statusExtraMinute: row.status_extra_minute,
+      lastProviderSyncAt: row.last_provider_sync_at,
+      periodFirstStartAt: row.period_first_start_at,
+      periodSecondStartAt: row.period_second_start_at,
+    },
   };
 }
 
@@ -149,6 +159,10 @@ const FIXTURE_SELECT = `
   kickoff_at,
   status,
   minute,
+  status_extra_minute,
+  period_first_start_at,
+  period_second_start_at,
+  last_provider_sync_at,
   referee,
   round,
   score_home,
@@ -702,6 +716,44 @@ export async function readPlayerIdByProviderIdFromDb(
   if (error) {
     throw new Error(
       `Failed to resolve player uuid ${providerId}: ${error.message}`
+    );
+  }
+
+  return data?.id ?? null;
+}
+
+export async function readLeagueIdByProviderIdFromDb(
+  providerId: number
+): Promise<string | null> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("leagues")
+    .select("id")
+    .eq("provider_id", providerId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Failed to resolve league uuid ${providerId}: ${error.message}`
+    );
+  }
+
+  return data?.id ?? null;
+}
+
+export async function readFixtureIdByProviderIdFromDb(
+  providerId: number
+): Promise<string | null> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("fixtures")
+    .select("id")
+    .eq("provider_id", providerId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Failed to resolve fixture uuid ${providerId}: ${error.message}`
     );
   }
 

@@ -10,13 +10,16 @@ import {
   formatMarketValue,
   formatPlayerPosition,
 } from "@/lib/players/display";
+import type { ReactNode } from "react";
+
 import type { Player } from "@/types/domain";
 
 type PlayerHeaderProps = {
   player: Player;
+  followControl?: ReactNode;
 };
 
-export function PlayerHeader({ player }: PlayerHeaderProps) {
+export function PlayerHeader({ player, followControl }: PlayerHeaderProps) {
   const age = ageFromDateOfBirth(player.dateOfBirth);
   const positionLabel = formatPlayerPosition(player.position);
   const marketValueLabel = formatMarketValue(player.marketValue);
@@ -42,48 +45,53 @@ export function PlayerHeader({ player }: PlayerHeaderProps) {
   return (
     <Card className="w-full overflow-hidden">
       <CardHeader className="gap-4">
-        <div className="flex items-center gap-4">
-          <PlayerPhoto
-            name={player.fullName}
-            photoUrl={player.photoUrl}
-            className="size-16 sm:size-20"
-          />
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="font-heading truncate text-xl sm:text-2xl">
-                {player.fullName}
-              </CardTitle>
-              {player.shirtNumber != null ? (
-                <Badge variant="secondary" className="shrink-0 font-mono">
-                  #{player.shirtNumber}
-                </Badge>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <PlayerPhoto
+              name={player.fullName}
+              photoUrl={player.photoUrl}
+              className="size-16 sm:size-20"
+            />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex items-center gap-2">
+                <CardTitle className="font-heading truncate text-xl sm:text-2xl">
+                  {player.fullName}
+                </CardTitle>
+                {player.shirtNumber != null ? (
+                  <Badge variant="secondary" className="shrink-0 font-mono">
+                    #{player.shirtNumber}
+                  </Badge>
+                ) : null}
+              </div>
+
+              {player.currentTeam ? (
+                <Link
+                  href={`/teams/${player.currentTeam.externalId}`}
+                  className="text-muted-foreground hover:text-foreground flex w-fit max-w-full items-center gap-2 text-sm"
+                >
+                  <TeamLogo
+                    name={player.currentTeam.name}
+                    logoUrl={player.currentTeam.logoUrl}
+                    className="size-5"
+                  />
+                  <span className="truncate">{player.currentTeam.name}</span>
+                </Link>
+              ) : null}
+
+              {chips.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {chips.map((chip) => (
+                    <Badge key={chip} variant="outline">
+                      {chip}
+                    </Badge>
+                  ))}
+                </div>
               ) : null}
             </div>
-
-            {player.currentTeam ? (
-              <Link
-                href={`/teams/${player.currentTeam.externalId}`}
-                className="text-muted-foreground hover:text-foreground flex w-fit max-w-full items-center gap-2 text-sm"
-              >
-                <TeamLogo
-                  name={player.currentTeam.name}
-                  logoUrl={player.currentTeam.logoUrl}
-                  className="size-5"
-                />
-                <span className="truncate">{player.currentTeam.name}</span>
-              </Link>
-            ) : null}
-
-            {chips.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {chips.map((chip) => (
-                  <Badge key={chip} variant="outline">
-                    {chip}
-                  </Badge>
-                ))}
-              </div>
-            ) : null}
           </div>
+          {followControl ? (
+            <div className="shrink-0">{followControl}</div>
+          ) : null}
         </div>
       </CardHeader>
 

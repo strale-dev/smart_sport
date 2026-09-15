@@ -14,6 +14,9 @@ type BroadcastEnvelope = {
   payload?: LiveBroadcastPayload;
 };
 
+export type MatchBroadcastSubscribeStatus =
+  "SUBSCRIBED" | "CHANNEL_ERROR" | "TIMED_OUT" | "CLOSED" | string;
+
 function extractBroadcastPayload(
   envelope: BroadcastEnvelope | LiveBroadcastPayload
 ): LiveBroadcastPayload {
@@ -34,9 +37,14 @@ function extractBroadcastPayload(
   );
 }
 
+type SubscribeMatchBroadcastOptions = {
+  onStatusChange?: (status: MatchBroadcastSubscribeStatus) => void;
+};
+
 export function subscribeMatchBroadcast(
   fixtureProviderId: number,
-  onUpdate: (payload: LiveBroadcastPayload) => void
+  onUpdate: (payload: LiveBroadcastPayload) => void,
+  options: SubscribeMatchBroadcastOptions = {}
 ): () => void {
   const supabase = createClient();
   const channelName = matchChannel(fixtureProviderId);
@@ -47,6 +55,7 @@ export function subscribeMatchBroadcast(
       onUpdate(extractBroadcastPayload(message as BroadcastEnvelope));
     })
     .subscribe(async (status) => {
+      options.onStatusChange?.(status);
       if (status === "SUBSCRIBED") {
         await channel.track({ surface: "match", fixtureProviderId });
       }

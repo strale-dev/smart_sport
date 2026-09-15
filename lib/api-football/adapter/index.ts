@@ -1,9 +1,11 @@
 export {
   mapFixture,
+  mapFixtureLiveClockFromRaw,
   mapLeague,
   mapLeagueRef,
   mapScore,
   mapTeamRef,
+  periodUnixSecondsToIso,
 } from "@/lib/api-football/adapter/fixture";
 export {
   mapFixtureEvent,

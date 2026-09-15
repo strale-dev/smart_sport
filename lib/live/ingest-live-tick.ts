@@ -1,9 +1,21 @@
+import { mapFixtureLiveClockFromRaw } from "@/lib/api-football/adapter";
 import {
   getFixtureEvents as getFixtureEventsEndpoint,
   getFixtureStatistics as getFixtureStatisticsEndpoint,
   getFixtureByIdWithRaw,
 } from "@/lib/api-football/endpoints/fixtures";
+import {
+  diffAuthoritativeState,
+  type AuthoritativeLiveState,
+} from "@/lib/live/authoritative-fingerprint";
+import { buildMatchLiveSnapshot } from "@/lib/live/build-match-snapshot";
+import type { MatchLiveSnapshot } from "@/lib/live/live-fetch";
 import { isLivePollingEnabled } from "@/lib/env";
+import {
+  readFixtureByProviderIdFromDb,
+  readFixtureEventsFromDb,
+  readFixtureStatisticsFromDb,
+} from "@/lib/ingestion/db-read";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import {
   getFixtureUuidByProviderId,
@@ -19,11 +31,15 @@ import {
   providerFixtureKey,
   providerFixtureStatsKey,
 } from "@/lib/redis/keys";
+import type { Fixture } from "@/types/domain";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type IngestLiveFixtureTickResult = {
   ok: boolean;
   fixtureProviderId: number;
+  changed?: boolean;
+  syncedAt?: string;
+  snapshot?: MatchLiveSnapshot;
   skipped?: boolean;
   reason?: string;
   stats?: {
@@ -32,6 +48,53 @@ export type IngestLiveFixtureTickResult = {
     apiRequests: number;
   };
 };
+
+async function readCurrentAuthoritativeState(
+  fixtureProviderId: number
+): Promise<AuthoritativeLiveState | null> {
+  const [fixture, events, statistics] = await Promise.all([
+    readFixtureByProviderIdFromDb(fixtureProviderId),
+    readFixtureEventsFromDb(fixtureProviderId),
+    readFixtureStatisticsFromDb(fixtureProviderId),
+  ]);
+
+  if (!fixture) {
+    return null;
+  }
+
+  return { fixture, events, statistics };
+}
+
+async function writeProviderCaches(
+  fixtureProviderId: number,
+  state: AuthoritativeLiveState,
+  syncedAt: string
+): Promise<void> {
+  const redis = getRedis();
+  if (!redis) {
+    return;
+  }
+
+  const fixtureTtl = fixtureFreshTtlSeconds(state.fixture.status);
+
+  await Promise.all([
+    redis.set(
+      providerFixtureKey(fixtureProviderId),
+      { value: state.fixture, cachedAt: syncedAt },
+      { ex: fixtureTtl }
+    ),
+    redis.set(
+      providerFixtureEventsKey(fixtureProviderId),
+      { value: state.events, cachedAt: syncedAt },
+      { ex: CACHE_TTL.fixtureEventsFresh }
+    ),
+    redis.set(
+      providerFixtureStatsKey(fixtureProviderId),
+      { value: state.statistics, cachedAt: syncedAt },
+      { ex: CACHE_TTL.fixtureStatsFresh }
+    ),
+  ]);
+}
 
 export async function ingestLiveFixtureTick(
   fixtureProviderId: number
@@ -61,8 +124,43 @@ export async function ingestLiveFixtureTick(
     };
   }
 
+  await throttleProviderRequest();
+  const events = await getFixtureEventsEndpoint(fixtureProviderId);
+  apiRequests += 1;
+
+  await throttleProviderRequest();
+  const statistics = await getFixtureStatisticsEndpoint(fixtureProviderId);
+  apiRequests += 1;
+
   const syncedAt = new Date().toISOString();
-  await ingestFixtureFromRaw(client, fixturePayload.raw, syncedAt);
+  const nextFixture: Fixture = {
+    ...fixturePayload.domain,
+    liveClock: mapFixtureLiveClockFromRaw(fixturePayload.raw, syncedAt),
+  };
+
+  const nextState: AuthoritativeLiveState = {
+    fixture: nextFixture,
+    events,
+    statistics,
+  };
+
+  const previousState = await readCurrentAuthoritativeState(fixtureProviderId);
+  const changeFlags = diffAuthoritativeState(previousState, nextState);
+
+  if (!changeFlags.any) {
+    return {
+      ok: true,
+      fixtureProviderId,
+      changed: false,
+      syncedAt,
+      snapshot: buildMatchLiveSnapshot(nextState),
+      stats: { events: 0, statistics: 0, apiRequests },
+    };
+  }
+
+  if (changeFlags.fixture) {
+    await ingestFixtureFromRaw(client, fixturePayload.raw, syncedAt);
+  }
 
   const fixtureUuid = await getFixtureUuidByProviderId(
     client,
@@ -78,48 +176,29 @@ export async function ingestLiveFixtureTick(
     };
   }
 
-  await throttleProviderRequest();
-  const events = await getFixtureEventsEndpoint(fixtureProviderId);
-  apiRequests += 1;
+  let eventsCount = 0;
+  let statisticsCount = 0;
 
-  await throttleProviderRequest();
-  const statistics = await getFixtureStatisticsEndpoint(fixtureProviderId);
-  apiRequests += 1;
-
-  const eventsCount = await upsertFixtureEvents(client, fixtureUuid, events);
-  const statisticsCount = await upsertFixtureStatistics(
-    client,
-    fixtureUuid,
-    statistics
-  );
-
-  const redis = getRedis();
-  const domain = fixturePayload.domain;
-  const fixtureTtl = fixtureFreshTtlSeconds(domain.status);
-
-  if (redis) {
-    await Promise.all([
-      redis.set(
-        providerFixtureKey(fixtureProviderId),
-        { value: domain, cachedAt: syncedAt },
-        { ex: fixtureTtl }
-      ),
-      redis.set(
-        providerFixtureEventsKey(fixtureProviderId),
-        { value: events, cachedAt: syncedAt },
-        { ex: CACHE_TTL.fixtureEventsFresh }
-      ),
-      redis.set(
-        providerFixtureStatsKey(fixtureProviderId),
-        { value: statistics, cachedAt: syncedAt },
-        { ex: CACHE_TTL.fixtureStatsFresh }
-      ),
-    ]);
+  if (changeFlags.events) {
+    eventsCount = await upsertFixtureEvents(client, fixtureUuid, events);
   }
+
+  if (changeFlags.statistics) {
+    statisticsCount = await upsertFixtureStatistics(
+      client,
+      fixtureUuid,
+      statistics
+    );
+  }
+
+  await writeProviderCaches(fixtureProviderId, nextState, syncedAt);
 
   return {
     ok: true,
     fixtureProviderId,
+    changed: true,
+    syncedAt,
+    snapshot: buildMatchLiveSnapshot(nextState),
     stats: {
       events: eventsCount,
       statistics: statisticsCount,

@@ -10,6 +10,7 @@ import { MatchRow } from "@/components/match/MatchRow";
 import { formatDateKeyInTimezone } from "@/lib/datetime/timezone";
 import { resolveViewerTimezone } from "@/lib/datetime/viewer-timezone.server";
 import { getDashboardData } from "@/lib/services/dashboardService";
+import { listUserFollows } from "@/lib/services/followService";
 import { getCurrentUser } from "@/lib/supabase/user";
 
 export const metadata: Metadata = {
@@ -20,7 +21,16 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   const timeZone = await resolveViewerTimezone(user?.id ?? null);
   const todayDateKey = formatDateKeyInTimezone(new Date(), timeZone);
-  const data = await getDashboardData();
+  const [data, followedData] = await Promise.all([
+    getDashboardData(),
+    user
+      ? listUserFollows(user.id).catch(() => ({
+          teams: [],
+          players: [],
+          leagues: [],
+        }))
+      : Promise.resolve({ teams: [], players: [], leagues: [] }),
+  ]);
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-8">
@@ -88,7 +98,7 @@ export default async function DashboardPage() {
       </DashboardSection>
 
       <DashboardSection title="Followed teams & players">
-        <FollowedSection />
+        <FollowedSection data={followedData} isAuthenticated={Boolean(user)} />
       </DashboardSection>
     </div>
   );

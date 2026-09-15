@@ -47,7 +47,7 @@ export function GroupedFixturesList({ data }: GroupedFixturesListProps) {
           <EmptyState
             icon={UsersIcon}
             title="No followed teams yet"
-            description="Follow clubs to see their upcoming and recent matches here. Team following arrives in a later release."
+            description="Follow clubs to see their upcoming and recent matches here."
           />
           <p className="text-center">
             <Link

@@ -467,6 +467,8 @@ export type Database = {
           minute: number | null
           pen_away: number | null
           pen_home: number | null
+          period_first_start_at: string | null
+          period_second_start_at: string | null
           provider_id: number
           provider_payload: Json | null
           referee: string | null
@@ -475,6 +477,7 @@ export type Database = {
           score_home: number | null
           season_id: string | null
           status: Database["public"]["Enums"]["fixture_status"]
+          status_extra_minute: number | null
           updated_at: string
           venue_id: string | null
         }
@@ -497,6 +500,8 @@ export type Database = {
           minute?: number | null
           pen_away?: number | null
           pen_home?: number | null
+          period_first_start_at?: string | null
+          period_second_start_at?: string | null
           provider_id: number
           provider_payload?: Json | null
           referee?: string | null
@@ -505,6 +510,7 @@ export type Database = {
           score_home?: number | null
           season_id?: string | null
           status?: Database["public"]["Enums"]["fixture_status"]
+          status_extra_minute?: number | null
           updated_at?: string
           venue_id?: string | null
         }
@@ -527,6 +533,8 @@ export type Database = {
           minute?: number | null
           pen_away?: number | null
           pen_home?: number | null
+          period_first_start_at?: string | null
+          period_second_start_at?: string | null
           provider_id?: number
           provider_payload?: Json | null
           referee?: string | null
@@ -535,6 +543,7 @@ export type Database = {
           score_home?: number | null
           season_id?: string | null
           status?: Database["public"]["Enums"]["fixture_status"]
+          status_extra_minute?: number | null
           updated_at?: string
           venue_id?: string | null
         }

@@ -63,6 +63,9 @@ export function fixtureToInsert(
     et_away: fixture.score.extratimeAway,
     pen_home: fixture.score.penaltyHome,
     pen_away: fixture.score.penaltyAway,
+    status_extra_minute: fixture.liveClock?.statusExtraMinute ?? null,
+    period_first_start_at: fixture.liveClock?.periodFirstStartAt ?? null,
+    period_second_start_at: fixture.liveClock?.periodSecondStartAt ?? null,
     last_provider_sync_at: syncedAt,
     provider_payload: rawPayload as FixtureInsert["provider_payload"],
   };

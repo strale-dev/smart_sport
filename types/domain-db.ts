@@ -83,6 +83,9 @@ export type FixtureInsert = {
   et_away: number | null;
   pen_home: number | null;
   pen_away: number | null;
+  status_extra_minute?: number | null;
+  period_first_start_at?: string | null;
+  period_second_start_at?: string | null;
   last_provider_sync_at?: string | null;
   provider_payload: Json;
 };

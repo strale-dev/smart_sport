@@ -45,6 +45,66 @@ describe("broadcaster", () => {
     expect(body.messages[0]?.event).toBe("update");
   });
 
+  it("includes snapshot on match topic only", async () => {
+    await broadcastMatchUpdate(1, "2026-09-12T12:00:00.000Z", {
+      snapshot: {
+        fixture: {
+          externalId: 1,
+          league: {
+            externalId: 39,
+            name: "EPL",
+            type: null,
+            country: null,
+            logoUrl: null,
+          },
+          seasonYear: 2026,
+          homeTeam: {
+            externalId: 10,
+            name: "H",
+            code: null,
+            logoUrl: null,
+            isNational: false,
+          },
+          awayTeam: {
+            externalId: 20,
+            name: "A",
+            code: null,
+            logoUrl: null,
+            isNational: false,
+          },
+          kickoffAt: "2026-09-15T18:00:00.000Z",
+          status: "1H",
+          minute: 1,
+          score: {
+            home: 0,
+            away: 0,
+            halftimeHome: null,
+            halftimeAway: null,
+            fulltimeHome: null,
+            fulltimeAway: null,
+            extratimeHome: null,
+            extratimeAway: null,
+            penaltyHome: null,
+            penaltyAway: null,
+          },
+          venue: null,
+          referee: null,
+          round: null,
+        },
+        events: [],
+        statistics: [],
+      },
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(String(init.body)) as {
+      messages: Array<{ topic: string; payload: { snapshot?: unknown } }>;
+    };
+
+    expect(body.messages[0]?.payload.snapshot).toBeDefined();
+    expect(body.messages[1]?.payload.snapshot).toBeUndefined();
+  });
+
   it("broadcasts live feed only for center updates", async () => {
     await broadcastLiveFeedUpdate("2026-09-12T12:00:00.000Z", "live-center");
 

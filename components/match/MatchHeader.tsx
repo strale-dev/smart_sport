@@ -18,10 +18,13 @@ import {
 } from "@/lib/fixtures/display";
 import { getMatchScoreboardPreset } from "@/lib/match/scoreboard-presets";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
+import type { ReactNode } from "react";
+
 import type { Fixture } from "@/types/domain";
 
 type MatchHeaderProps = {
   fixture: Fixture;
+  favoriteControl?: ReactNode;
 };
 
 function formatVenue(fixture: Fixture): string | null {
@@ -38,7 +41,10 @@ function formatVenue(fixture: Fixture): string | null {
 
 const headerScoreboardPreset = getMatchScoreboardPreset("header");
 
-export function MatchHeader({ fixture: fixtureProp }: MatchHeaderProps) {
+export function MatchHeader({
+  fixture: fixtureProp,
+  favoriteControl,
+}: MatchHeaderProps) {
   const liveContext = useMatchLiveContext();
   const fixture = liveContext?.fixture ?? fixtureProp;
   const timeZone = useViewerTimezone();
@@ -57,16 +63,22 @@ export function MatchHeader({ fixture: fixtureProp }: MatchHeaderProps) {
           leagueLogoUrl={fixture.league.logoUrl}
           leagueLogoPriority
           trailing={
-            isLive ? (
-              <LiveStatusChip
-                minuteLabel={formatFixtureMinute(fixture)}
-                animate
-              />
-            ) : (
-              <span className="text-muted-foreground text-sm">
-                {statusLabel}
-              </span>
-            )
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {favoriteControl}
+              {isLive ? (
+                <LiveStatusChip
+                  minuteLabel={
+                    liveContext?.displayMinuteLabel ??
+                    formatFixtureMinute(fixture)
+                  }
+                  animate
+                />
+              ) : (
+                <span className="text-muted-foreground text-sm">
+                  {statusLabel}
+                </span>
+              )}
+            </div>
           }
         />
       </MatchHeaderShellHeader>

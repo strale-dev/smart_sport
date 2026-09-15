@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { Suspense } from "react";
 
+import { FollowToggle } from "@/components/follow/FollowToggle";
 import { LeagueDetailsTabsSection } from "@/components/league/LeagueDetailsTabsSection";
 import { LeagueHeader } from "@/components/league/LeagueHeader";
 import { LeagueViewAnalytics } from "@/components/league/LeagueViewAnalytics";
@@ -17,6 +18,7 @@ import {
   getLeagueTopStats,
   getStandings,
 } from "@/lib/services/footballService";
+import { isFollowingProvider } from "@/lib/services/followService";
 import { getCurrentUser } from "@/lib/supabase/user";
 import type {
   Fixture,
@@ -132,6 +134,24 @@ export default async function LeaguePage({
           }),
     ]);
 
+  const returnTo = `/leagues/${id}`;
+  const initialFollowing = user
+    ? await isFollowingProvider(user.id, {
+        objectType: "LEAGUE",
+        providerId: id,
+      }).catch(() => false)
+    : false;
+
+  const followControl = (
+    <FollowToggle
+      objectType="LEAGUE"
+      providerId={id}
+      initialFollowing={initialFollowing}
+      isAuthenticated={Boolean(user)}
+      returnTo={returnTo}
+    />
+  );
+
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
       <Suspense fallback={<Skeleton className="h-28 w-full rounded-xl" />}>
@@ -139,6 +159,7 @@ export default async function LeaguePage({
           league={league}
           seasons={seasons}
           seasonYear={seasonYear}
+          followControl={followControl}
         />
       </Suspense>
       <LeagueDetailsTabsSection

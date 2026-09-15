@@ -5,6 +5,7 @@ import {
   type LiveBroadcastPayload,
   type MeaningfulEventBroadcastPayload,
 } from "@/lib/live/channels";
+import type { MatchLiveSnapshot } from "@/lib/live/live-fetch";
 import { getServerEnv } from "@/lib/env.server";
 
 type BroadcastMessage = {
@@ -52,7 +53,10 @@ async function sendBroadcastSafe(messages: BroadcastMessage[]): Promise<void> {
 export async function broadcastMatchUpdate(
   fixtureProviderId: number,
   syncedAt: string,
-  meaningfulEvents?: MeaningfulEventBroadcastPayload[]
+  options?: {
+    meaningfulEvents?: MeaningfulEventBroadcastPayload[];
+    snapshot?: MatchLiveSnapshot;
+  }
 ): Promise<void> {
   const payload: LiveBroadcastPayload = {
     fixtureProviderId,
@@ -60,8 +64,22 @@ export async function broadcastMatchUpdate(
     source: "match",
   };
 
+  const meaningfulEvents = options?.meaningfulEvents;
   if (meaningfulEvents && meaningfulEvents.length > 0) {
     payload.meaningfulEvents = meaningfulEvents;
+  }
+
+  if (options?.snapshot) {
+    payload.snapshot = options.snapshot;
+  }
+
+  const feedPayload: LiveBroadcastPayload = {
+    fixtureProviderId,
+    syncedAt,
+    source: "match",
+  };
+  if (meaningfulEvents && meaningfulEvents.length > 0) {
+    feedPayload.meaningfulEvents = meaningfulEvents;
   }
 
   await sendBroadcastSafe([
@@ -73,7 +91,7 @@ export async function broadcastMatchUpdate(
     {
       topic: LIVE_FEED_CHANNEL,
       event: LIVE_BROADCAST_EVENT,
-      payload,
+      payload: feedPayload,
     },
   ]);
 }
