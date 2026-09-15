@@ -66,5 +66,8 @@ describe("vercel.json cron contract", () => {
     expect(VERCEL_CRON_PRO_TARGETS["/api/cron/sync-lineups"]).toBe(
       "*/15 * * * *"
     );
+    expect(VERCEL_CRON_PRO_TARGETS["/api/cron/reconcile-ai-usage"]).toBe(
+      "*/5 * * * *"
+    );
   });
 });

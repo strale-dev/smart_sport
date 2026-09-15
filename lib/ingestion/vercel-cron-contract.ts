@@ -25,6 +25,7 @@ export const VERCEL_CRON_HOBBY_SCHEDULES: Record<string, string> = {
 export const VERCEL_CRON_PRO_TARGETS: Record<string, string> = {
   "/api/cron/sync-standings": "0 */6 * * *",
   "/api/cron/sync-lineups": "*/15 * * * *",
+  "/api/cron/reconcile-ai-usage": "*/5 * * * *",
 };
 
 export const GITHUB_ACTIONS_INGESTION_PATHS = [
@@ -33,4 +34,5 @@ export const GITHUB_ACTIONS_INGESTION_PATHS = [
   "/api/cron/sync-live-center",
   "/api/cron/sync-fixtures-today",
   "/api/cron/reap-stale-locks",
+  "/api/cron/reconcile-ai-usage",
 ] as const;

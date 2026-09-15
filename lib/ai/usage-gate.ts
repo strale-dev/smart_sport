@@ -1,7 +1,4 @@
-import * as Sentry from "@sentry/nextjs";
-
 import {
-  AiLimitReachedError,
   assertCanGenerateAI,
   getAiUsageSummary,
   getUserEntitlement,

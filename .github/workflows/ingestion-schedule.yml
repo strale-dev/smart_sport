@@ -44,6 +44,7 @@ jobs:
             { id: "sync-live-center", path: "/api/cron/sync-live-center", schedule: "*/15 * * * *" },
             { id: "sync-fixtures-today", path: "/api/cron/sync-fixtures-today", schedule: "*/15 * * * *" },
             { id: "reap-stale-locks", path: "/api/cron/reap-stale-locks", schedule: "*/5 * * * *" },
+            { id: "reconcile-ai-usage", path: "/api/cron/reconcile-ai-usage", schedule: "*/5 * * * *" },
             { id: "standings", path: "/api/cron/sync-standings", schedule: "0 */6 * * *" },
           ];
           const liveIds = new Set([

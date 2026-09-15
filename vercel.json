@@ -29,10 +29,6 @@
     {
       "path": "/api/cron/cleanup-ai-usage",
       "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/reconcile-ai-usage",
-      "schedule": "*/5 * * * *"
     }
   ]
 }

@@ -996,11 +996,12 @@ Optional hardening (not required for Phase 0): in Sentry → Project Settings �
     { "path": "/api/cron/sync-fixtures", "schedule": "0 4 * * *" },
     { "path": "/api/cron/sync-standings", "schedule": "0 */6 * * *" },
     { "path": "/api/cron/sync-lineups", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/cleanup-ai-usage", "schedule": "5 0 * * *" },
-    { "path": "/api/cron/reconcile-ai-usage", "schedule": "*/5 * * * *" }
+    { "path": "/api/cron/cleanup-ai-usage", "schedule": "5 0 * * *" }
   ]
 }
 ```
+
+- **`/api/cron/reconcile-ai-usage`:** every 5 min via [`.github/workflows/ingestion-schedule.yml`](../.github/workflows/ingestion-schedule.yml) on Vercel Hobby; move to `vercel.json` with `*/5 * * * *` after Pro cutover (`VERCEL_CRON_PRO_TARGETS`).
 
 - Fixtures: daily, window today ± 7 days (~15 requests/run).
 - Standings: every 6h (~7 requests/run × 4 = ~28/day for 7 leagues).
