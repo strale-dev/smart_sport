@@ -83,6 +83,7 @@ describe("match-clock", () => {
   });
 
   it("shows authoritative stoppage at sync without drift", () => {
+    const receivedAt = Date.parse("2026-09-15T18:45:00.000Z");
     const anchor = buildMatchClockAnchorFromFixture(
       fixture({
         minute: 45,
@@ -92,11 +93,10 @@ describe("match-clock", () => {
           periodFirstStartAt: null,
           periodSecondStartAt: null,
         },
-      })
+      }),
+      receivedAt
     );
-    expect(computeMatchClockDisplay(anchor, anchor.receivedAtMs).label).toBe(
-      "45+2'"
-    );
+    expect(computeMatchClockDisplay(anchor, receivedAt).label).toBe("45+2'");
   });
 
   it("ticks stoppage extra locally when server extra is set", () => {
