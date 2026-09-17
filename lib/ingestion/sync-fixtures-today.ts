@@ -25,6 +25,7 @@ export type SyncFixturesTodayResult = {
     fixturesFilteredOut: number;
     fixturesRemaining?: number;
     stoppedForTimeBudget?: boolean;
+    fixtureErrors?: number;
   };
 };
 
@@ -71,6 +72,7 @@ export async function syncFixturesToday(
   const fixturesFilteredOut = rawFixtures.length - allowlisted.length;
   const domainFixtures: Fixture[] = [];
   let fixturesUpserted = 0;
+  let fixtureErrors = 0;
   let stoppedForTimeBudget = false;
 
   for (const raw of allowlisted) {
@@ -79,9 +81,14 @@ export async function syncFixturesToday(
       break;
     }
 
-    const { domain } = await ingestFixtureFromRaw(client, raw, syncedAt);
-    domainFixtures.push(domain);
-    fixturesUpserted += 1;
+    try {
+      const { domain } = await ingestFixtureFromRaw(client, raw, syncedAt);
+      domainFixtures.push(domain);
+      fixturesUpserted += 1;
+    } catch (error) {
+      fixtureErrors += 1;
+      console.error(`[sync-fixtures-today] fixture ${raw.fixture.id}`, error);
+    }
   }
 
   const redis = getRedis();
@@ -96,8 +103,13 @@ export async function syncFixturesToday(
     );
   }
 
+  const ok =
+    allowlisted.length === 0 ||
+    fixturesUpserted > 0 ||
+    (fixtureErrors === 0 && !stoppedForTimeBudget);
+
   return {
-    ok: true,
+    ok,
     job: "sync-fixtures-today",
     stats: {
       date,
@@ -110,6 +122,7 @@ export async function syncFixturesToday(
             stoppedForTimeBudget: true,
           }
         : {}),
+      ...(fixtureErrors > 0 ? { fixtureErrors } : {}),
     },
   };
 }

@@ -79,7 +79,7 @@ export type RawApiFootballFixture = {
     timezone: string;
     date: string;
     timestamp: number;
-    periods: {
+    periods?: {
       first: number | null;
       second: number | null;
     };

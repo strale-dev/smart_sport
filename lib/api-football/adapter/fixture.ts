@@ -1,4 +1,7 @@
-import { mapFixtureStatus } from "@/lib/api-football/adapter/utils";
+import {
+  mapFixtureStatus,
+  parseNullableInt,
+} from "@/lib/api-football/adapter/utils";
 import type {
   RawApiFootballFixture,
   RawApiFootballLeague,
@@ -101,11 +104,13 @@ export function mapFixtureLiveClockFromRaw(
   raw: RawApiFootballFixture,
   lastProviderSyncAt: string | null = null
 ): Fixture["liveClock"] {
+  const periods = raw.fixture.periods;
+
   return {
-    statusExtraMinute: raw.fixture.status.extra,
+    statusExtraMinute: parseNullableInt(raw.fixture.status.extra),
     lastProviderSyncAt,
-    periodFirstStartAt: periodUnixSecondsToIso(raw.fixture.periods.first),
-    periodSecondStartAt: periodUnixSecondsToIso(raw.fixture.periods.second),
+    periodFirstStartAt: periodUnixSecondsToIso(periods?.first),
+    periodSecondStartAt: periodUnixSecondsToIso(periods?.second),
   };
 }
 

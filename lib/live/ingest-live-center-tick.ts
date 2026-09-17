@@ -23,6 +23,7 @@ export type IngestLiveCenterTickResult = {
     fixturesFilteredOut: number;
     fixturesRemaining?: number;
     stoppedForTimeBudget?: boolean;
+    fixtureErrors?: number;
   };
 };
 
@@ -54,6 +55,7 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
   const fixturesFilteredOut = rawFixtures.length - allowlisted.length;
   const domainFixtures: Fixture[] = [];
   let stoppedForTimeBudget = false;
+  let fixtureErrors = 0;
 
   for (const raw of allowlisted) {
     if (cronIngestBudgetExceeded(startedAtMs)) {
@@ -61,8 +63,13 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
       break;
     }
 
-    const { domain } = await ingestFixtureFromRaw(client, raw, syncedAt);
-    domainFixtures.push(domain);
+    try {
+      const { domain } = await ingestFixtureFromRaw(client, raw, syncedAt);
+      domainFixtures.push(domain);
+    } catch (error) {
+      fixtureErrors += 1;
+      console.error(`[sync-live-center] fixture ${raw.fixture.id}`, error);
+    }
   }
 
   const redis = getRedis();
@@ -74,18 +81,25 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
     );
   }
 
+  const fixturesUpserted = domainFixtures.length;
+  const ok =
+    allowlisted.length === 0 ||
+    fixturesUpserted > 0 ||
+    (fixtureErrors === 0 && !stoppedForTimeBudget);
+
   return {
-    ok: true,
+    ok,
     stats: {
       apiRequests,
-      fixturesUpserted: domainFixtures.length,
+      fixturesUpserted,
       fixturesFilteredOut,
       ...(stoppedForTimeBudget
         ? {
-            fixturesRemaining: allowlisted.length - domainFixtures.length,
+            fixturesRemaining: allowlisted.length - fixturesUpserted,
             stoppedForTimeBudget: true,
           }
         : {}),
+      ...(fixtureErrors > 0 ? { fixtureErrors } : {}),
     },
   };
 }

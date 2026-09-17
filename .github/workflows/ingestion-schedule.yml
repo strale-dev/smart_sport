@@ -79,6 +79,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Avoid parallel /fixtures calls + concurrent upserts (quota, locks, 58s client timeout).
+      max-parallel: 1
       matrix:
         include: ${{ fromJSON(needs.select.outputs.include) }}
     steps:
