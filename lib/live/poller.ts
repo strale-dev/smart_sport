@@ -6,12 +6,8 @@ import {
   LIVE_SERVER_POLL_MAX_MS,
   LIVE_SERVER_POLL_MIN_MS,
 } from "@/lib/live/constants";
-import {
-  buildLiveDetectorSnapshot,
-  readDetectorSnapshot,
-  writeDetectorSnapshot,
-} from "@/lib/live/detector-snapshot";
-import { runMeaningfulEventPipeline } from "@/lib/live/meaningful-event-pipeline";
+import { runFixtureLiveIngestAndPipeline } from "@/lib/live/fixture-live-ingest-pipeline";
+import { dispatchNotificationsFromLive } from "@/lib/notifications/dispatch-from-live";
 import {
   shouldContinueFixturePoll,
   shouldContinueLiveCenterPoll,
@@ -21,7 +17,6 @@ import {
   broadcastMatchUpdate,
 } from "@/lib/live/broadcaster";
 import { ingestLiveCenterTick } from "@/lib/live/ingest-live-center-tick";
-import { ingestLiveFixtureTick } from "@/lib/live/ingest-live-tick";
 import { parsePublicEnv, getCronSecret } from "@/lib/env";
 import { getRedis } from "@/lib/redis/client";
 import {
@@ -60,7 +55,7 @@ async function readLastPollAt(key: string): Promise<number | null> {
   return memoryLastPollAt.get(key) ?? null;
 }
 
-async function writeLastPollAt(
+export async function writeLastPollAt(
   key: string,
   timestampMs: number
 ): Promise<void> {
@@ -211,63 +206,25 @@ export async function runFixturePollChainTick(
   }
 
   try {
-    const prevSnapshot = await readDetectorSnapshot(fixtureProviderId);
-    const ingestResult = await ingestLiveFixtureTick(fixtureProviderId);
+    const tickResult = await runFixtureLiveIngestAndPipeline(fixtureProviderId);
 
-    if (ingestResult.ok && ingestResult.changed) {
-      const syncedAt = ingestResult.syncedAt ?? new Date().toISOString();
-      const nextSnapshot = await buildLiveDetectorSnapshot(fixtureProviderId);
+    if (
+      tickResult.changed &&
+      tickResult.nextSnapshot &&
+      tickResult.pipelineResult
+    ) {
+      await dispatchNotificationsFromLive({
+        fixtureProviderId,
+        prevSnapshot: tickResult.prevSnapshot,
+        nextSnapshot: tickResult.nextSnapshot,
+        pipelineResult: tickResult.pipelineResult,
+      });
+    }
 
-      let meaningfulEvents:
-        | import("@/lib/live/event-detector-types").MeaningfulEventBroadcastPayload[]
-        | undefined;
-
-      if (nextSnapshot) {
-        const pipelineResult = await runMeaningfulEventPipeline({
-          fixtureProviderId,
-          prevSnapshot,
-          nextSnapshot,
-        });
-
-        if (pipelineResult.detectResult.scoreGoalMismatch) {
-          console.warn(
-            JSON.stringify({
-              scope: "live/meaningful-event-detector",
-              level: "warn",
-              message: "score_goal_event_count_mismatch",
-              fixtureProviderId,
-              mismatch: pipelineResult.detectResult.scoreGoalMismatch,
-              prevScore: prevSnapshot?.score ?? null,
-              nextScore: nextSnapshot.score,
-            })
-          );
-        }
-
-        if (pipelineResult.broadcastEvents.length > 0) {
-          console.info(
-            JSON.stringify({
-              scope: "live/meaningful-event-detector",
-              level: "info",
-              message: "meaningful_events_detected",
-              fixtureProviderId,
-              events: pipelineResult.broadcastEvents,
-              livePredictionUpdated: pipelineResult.livePredictionUpdated,
-              liveInsightGenerated: pipelineResult.liveInsightGenerated,
-            })
-          );
-        }
-
-        await writeDetectorSnapshot(nextSnapshot);
-
-        meaningfulEvents =
-          pipelineResult.broadcastEvents.length > 0
-            ? pipelineResult.broadcastEvents
-            : undefined;
-      }
-
-      await broadcastMatchUpdate(fixtureProviderId, syncedAt, {
-        meaningfulEvents,
-        snapshot: ingestResult.snapshot,
+    if (tickResult.changed && tickResult.syncedAt) {
+      await broadcastMatchUpdate(fixtureProviderId, tickResult.syncedAt, {
+        meaningfulEvents: tickResult.meaningfulEvents,
+        snapshot: tickResult.snapshot,
       });
     }
 

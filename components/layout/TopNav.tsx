@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -12,9 +13,10 @@ import type { AuthUserView } from "@/lib/supabase/user";
 
 type TopNavProps = {
   user: AuthUserView | null;
+  notificationBell?: ReactNode;
 };
 
-export function TopNav({ user }: TopNavProps) {
+export function TopNav({ user, notificationBell }: TopNavProps) {
   const pathname = usePathname();
   const homeHref = user ? "/dashboard" : "/";
 
@@ -38,9 +40,14 @@ export function TopNav({ user }: TopNavProps) {
           ))}
         </nav>
 
-        <div className="hidden shrink-0 items-center md:col-start-3 md:flex md:justify-self-end">
+        <div className="ml-auto flex shrink-0 items-center gap-1 md:col-start-3 md:ml-0 md:justify-self-end">
           {user ? (
-            <AccountMenu user={user} />
+            <>
+              {notificationBell}
+              <div className="hidden md:block">
+                <AccountMenu user={user} />
+              </div>
+            </>
           ) : (
             <AuthNavActions returnTo={pathname} />
           )}

@@ -10,8 +10,11 @@ export type ImportanceContext = {
   prestigeByLeagueId: Map<number, number>;
   standingsByFixtureId: Map<number, FixtureStandingsInfo>;
   h2hInterestByFixtureId: Map<number, number>;
+  preferredLeagueExternalId: number | null;
   now: Date;
 };
+
+export const PREFERRED_LEAGUE_MULTIPLIER = 1.35;
 
 const PRESTIGE_FALLBACK = 0.3;
 const KICKOFF_SIGMA_HOURS = 3;
@@ -84,6 +87,20 @@ export function computeFollowBonusFactor(): number {
   return FOLLOW_BONUS_V1;
 }
 
+export function computePreferredLeagueFactor(
+  leagueExternalId: number,
+  preferredLeagueExternalId: number | null
+): number {
+  if (
+    preferredLeagueExternalId != null &&
+    leagueExternalId === preferredLeagueExternalId
+  ) {
+    return PREFERRED_LEAGUE_MULTIPLIER;
+  }
+
+  return 1;
+}
+
 export function computeImportanceScore(
   fixture: Fixture,
   context: ImportanceContext
@@ -103,8 +120,19 @@ export function computeImportanceScore(
     context.now
   );
   const followBonus = computeFollowBonusFactor();
+  const preferredLeague = computePreferredLeagueFactor(
+    fixture.league.externalId,
+    context.preferredLeagueExternalId
+  );
 
-  return prestige * teamRank * h2hInterest * kickoffProximity * followBonus;
+  return (
+    prestige *
+    teamRank *
+    h2hInterest *
+    kickoffProximity *
+    followBonus *
+    preferredLeague
+  );
 }
 
 export function rankFixturesByImportance(

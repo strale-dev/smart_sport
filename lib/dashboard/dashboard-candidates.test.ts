@@ -113,6 +113,7 @@ describe("dashboard candidates", () => {
       prestigeByLeagueId: new Map(),
       standingsByFixtureId: new Map(),
       h2hInterestByFixtureId: new Map(),
+      preferredLeagueExternalId: null,
       now: new Date("2026-09-14T12:00:00.000Z"),
     });
 

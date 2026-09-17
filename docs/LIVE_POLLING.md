@@ -90,6 +90,16 @@ Verify Postgres `fixtures` / `fixture_events` / scores and Redis keys `provider:
 
 On Vercel Hobby, `reap-stale-locks` in `vercel.json` runs once daily. Sub-daily live maintenance uses [`.github/workflows/ingestion-schedule.yml`](../.github/workflows/ingestion-schedule.yml) (`reap-stale-locks` every 5 minutes when live is enabled in Production).
 
+## Follow-aware notifications poll
+
+When a live fixture has at least one **TEAM** follower (home or away) but **no** active viewer poll, `reap-stale-locks` seeds a separate follow-notification poll chain (`/api/internal/live/follow-notification-poll-tick`). That chain reuses `ingestLiveFixtureTick` + the meaningful-event pipeline, then enqueues in-app notifications and broadcasts on `user:{userId}:notifications`.
+
+- **Dup-tick guard:** if a presence-gated viewer poll is active for the fixture (watchers, grace, or `lock:fixture:{id}:poll`), the follow poller skips provider reads and only reschedules — dispatch already runs from `runFixturePollChainTick`.
+- **Concurrency cap:** at most `FOLLOW_NOTIFICATION_MAX_CONCURRENT_POLLS` (8) follow chains at once; additional candidates wait for the next reap cycle.
+- **Cadence:** same 30–40s self-schedule as match polls (`LIVE_SERVER_POLL_*`), with a separate last-poll Redis key per fixture.
+
+Apply migration `0027_realtime_notifications_broadcast_rls.sql` so authenticated clients can **receive** broadcasts on their private notification topic.
+
 ## Realtime broadcast
 
 After each successful poll tick, the server sends Supabase Realtime **Broadcast** (`event: update`):

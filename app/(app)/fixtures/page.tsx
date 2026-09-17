@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { FixturesLeagueTabs } from "@/components/fixtures/FixturesLeagueTabs";
 import { FixturesList } from "@/components/fixtures/FixturesList";
@@ -8,6 +9,7 @@ import {
   getFixturesData,
   parseFixturesParams,
 } from "@/lib/services/fixturesService";
+import { readPreferredLeagueProviderId } from "@/lib/services/userService";
 import { getCurrentUser } from "@/lib/supabase/user";
 
 export const metadata: Metadata = {
@@ -20,8 +22,16 @@ export default async function FixturesPage({
   searchParams: Promise<{ league?: string }>;
 }) {
   const rawParams = await searchParams;
-  const params = parseFixturesParams(rawParams);
   const user = await getCurrentUser();
+
+  if (user && !rawParams.league) {
+    const preferredProviderId = await readPreferredLeagueProviderId(user.id);
+    if (preferredProviderId != null) {
+      redirect(`/fixtures?league=${preferredProviderId}`);
+    }
+  }
+
+  const params = parseFixturesParams(rawParams);
   const timeZone = await resolveViewerTimezone(user?.id ?? null);
   const data = await getFixturesData(params, timeZone);
 

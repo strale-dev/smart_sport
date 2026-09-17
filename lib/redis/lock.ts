@@ -57,6 +57,19 @@ export async function releaseLock(key: string): Promise<void> {
   memoryLocks.delete(key);
 }
 
+export async function isLockHeld(key: string): Promise<boolean> {
+  const redis = getRedis();
+  if (redis) {
+    const value = await redis.get(key);
+    return value != null;
+  }
+
+  const now = Date.now();
+  pruneExpiredMemoryLock(key, now);
+  const existing = memoryLocks.get(key);
+  return existing != null && existing.expiresAt > now;
+}
+
 export async function renewLock(
   key: string,
   ttlSeconds: number

@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
+import { after, NextResponse } from "next/server";
 
 import { exchangeCodeForSession } from "@/lib/auth/exchange-code-session";
 import { safeReturnTo } from "@/lib/auth/return-to";
+import { sendWelcomeIfNeeded } from "@/lib/emails/send-welcome-if-needed";
 
 const NEW_USER_WINDOW_MS = 120_000;
 
@@ -63,5 +65,20 @@ export async function GET(request: Request) {
   }
 
   const event = isNewUser(result.createdAt) ? "signup" : "login";
+
+  after(async () => {
+    try {
+      await sendWelcomeIfNeeded({
+        userId: result.userId,
+        email: result.email,
+        emailConfirmedAt: result.emailConfirmedAt,
+        displayName: result.displayName,
+      });
+    } catch (error) {
+      Sentry.captureException(error);
+      console.error("[auth/callback] welcome email failed", error);
+    }
+  });
+
   return redirectTo(request, next, event);
 }

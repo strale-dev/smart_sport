@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { CreditCardIcon, LayoutDashboardIcon, UserIcon } from "lucide-react";
+import {
+  CreditCardIcon,
+  LayoutDashboardIcon,
+  SettingsIcon,
+  UserIcon,
+} from "lucide-react";
 
 import { SignOutMenuItem } from "@/components/auth/SignOutMenuItem";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -47,12 +53,21 @@ export function AccountMenu({
 }: AccountMenuProps) {
   const initials = getInitials(user.displayName);
 
+  const avatarMark = (
+    <Avatar size="sm" className="size-full">
+      {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt="" /> : null}
+      <AvatarFallback className="text-xs font-medium">
+        {initials}
+      </AvatarFallback>
+    </Avatar>
+  );
+
   const trigger =
     variant === "header" ? (
       <Button
         variant="outline"
         size="icon-sm"
-        className="rounded-full"
+        className="size-8 overflow-hidden rounded-full p-0"
         aria-label="Account menu"
       />
     ) : (
@@ -70,16 +85,10 @@ export function AccountMenu({
     <DropdownMenu>
       <DropdownMenuTrigger render={trigger}>
         {variant === "header" ? (
-          <span aria-hidden="true" className="text-xs font-medium">
-            {initials}
-          </span>
+          avatarMark
         ) : (
           <>
-            <span className={mobileNavIconClass(active)}>
-              <span aria-hidden="true" className="text-xs font-medium">
-                {initials}
-              </span>
-            </span>
+            <span className={mobileNavIconClass(active)}>{avatarMark}</span>
             <span className="sr-only">Account</span>
           </>
         )}
@@ -109,6 +118,10 @@ export function AccountMenu({
           <DropdownMenuItem render={<Link href="/profile" />}>
             <UserIcon />
             Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem render={<Link href="/profile/preferences" />}>
+            <SettingsIcon />
+            Preferences
           </DropdownMenuItem>
           <DropdownMenuItem render={<Link href="/profile/subscription" />}>
             <CreditCardIcon />

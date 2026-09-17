@@ -10,6 +10,7 @@ import { MatchRow } from "@/components/match/MatchRow";
 import { formatDateKeyInTimezone } from "@/lib/datetime/timezone";
 import { resolveViewerTimezone } from "@/lib/datetime/viewer-timezone.server";
 import { getDashboardData } from "@/lib/services/dashboardService";
+import { readPreferredLeagueProviderId } from "@/lib/services/userService";
 import { listUserFollows } from "@/lib/services/followService";
 import { getCurrentUser } from "@/lib/supabase/user";
 
@@ -21,8 +22,12 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   const timeZone = await resolveViewerTimezone(user?.id ?? null);
   const todayDateKey = formatDateKeyInTimezone(new Date(), timeZone);
+  const preferredLeagueProviderId = user
+    ? await readPreferredLeagueProviderId(user.id)
+    : null;
+
   const [data, followedData] = await Promise.all([
-    getDashboardData(),
+    getDashboardData({ preferredLeagueExternalId: preferredLeagueProviderId }),
     user
       ? listUserFollows(user.id).catch(() => ({
           teams: [],
@@ -34,7 +39,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-8">
-      <DashboardQuickLinks />
+      <DashboardQuickLinks
+        preferredLeagueProviderId={preferredLeagueProviderId}
+      />
 
       {data.featured ? <FeaturedMatchHero fixture={data.featured} /> : null}
 

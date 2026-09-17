@@ -263,6 +263,28 @@ export function lockFixturePollKey(fixtureProviderId: number): string {
   return `lock:fixture:${fixtureProviderId}:poll`;
 }
 
+export function lockFollowNotificationPollKey(
+  fixtureProviderId: number
+): string {
+  return `lock:fixture:${fixtureProviderId}:follow-notify`;
+}
+
+export function liveFollowNotificationActiveSetKey(): string {
+  return "live:follow-notify:active";
+}
+
+export function livePollFollowNotificationLastAtKey(
+  fixtureProviderId: number
+): string {
+  return `live:poll:fixture:${fixtureProviderId}:follow_notify:last_at`;
+}
+
+const FINISHED_STATUSES = new Set<FixtureStatus>(["FT", "AET", "PEN"]);
+
+export function isFinishedFixtureStatus(status: FixtureStatus): boolean {
+  return FINISHED_STATUSES.has(status);
+}
+
 export function lockLiveCenterPollKey(): string {
   return "lock:live-center:poll";
 }

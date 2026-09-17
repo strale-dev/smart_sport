@@ -809,6 +809,7 @@ create table public.profiles (
   preferred_league_id uuid references public.leagues(id) on delete set null,
   onboarding_completed boolean not null default false,
   is_deleted        boolean not null default false,
+  welcome_email_sent_at timestamptz,               -- Resend WelcomeEmail (once)
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
@@ -932,6 +933,7 @@ create table public.subscriptions (
   price_amount              numeric(8,2) not null, -- e.g. 2.99
   price_currency            text not null default 'EUR',
   trial_ends_at             timestamptz,
+  trial_ending_email_sent_at timestamptz,          -- TrialEndingEmail (T-3 days UTC)
   renews_at                 timestamptz,
   cancelled_at              timestamptz,
   ended_at                  timestamptz,

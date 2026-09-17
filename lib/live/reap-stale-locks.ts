@@ -4,6 +4,7 @@ import {
   shouldContinueFixturePoll,
   shouldContinueLiveCenterPoll,
 } from "@/lib/live/coordinator";
+import { seedFollowNotificationPolls } from "@/lib/live/follow-notification-poller";
 import {
   scheduleLiveCenterPollTick,
   scheduleMatchPollTick,
@@ -28,6 +29,9 @@ export type ReapStaleLocksResult = {
     matchLocksReleased: number;
     liveCenterRestarted: number;
     liveCenterLockReleased: number;
+    followNotifyCandidates: number;
+    followNotifyScheduled: number;
+    followNotifySkippedAtCap: number;
   };
 };
 
@@ -37,6 +41,9 @@ export async function reapStaleLiveLocks(): Promise<ReapStaleLocksResult> {
     matchLocksReleased: 0,
     liveCenterRestarted: 0,
     liveCenterLockReleased: 0,
+    followNotifyCandidates: 0,
+    followNotifyScheduled: 0,
+    followNotifySkippedAtCap: 0,
   };
 
   if (!isLivePollingEnabled()) {
@@ -114,6 +121,11 @@ export async function reapStaleLiveLocks(): Promise<ReapStaleLocksResult> {
       }
     }
   }
+
+  const followSeed = await seedFollowNotificationPolls();
+  stats.followNotifyCandidates = followSeed.candidates;
+  stats.followNotifyScheduled = followSeed.scheduled;
+  stats.followNotifySkippedAtCap = followSeed.skippedAtCap;
 
   return {
     ok: true,

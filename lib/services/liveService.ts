@@ -71,6 +71,7 @@ async function buildImportanceContext(
     prestigeByLeagueId,
     standingsByFixtureId,
     h2hInterestByFixtureId,
+    preferredLeagueExternalId: null,
     now,
   };
 }

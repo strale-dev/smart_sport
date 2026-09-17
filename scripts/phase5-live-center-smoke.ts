@@ -59,6 +59,7 @@ const context: ImportanceContext = {
   ]),
   standingsByFixtureId: new Map(),
   h2hInterestByFixtureId: new Map(),
+  preferredLeagueExternalId: null,
   now,
 };
 

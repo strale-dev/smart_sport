@@ -101,8 +101,8 @@ async function persistIncrementToPostgres(
     p_predictions: increment.predictions ?? 0,
     p_deep_analyses: increment.deepAnalyses ?? 0,
     p_generations: increment.generations ?? 0,
-    p_live_fixture_uuid: increment.liveFixtureUuid ?? null,
-    p_live_touch_at: touchAt,
+    p_live_fixture_uuid: increment.liveFixtureUuid ?? undefined,
+    p_live_touch_at: touchAt ?? undefined,
   });
 
   if (error) {

@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { MatchLiveWatchLimitBanner } from "@/components/match/MatchLiveWatchLimitBanner";
+import { MatchSoundListener } from "@/components/sound/MatchSoundListener";
 import { useLiveMatch } from "@/hooks/useLiveMatch";
 import { useMatchLocalClock } from "@/hooks/useMatchLocalClock";
 import type { LiveWatchResult } from "@/lib/live/watch-client";
@@ -83,16 +84,17 @@ export function MatchLiveSession({
 
   return (
     <MatchLiveContext.Provider value={value}>
-      {watchError ? (
-        <div className="mb-4">
+      <MatchSoundListener fixtureProviderId={fixture.externalId} />
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+        {watchError ? (
           <MatchLiveWatchLimitBanner
             code={watchError.code}
             limit={watchError.limit}
             used={watchError.used}
           />
-        </div>
-      ) : null}
-      {children}
+        ) : null}
+        {children}
+      </div>
     </MatchLiveContext.Provider>
   );
 }

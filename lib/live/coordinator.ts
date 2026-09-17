@@ -18,6 +18,7 @@ import {
   lockFixturePollKey,
   lockLiveCenterPollKey,
 } from "@/lib/redis/keys";
+import type { FixtureStatus } from "@/types/domain";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type EnsureWorkerResult = {
@@ -108,4 +109,43 @@ export async function listReapMatchFixtureIds(): Promise<number[]> {
   }
 
   return [...ids];
+}
+
+export async function shouldContinueFollowNotificationPoll(
+  fixtureProviderId: number
+): Promise<boolean> {
+  try {
+    const client = createAdminClient();
+    const { data: fixture } = await client
+      .from("fixtures")
+      .select("id, status, home_team_id, away_team_id")
+      .eq("provider_id", fixtureProviderId)
+      .maybeSingle();
+
+    if (!fixture?.id || !fixture.home_team_id || !fixture.away_team_id) {
+      return false;
+    }
+
+    if (
+      !fixture.status ||
+      !isLiveFixtureStatus(fixture.status as FixtureStatus)
+    ) {
+      return false;
+    }
+
+    const teamIds = [fixture.home_team_id, fixture.away_team_id];
+    const { count, error } = await client
+      .from("follows")
+      .select("id", { count: "exact", head: true })
+      .eq("object_type", "TEAM")
+      .in("team_id", teamIds);
+
+    if (error) {
+      return false;
+    }
+
+    return (count ?? 0) > 0;
+  } catch {
+    return false;
+  }
 }

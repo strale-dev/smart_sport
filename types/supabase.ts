@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -1035,6 +1035,21 @@ export type Database = {
           },
         ]
       }
+      platform_limits: {
+        Row: {
+          free_tier_follows_total: number
+          id: number
+        }
+        Insert: {
+          free_tier_follows_total?: number
+          id?: number
+        }
+        Update: {
+          free_tier_follows_total?: number
+          id?: number
+        }
+        Relationships: []
+      }
       player_match_performances: {
         Row: {
           assists: number | null
@@ -1427,6 +1442,7 @@ export type Database = {
           preferred_league_id: string | null
           timezone: string
           updated_at: string
+          welcome_email_sent_at: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -1440,6 +1456,7 @@ export type Database = {
           preferred_league_id?: string | null
           timezone?: string
           updated_at?: string
+          welcome_email_sent_at?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -1453,6 +1470,7 @@ export type Database = {
           preferred_league_id?: string | null
           timezone?: string
           updated_at?: string
+          welcome_email_sent_at?: string | null
         }
         Relationships: [
           {
@@ -1644,6 +1662,7 @@ export type Database = {
           raw_event_payload: Json | null
           renews_at: string | null
           status: Database["public"]["Enums"]["subscription_status"]
+          trial_ending_email_sent_at: string | null
           trial_ends_at: string | null
           updated_at: string
           user_id: string
@@ -1662,6 +1681,7 @@ export type Database = {
           raw_event_payload?: Json | null
           renews_at?: string | null
           status: Database["public"]["Enums"]["subscription_status"]
+          trial_ending_email_sent_at?: string | null
           trial_ends_at?: string | null
           updated_at?: string
           user_id: string
@@ -1680,6 +1700,7 @@ export type Database = {
           raw_event_payload?: Json | null
           renews_at?: string | null
           status?: Database["public"]["Enums"]["subscription_status"]
+          trial_ending_email_sent_at?: string | null
           trial_ends_at?: string | null
           updated_at?: string
           user_id?: string
@@ -1897,27 +1918,59 @@ export type Database = {
     Functions: {
       increment_ai_usage: {
         Args: {
-          p_user_id: string
-          p_usage_day: string
-          p_predictions?: number
           p_deep_analyses?: number
           p_generations?: number
-          p_live_fixture_uuid?: string | null
-          p_live_touch_at?: string | null
+          p_live_fixture_uuid?: string
+          p_live_touch_at?: string
+          p_predictions?: number
+          p_usage_day: string
+          p_user_id: string
         }
-        Returns: Database["public"]["Tables"]["ai_usage"]["Row"]
+        Returns: {
+          ai_deep_analyses_count: number
+          ai_generations_count: number
+          ai_predictions_count: number
+          id: string
+          last_live_ai_at: Json
+          live_ai_matches: string[]
+          updated_at: string
+          usage_day: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ai_usage"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       merge_ai_usage_from_redis: {
         Args: {
-          p_user_id: string
-          p_usage_day: string
-          p_predictions: number
           p_deep_analyses: number
           p_generations: number
-          p_live_ai_matches: string[]
           p_last_live_ai_at: Json
+          p_live_ai_matches: string[]
+          p_predictions: number
+          p_usage_day: string
+          p_user_id: string
         }
-        Returns: Database["public"]["Tables"]["ai_usage"]["Row"]
+        Returns: {
+          ai_deep_analyses_count: number
+          ai_generations_count: number
+          ai_predictions_count: number
+          id: string
+          last_live_ai_at: Json
+          live_ai_matches: string[]
+          updated_at: string
+          usage_day: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ai_usage"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       search_players: {
         Args: { max_results?: number; q: string }
@@ -2007,12 +2060,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2036,11 +2089,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2061,11 +2114,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2086,11 +2139,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2103,11 +2156,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

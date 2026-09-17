@@ -5,7 +5,7 @@ import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { MarketingHeader } from "@/components/marketing/MarketingHeader";
 import { BRAND, landingCopy } from "@/lib/marketing/copy";
 import { env } from "@/lib/env.server";
-import { getCurrentUser, toAuthUserView } from "@/lib/supabase/user";
+import { getAuthUserViewForSession } from "@/lib/supabase/user";
 
 export const metadata: Metadata = {
   metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
@@ -34,11 +34,11 @@ export default async function MarketingLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getCurrentUser();
+  const user = await getAuthUserViewForSession();
 
   return (
     <div className="flex min-h-dvh w-full min-w-0 flex-col">
-      <MarketingHeader user={user ? toAuthUserView(user) : null} />
+      <MarketingHeader user={user} />
       <main className="min-w-0 flex-1">{children}</main>
       <MarketingFooter />
       <CookieConsentShell />

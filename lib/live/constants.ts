@@ -46,6 +46,11 @@ export const LIVE_USER_ACTIVE_WATCH_TTL_SEC = 60;
 export const LIVE_INTERNAL_POLL_TICK_PATH = "/api/internal/live/poll-tick";
 export const LIVE_INTERNAL_POLL_CENTER_TICK_PATH =
   "/api/internal/live/poll-center-tick";
+export const LIVE_INTERNAL_FOLLOW_NOTIFICATION_POLL_TICK_PATH =
+  "/api/internal/live/follow-notification-poll-tick";
+
+/** Max concurrent follow-notification poll chains (API budget guard). */
+export const FOLLOW_NOTIFICATION_MAX_CONCURRENT_POLLS = 8;
 
 export type LiveWatchSurface = "match" | "live-center";
 

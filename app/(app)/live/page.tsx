@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { LiveCenterFilters } from "@/components/live/LiveCenterFilters";
 import { LiveCenterList } from "@/components/live/LiveCenterList";
@@ -7,6 +8,8 @@ import {
   getLiveCenterData,
   parseLiveCenterParams,
 } from "@/lib/services/liveService";
+import { readPreferredLeagueProviderId } from "@/lib/services/userService";
+import { getCurrentUser } from "@/lib/supabase/user";
 
 export const metadata: Metadata = {
   title: "Live Center",
@@ -18,6 +21,15 @@ export default async function LivePage({
   searchParams: Promise<{ league?: string; status?: string; page?: string }>;
 }) {
   const rawParams = await searchParams;
+  const user = await getCurrentUser();
+
+  if (user && !rawParams.league) {
+    const preferredProviderId = await readPreferredLeagueProviderId(user.id);
+    if (preferredProviderId != null) {
+      redirect(`/live?league=${preferredProviderId}`);
+    }
+  }
+
   const params = parseLiveCenterParams(rawParams);
   const data = await getLiveCenterData(params);
 

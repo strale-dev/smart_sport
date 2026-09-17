@@ -70,7 +70,8 @@ async function fetchFixturesForDates(dates: string[]): Promise<Fixture[]> {
 
 async function buildImportanceContext(
   fixtures: Fixture[],
-  now: Date
+  now: Date,
+  preferredLeagueExternalId: number | null = null
 ): Promise<ImportanceContext> {
   const [prestigeByLeagueId, standingsByFixtureId, h2hInterestByFixtureId] =
     await Promise.all([
@@ -83,6 +84,7 @@ async function buildImportanceContext(
     prestigeByLeagueId,
     standingsByFixtureId,
     h2hInterestByFixtureId,
+    preferredLeagueExternalId,
     now,
   };
 }
@@ -100,8 +102,13 @@ function takeRankedFixtures(
 }
 
 export async function getDashboardData(
-  now = new Date()
+  options: {
+    now?: Date;
+    preferredLeagueExternalId?: number | null;
+  } = {}
 ): Promise<DashboardData> {
+  const now = options.now ?? new Date();
+  const preferredLeagueExternalId = options.preferredLeagueExternalId ?? null;
   const today = utcDateString(now);
   const yesterday = addUtcDays(today, -1);
   const tomorrow = addUtcDays(today, 1);
@@ -162,7 +169,11 @@ export async function getDashboardData(
     ...upcomingFixtures,
   ]);
 
-  const context = await buildImportanceContext(allCandidates, now);
+  const context = await buildImportanceContext(
+    allCandidates,
+    now,
+    preferredLeagueExternalId
+  );
   const usedIds = new Set<number>();
 
   const featured =

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { DesignSystemPlayground } from "@/components/ds/design-system-playground";
 import { AppShell } from "@/components/layout/AppShell";
 import { resolveViewerTimezone } from "@/lib/datetime/viewer-timezone.server";
-import { getCurrentUser, toAuthUserView } from "@/lib/supabase/user";
+import { getAuthUserViewForSession, getCurrentUser } from "@/lib/supabase/user";
 
 export const metadata: Metadata = {
   title: "Design System — Scorence",
@@ -15,13 +15,17 @@ export const metadata: Metadata = {
 };
 
 export default async function DesignSystemPage() {
-  const user = await getCurrentUser();
-  const viewerTimeZone = await resolveViewerTimezone(user?.id ?? null);
+  const [authUser, sessionUser] = await Promise.all([
+    getAuthUserViewForSession(),
+    getCurrentUser(),
+  ]);
+  const viewerTimeZone = await resolveViewerTimezone(sessionUser?.id ?? null);
 
   return (
     <AppShell
-      user={user ? toAuthUserView(user) : null}
+      user={authUser}
       viewerTimeZone={viewerTimeZone}
+      initialSoundPreferences={null}
     >
       <DesignSystemPlayground />
     </AppShell>

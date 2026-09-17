@@ -6,6 +6,7 @@ import {
 } from "@/lib/ingestion/match-details-upsert";
 import { getRedis } from "@/lib/redis/client";
 import { providerFixtureLineupsKey } from "@/lib/redis/keys";
+import { dispatchLineupConfirmedNotifications } from "@/lib/notifications/dispatch-lineup-confirmed";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type IngestLineupsResult = {
@@ -37,6 +38,11 @@ export async function ingestLineupsFromProvider(
   const lineups = await getFixtureLineupsEndpoint(fixtureProviderId);
 
   const lineupsCount = await upsertLineups(client, fixtureId, lineups);
+
+  const hasConfirmedLineup = lineups.some((entry) => entry.isConfirmed);
+  if (hasConfirmedLineup) {
+    await dispatchLineupConfirmedNotifications(fixtureProviderId);
+  }
 
   const syncedAt = new Date().toISOString();
   const redis = getRedis();

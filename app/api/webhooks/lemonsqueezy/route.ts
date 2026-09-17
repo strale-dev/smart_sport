@@ -90,27 +90,50 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const email = await readUserEmail(syncResult.userId);
     const siteUrl = env.NEXT_PUBLIC_SITE_URL;
+    const emailErrors: string[] = [];
 
     if (email && eventName === "subscription_payment_success") {
-      await sendEmail({
-        to: email,
-        subject: "Scorence Premium — payment received",
-        react: PaymentSuccessEmail({ siteUrl }),
-      });
+      try {
+        await sendEmail({
+          to: email,
+          subject: "Scorence Premium — payment received",
+          react: PaymentSuccessEmail({
+            siteUrl,
+            renewalDate: payload.data?.attributes?.renews_at ?? null,
+          }),
+        });
+      } catch (emailError) {
+        emailErrors.push("payment_success");
+        Sentry.captureException(emailError);
+        console.error(
+          "[webhooks/lemonsqueezy] payment email failed",
+          emailError
+        );
+      }
     }
 
     if (email && eventName === "subscription_cancelled") {
-      await sendEmail({
-        to: email,
-        subject: "Scorence Premium — subscription cancelled",
-        react: SubscriptionCancelledEmail({ siteUrl }),
-      });
+      try {
+        await sendEmail({
+          to: email,
+          subject: "Scorence Premium — subscription cancelled",
+          react: SubscriptionCancelledEmail({ siteUrl }),
+        });
+      } catch (emailError) {
+        emailErrors.push("subscription_cancelled");
+        Sentry.captureException(emailError);
+        console.error(
+          "[webhooks/lemonsqueezy] cancellation email failed",
+          emailError
+        );
+      }
     }
 
     return NextResponse.json({
       ok: true,
       tier: syncResult.tier,
       event: eventName,
+      ...(emailErrors.length > 0 ? { emailErrors } : {}),
     });
   } catch (error) {
     Sentry.captureException(error);

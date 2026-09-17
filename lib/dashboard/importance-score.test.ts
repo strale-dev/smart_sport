@@ -7,7 +7,9 @@ import {
   computeH2hInterestFactor,
   computeImportanceScore,
   computeKickoffProximityFactor,
+  computePreferredLeagueFactor,
   computeTeamRankFactor,
+  PREFERRED_LEAGUE_MULTIPLIER,
   type ImportanceContext,
 } from "./importance-score";
 
@@ -65,6 +67,7 @@ function makeContext(
     prestigeByLeagueId: new Map([[39, 95]]),
     standingsByFixtureId: new Map(),
     h2hInterestByFixtureId: new Map(),
+    preferredLeagueExternalId: null,
     now: new Date("2026-09-01T14:00:00.000Z"),
     ...overrides,
   };
@@ -146,6 +149,16 @@ describe("computeH2hInterestFactor", () => {
   it("clamps valid density ratios to the 0..1 range", () => {
     expect(computeH2hInterestFactor(0.6)).toBe(0.6);
     expect(computeH2hInterestFactor(1.5)).toBe(1);
+  });
+});
+
+describe("computePreferredLeagueFactor", () => {
+  it("boosts fixtures in the preferred league", () => {
+    expect(computePreferredLeagueFactor(39, 39)).toBe(
+      PREFERRED_LEAGUE_MULTIPLIER
+    );
+    expect(computePreferredLeagueFactor(140, 39)).toBe(1);
+    expect(computePreferredLeagueFactor(39, null)).toBe(1);
   });
 });
 

@@ -612,11 +612,11 @@ Users can start a 7-day trial (card required), become paying subscribers, and hi
 
 **Notifications**
 
-- [ ] `notificationService.enqueue({userId, kind, ...})`.
-- [ ] Realtime broadcast to `user:{id}:notifications`.
-- [ ] `components/notifications/NotificationBell.tsx` in top nav.
-- [ ] `notifications/list-drawer.tsx` with read-state toggles.
-- [ ] Notification triggers wired:
+- [x] `notificationService.enqueue({userId, kind, ...})`.
+- [x] Realtime broadcast to `user:{id}:notifications`.
+- [x] `components/notifications/NotificationBell.tsx` in top nav.
+- [x] `notifications/list-drawer.tsx` with read-state toggles.
+- [x] Notification triggers wired:
   - Goal for followed team.
   - Full-time for followed team.
   - Lineup confirmed for followed team.
@@ -625,15 +625,15 @@ Users can start a 7-day trial (card required), become paying subscribers, and hi
 
 **Sound**
 
-- [ ] Sound assets in `/public/sounds/` — `goal.mp3` (synthetic cheer), `whistle.mp3`.
-- [ ] `useSoundPreference()` hook.
-- [ ] `SoundToggle` component on match page + preferences.
-- [ ] Default off; requires a prior user gesture in the tab to be allowed.
+- [x] Synthetic Web Audio (goal cheer + full-time whistle) — no `/public/sounds/` files in MVP.
+- [x] `useSoundPreference()` hook (+ `SoundPreferencesProvider`).
+- [x] `SoundToggle` on match page (goal + full-time toggles); `/profile/preferences` sound section deferred.
+- [x] Default off; requires a prior user gesture in the tab to be allowed.
 
 **Emails**
 
-- [ ] React Email templates for `WelcomeEmail`, `PasswordResetEmail`, `PaymentSuccessEmail`, `TrialEndingEmail`, `SubscriptionCancelledEmail`.
-- [ ] `TrialEndingEmail` triggered by daily cron 3 days before `trial_ends_at`.
+- [x] React Email templates for `WelcomeEmail`, `PasswordResetEmail`, `PaymentSuccessEmail`, `TrialEndingEmail`, `SubscriptionCancelledEmail`.
+- [x] `TrialEndingEmail` triggered by daily cron 3 days before `trial_ends_at`.
 
 **Profile & preferences**
 
@@ -915,7 +915,7 @@ A founder can open **typical allowlist fixtures** (FT, live, or NS near kickoff)
 - [ ] **P8-BILL-3** — Free AI cap + premium unlimited (server-enforced).
 - [ ] **P8-BILL-4** — Profile + preferences (timezone, league, notification/sound).
 - [ ] **P8-BILL-5** — Notification bell + MVP triggers (§13.1).
-- [ ] **P8-BILL-6** — Sound assets + toggles; default off (§13.2).
+- [x] **P8-BILL-6** — Sound (synthetic audio) + toggles; default off (§13.2).
 - [ ] **P8-BILL-7** — E2E: signup → trial → webhook → unlimited AI on match.
 
 ### 16.6 — Launch gate
