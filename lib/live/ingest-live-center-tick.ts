@@ -24,6 +24,7 @@ export type IngestLiveCenterTickResult = {
     fixturesRemaining?: number;
     stoppedForTimeBudget?: boolean;
     fixtureErrors?: number;
+    lastFixtureError?: string;
   };
 };
 
@@ -39,7 +40,6 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
   const config = getIngestionConfig();
   const client = createAdminClient();
   const syncedAt = new Date().toISOString();
-  const startedAtMs = Date.now();
 
   await throttleProviderRequest();
   const rawFixtures = await apiFootballFetchResponse<RawApiFootballFixture>(
@@ -47,6 +47,7 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
     { live: "all" },
     { priority: "critical" }
   );
+  const upsertStartedAtMs = Date.now();
   const apiRequests = 1;
 
   const allowlisted = rawFixtures.filter((raw) =>
@@ -56,9 +57,10 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
   const domainFixtures: Fixture[] = [];
   let stoppedForTimeBudget = false;
   let fixtureErrors = 0;
+  let lastFixtureError: string | undefined;
 
   for (const raw of allowlisted) {
-    if (cronIngestBudgetExceeded(startedAtMs)) {
+    if (cronIngestBudgetExceeded(upsertStartedAtMs)) {
       stoppedForTimeBudget = true;
       break;
     }
@@ -68,24 +70,30 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
       domainFixtures.push(domain);
     } catch (error) {
       fixtureErrors += 1;
+      if (!lastFixtureError) {
+        lastFixtureError =
+          error instanceof Error ? error.message : "Unknown upsert error";
+      }
       console.error(`[sync-live-center] fixture ${raw.fixture.id}`, error);
     }
   }
 
   const redis = getRedis();
   if (redis && domainFixtures.length > 0) {
-    await redis.set(
-      providerFixturesLiveKey(),
-      { value: domainFixtures, cachedAt: syncedAt },
-      { ex: CACHE_TTL.fixturesLiveFresh }
-    );
+    try {
+      await redis.set(
+        providerFixturesLiveKey(),
+        { value: domainFixtures, cachedAt: syncedAt },
+        { ex: CACHE_TTL.fixturesLiveFresh }
+      );
+    } catch (error) {
+      console.error("[sync-live-center] redis cache write failed", error);
+    }
   }
 
   const fixturesUpserted = domainFixtures.length;
   const ok =
-    allowlisted.length === 0 ||
-    fixturesUpserted > 0 ||
-    (fixtureErrors === 0 && !stoppedForTimeBudget);
+    allowlisted.length === 0 || fixturesUpserted > 0 || stoppedForTimeBudget;
 
   return {
     ok,
@@ -100,6 +108,7 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
           }
         : {}),
       ...(fixtureErrors > 0 ? { fixtureErrors } : {}),
+      ...(lastFixtureError ? { lastFixtureError } : {}),
     },
   };
 }

@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import { ApiFootballError } from "@/lib/api-football/errors";
 import { verifyCronRequest } from "@/lib/ingestion/cron-auth";
 import { acquireLock, releaseLock } from "@/lib/redis/lock";
 
@@ -59,14 +60,23 @@ export async function runCronRoute(
     return NextResponse.json(result, { status: cronJobHttpStatus(result) });
   } catch (error) {
     console.error(`[cron/${options.jobName}]`, error);
-    return NextResponse.json(
-      {
-        ok: false,
-        job: options.jobName,
-        error: error instanceof Error ? error.message : "Unknown cron error",
-      },
-      { status: 500 }
-    );
+    const payload: Record<string, unknown> = {
+      ok: false,
+      job: options.jobName,
+      error: error instanceof Error ? error.message : "Unknown cron error",
+    };
+
+    if (error instanceof ApiFootballError) {
+      payload.path = error.path;
+      if (error.providerErrors) {
+        payload.providerErrors = error.providerErrors;
+      }
+      if (error.statusCode !== undefined) {
+        payload.statusCode = error.statusCode;
+      }
+    }
+
+    return NextResponse.json(payload, { status: 500 });
   } finally {
     await releaseLock(lockKey);
   }

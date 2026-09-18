@@ -26,6 +26,7 @@ export type SyncFixturesTodayResult = {
     fixturesRemaining?: number;
     stoppedForTimeBudget?: boolean;
     fixtureErrors?: number;
+    lastFixtureError?: string;
   };
 };
 
@@ -41,7 +42,7 @@ const LIVE_FIXTURE_STATUSES = new Set([
 ]);
 
 function fixtureTodaySyncPriority(raw: RawApiFootballFixture): number {
-  const status = raw.fixture.status.short;
+  const status = raw.fixture.status?.short ?? "NS";
   if (LIVE_FIXTURE_STATUSES.has(status)) {
     return 0;
   }
@@ -58,13 +59,13 @@ export async function syncFixturesToday(
   const client = createAdminClient();
   const date = anchor.toISOString().slice(0, 10);
   const syncedAt = anchor.toISOString();
-  const startedAtMs = Date.now();
 
   await throttleProviderRequest();
   const rawFixtures = await apiFootballFetchResponse<RawApiFootballFixture>(
     "/fixtures",
     { date }
   );
+  const upsertStartedAtMs = Date.now();
 
   const allowlisted = rawFixtures
     .filter((raw) => isLeagueInAllowlist(raw.league.id, config))
@@ -74,9 +75,10 @@ export async function syncFixturesToday(
   let fixturesUpserted = 0;
   let fixtureErrors = 0;
   let stoppedForTimeBudget = false;
+  let lastFixtureError: string | undefined;
 
   for (const raw of allowlisted) {
-    if (cronIngestBudgetExceeded(startedAtMs)) {
+    if (cronIngestBudgetExceeded(upsertStartedAtMs)) {
       stoppedForTimeBudget = true;
       break;
     }
@@ -87,26 +89,32 @@ export async function syncFixturesToday(
       fixturesUpserted += 1;
     } catch (error) {
       fixtureErrors += 1;
+      if (!lastFixtureError) {
+        lastFixtureError =
+          error instanceof Error ? error.message : "Unknown upsert error";
+      }
       console.error(`[sync-fixtures-today] fixture ${raw.fixture.id}`, error);
     }
   }
 
   const redis = getRedis();
   if (redis && domainFixtures.length > 0) {
-    await redis.set(
-      providerFixturesDateKey(date),
-      {
-        value: domainFixtures,
-        cachedAt: syncedAt,
-      },
-      { ex: 86_400 }
-    );
+    try {
+      await redis.set(
+        providerFixturesDateKey(date),
+        {
+          value: domainFixtures,
+          cachedAt: syncedAt,
+        },
+        { ex: 86_400 }
+      );
+    } catch (error) {
+      console.error("[sync-fixtures-today] redis cache write failed", error);
+    }
   }
 
   const ok =
-    allowlisted.length === 0 ||
-    fixturesUpserted > 0 ||
-    (fixtureErrors === 0 && !stoppedForTimeBudget);
+    allowlisted.length === 0 || fixturesUpserted > 0 || stoppedForTimeBudget;
 
   return {
     ok,
@@ -123,6 +131,7 @@ export async function syncFixturesToday(
           }
         : {}),
       ...(fixtureErrors > 0 ? { fixtureErrors } : {}),
+      ...(lastFixtureError ? { lastFixtureError } : {}),
     },
   };
 }

@@ -22,7 +22,13 @@ const KNOWN_STATUSES = new Set<FixtureStatus>([
   "LIVE",
 ]);
 
-export function mapFixtureStatus(shortStatus: string): FixtureStatus {
+export function mapFixtureStatus(
+  shortStatus: string | null | undefined
+): FixtureStatus {
+  if (!shortStatus) {
+    return "NS";
+  }
+
   const normalized = shortStatus.toUpperCase() as FixtureStatus;
   if (KNOWN_STATUSES.has(normalized)) {
     return normalized;
