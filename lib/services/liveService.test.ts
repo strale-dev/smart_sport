@@ -10,6 +10,7 @@ import {
 import type { Fixture } from "@/types/domain";
 
 function makeFixture(overrides: Partial<Fixture> = {}): Fixture {
+  const kickoffAt = overrides.kickoffAt ?? "2026-09-01T15:00:00.000Z";
   return {
     externalId: 1,
     league: {
@@ -34,7 +35,7 @@ function makeFixture(overrides: Partial<Fixture> = {}): Fixture {
       logoUrl: null,
       isNational: false,
     },
-    kickoffAt: "2026-09-01T15:00:00.000Z",
+    kickoffAt,
     status: "1H",
     minute: 23,
     score: {
@@ -52,6 +53,12 @@ function makeFixture(overrides: Partial<Fixture> = {}): Fixture {
     venue: null,
     referee: null,
     round: null,
+    liveClock: {
+      statusExtraMinute: null,
+      lastProviderSyncAt: kickoffAt,
+      periodFirstStartAt: kickoffAt,
+      periodSecondStartAt: null,
+    },
     ...overrides,
   };
 }
@@ -152,7 +159,7 @@ describe("getLiveCenterData", () => {
     const fixtures = Array.from({ length: 25 }, (_, index) =>
       makeFixture({
         externalId: index + 1,
-        kickoffAt: `2026-09-01T${String(10 + index).padStart(2, "0")}:00:00.000Z`,
+        kickoffAt: "2026-09-01T15:00:00.000Z",
       })
     );
 
@@ -165,8 +172,14 @@ describe("getLiveCenterData", () => {
       meta: { cached: false, stale: false },
     });
 
-    const pageOne = await getLiveCenterData({ page: 1 });
-    const pageTwo = await getLiveCenterData({ page: 2 });
+    const pageOne = await getLiveCenterData(
+      { page: 1 },
+      new Date("2026-09-01T16:00:00.000Z")
+    );
+    const pageTwo = await getLiveCenterData(
+      { page: 2 },
+      new Date("2026-09-01T16:00:00.000Z")
+    );
 
     expect(pageOne.fixtures).toHaveLength(20);
     expect(pageOne.totalCount).toBe(25);

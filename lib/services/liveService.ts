@@ -15,7 +15,7 @@ import {
   UPCOMING_SOON_LIMIT,
   type LiveStatusFilter,
 } from "@/lib/live/constants";
-import { isLiveFixtureStatus } from "@/lib/redis/keys";
+import { isAuthoritativeLivePresentation } from "@/lib/live/live-presentation";
 import {
   getMatchesForDate,
   listLiveFixtures,
@@ -106,10 +106,12 @@ function sortLiveFixturesByImportance(
 
 function filterLiveFixtures(
   fixtures: Fixture[],
-  params: LiveCenterParams
+  params: LiveCenterParams,
+  now = new Date()
 ): Fixture[] {
+  const nowMs = now.getTime();
   return fixtures.filter((fixture) => {
-    if (!isLiveFixtureStatus(fixture.status)) {
+    if (!isAuthoritativeLivePresentation(fixture, nowMs)) {
       return false;
     }
 
@@ -202,12 +204,12 @@ export async function getLiveCenterData(
   ]);
 
   const liveFromToday = todayResult.data.filter((fixture) =>
-    isLiveFixtureStatus(fixture.status)
+    isAuthoritativeLivePresentation(fixture, now.getTime())
   );
   const liveCandidates = filterAllowlistedFixtures(
     dedupeFixtures([...liveResult.data, ...liveFromToday])
   );
-  const filtered = filterLiveFixtures(liveCandidates, params);
+  const filtered = filterLiveFixtures(liveCandidates, params, now);
   const withAi = await attachAiUpdatedAtToFixturesSafe(filtered, now);
   const context = await buildImportanceContext(withAi, now);
   const sorted = sortLiveFixturesByImportance(withAi, context, now);

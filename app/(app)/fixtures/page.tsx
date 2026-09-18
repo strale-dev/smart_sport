@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { FixturesLeagueTabs } from "@/components/fixtures/FixturesLeagueTabs";
-import { FixturesList } from "@/components/fixtures/FixturesList";
+import { FixturesPageClient } from "@/components/fixtures/FixturesPageClient";
 import { FixturesNotice } from "@/components/fixtures/FixturesNotice";
 import { resolveViewerTimezone } from "@/lib/datetime/viewer-timezone.server";
 import {
@@ -54,7 +54,11 @@ export default async function FixturesPage({
         activeLeagueIds={data.activeLeagueIds}
       />
 
-      <FixturesList data={data} />
+      <FixturesPageClient
+        params={params}
+        timeZone={timeZone}
+        initialData={data}
+      />
     </div>
   );
 }

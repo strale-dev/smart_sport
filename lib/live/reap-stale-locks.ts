@@ -4,6 +4,9 @@ import {
   shouldContinueFixturePoll,
   shouldContinueLiveCenterPoll,
 } from "@/lib/live/coordinator";
+import { readLiveFixturesFromDb } from "@/lib/ingestion/db-read";
+import { shouldTailPollLiveFixture } from "@/lib/live/live-tail-poll";
+import { reconcileStaleLiveFixtures } from "@/lib/live/reconcile-stale-live";
 import { seedFollowNotificationPolls } from "@/lib/live/follow-notification-poller";
 import {
   scheduleLiveCenterPollTick,
@@ -126,6 +129,25 @@ export async function reapStaleLiveLocks(): Promise<ReapStaleLocksResult> {
   stats.followNotifyCandidates = followSeed.candidates;
   stats.followNotifyScheduled = followSeed.scheduled;
   stats.followNotifySkippedAtCap = followSeed.skippedAtCap;
+
+  const tailFixtures = await readLiveFixturesFromDb();
+  for (const fixture of tailFixtures) {
+    if (!(await shouldTailPollLiveFixture(fixture.externalId))) {
+      continue;
+    }
+
+    const lockKey = lockFixturePollKey(fixture.externalId);
+    const acquired = await acquireLock(lockKey, LIVE_POLL_LOCK_TTL_SEC);
+    if (acquired) {
+      scheduleMatchPollTick(fixture.externalId);
+      stats.matchRestarted += 1;
+    }
+  }
+
+  await reconcileStaleLiveFixtures({
+    maxRevalidations: 6,
+    source: "reap-stale-locks",
+  });
 
   return {
     ok: true,

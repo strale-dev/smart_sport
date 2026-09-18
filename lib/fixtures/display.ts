@@ -2,6 +2,7 @@ import {
   formatDateKeyInTimezone,
   sanitizeTimezone,
 } from "@/lib/datetime/timezone";
+import { isAuthoritativeLivePresentation } from "@/lib/live/live-presentation";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import type { Fixture, FixtureStatus } from "@/types/domain";
 
@@ -54,7 +55,7 @@ function fixtureHasRecordedScore(fixture: Fixture): boolean {
 /** Whether list/hero scoreboards should show goals instead of kickoff time. */
 export function shouldShowFixtureScore(fixture: Fixture): boolean {
   if (
-    isLiveFixtureStatus(fixture.status) ||
+    isAuthoritativeLivePresentation(fixture) ||
     isFinishedFixtureStatus(fixture.status)
   ) {
     return true;
@@ -140,7 +141,7 @@ export function isFinishedFixtureStatus(status: FixtureStatus): boolean {
 }
 
 export function formatFixtureMinute(fixture: Fixture): string | null {
-  if (!isLiveFixtureStatus(fixture.status)) {
+  if (!isAuthoritativeLivePresentation(fixture)) {
     return null;
   }
 
@@ -177,8 +178,12 @@ export function formatMatchHeaderStatusLabel(
   fixture: Fixture,
   timeZone: string
 ): string {
-  if (isLiveFixtureStatus(fixture.status)) {
+  if (isAuthoritativeLivePresentation(fixture)) {
     return formatFixtureMinute(fixture) ?? "Live";
+  }
+
+  if (isLiveFixtureStatus(fixture.status)) {
+    return FINISHED_MATCH_HEADER_LABELS.FT ?? "Full time";
   }
 
   const interrupted = INTERRUPTED_MATCH_HEADER_LABELS[fixture.status];

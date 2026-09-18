@@ -29,3 +29,14 @@ export function parseFixturesParams(input: {
     league: Number.isFinite(league) ? league : undefined,
   };
 }
+
+export function buildFixturesApiHref(
+  params: FixturesSearchParams = {}
+): string {
+  const searchParams = new URLSearchParams();
+  if (params.league != null) {
+    searchParams.set("league", String(params.league));
+  }
+  const query = searchParams.toString();
+  return query ? `/api/fixtures?${query}` : "/api/fixtures";
+}

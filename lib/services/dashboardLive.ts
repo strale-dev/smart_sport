@@ -7,7 +7,7 @@ import {
   readLeaguePrestigeMap,
   readStandingsRanksForFixtures,
 } from "@/lib/ingestion/db-read";
-import { isLiveFixtureStatus } from "@/lib/redis/keys";
+import { isAuthoritativeLivePresentation } from "@/lib/live/live-presentation";
 import {
   attachAiUpdatedAtToFixturesSafe,
   isAiUpdatedMarkerFresh,
@@ -44,7 +44,7 @@ export async function getDashboardLiveFixtures(
 ): Promise<LiveFixtureRow[]> {
   const { data: liveFixtures } = await listLiveFixtures();
   const candidates = liveFixtures.filter((fixture) =>
-    isLiveFixtureStatus(fixture.status)
+    isAuthoritativeLivePresentation(fixture, now.getTime())
   );
 
   if (candidates.length === 0) {

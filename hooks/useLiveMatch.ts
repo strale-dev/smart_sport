@@ -17,6 +17,7 @@ import {
 } from "@/lib/live/subscribe-broadcast";
 import { startLiveWatchSession } from "@/lib/live/watch-client";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
+import type { FixtureStatus } from "@/types/domain";
 
 type UseLiveMatchOptions = {
   initialSnapshot?: MatchLiveSnapshot;
@@ -44,9 +45,8 @@ export function useLiveMatch(
   const [realtimeStatusKnown, setRealtimeStatusKnown] = useState(false);
   const resyncOnSubscribeRef = useRef(false);
 
-  const isLive = isLiveFixtureStatus(
-    fixtureStatus as Parameters<typeof isLiveFixtureStatus>[0]
-  );
+  const seedStatus = fixtureStatus as FixtureStatus;
+  const seedIsLive = isLiveFixtureStatus(seedStatus);
 
   const applySnapshot = useCallback(
     (snapshot: MatchLiveSnapshot) => {
@@ -62,9 +62,13 @@ export function useLiveMatch(
     queryKey: liveKeys.fixtureSnapshot(fixtureProviderId),
     queryFn: () => fetchMatchSnapshot(fixtureProviderId),
     initialData: options.initialSnapshot,
-    enabled: isLive,
-    refetchInterval: () => {
-      if (!isLive || !documentVisible) {
+    enabled: seedIsLive,
+    refetchInterval: (query) => {
+      const status =
+        query.state.data?.fixture?.status ??
+        options.initialSnapshot?.fixture?.status ??
+        seedStatus;
+      if (!isLiveFixtureStatus(status as FixtureStatus) || !documentVisible) {
         return false;
       }
       if (!realtimeStatusKnown || realtimeHealthy) {
@@ -74,6 +78,11 @@ export function useLiveMatch(
     },
     refetchIntervalInBackground: false,
   });
+
+  const fixture =
+    snapshotQuery.data?.fixture ?? options.initialSnapshot?.fixture ?? null;
+  const authoritativeStatus = (fixture?.status ?? seedStatus) as FixtureStatus;
+  const isLive = isLiveFixtureStatus(authoritativeStatus);
 
   useEffect(() => {
     if (!isLive) {
@@ -148,9 +157,6 @@ export function useLiveMatch(
     options.onWatchError,
     queryClient,
   ]);
-
-  const fixture =
-    snapshotQuery.data?.fixture ?? options.initialSnapshot?.fixture ?? null;
 
   return useMemo(
     () => ({

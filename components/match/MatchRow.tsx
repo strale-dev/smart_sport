@@ -6,10 +6,10 @@ import { LiveStatusChip } from "@/components/match/LiveStatusChip";
 import { MatchFixtureScoreboard } from "@/components/match/MatchFixtureScoreboard";
 import { MatchMetaBar } from "@/components/match/MatchMetaBar";
 import { formatFixtureMinute } from "@/lib/fixtures/display";
+import { isPresentationLiveFixture } from "@/lib/live/live-presentation";
 import { formatRelativeTime } from "@/lib/ai/format";
 import { isAiUpdatedMarkerFresh } from "@/lib/live/ai-updated-marker";
 import { getMatchScoreboardPreset } from "@/lib/match/scoreboard-presets";
-import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import { cn } from "@/lib/utils";
 import type { Fixture } from "@/types/domain";
 
@@ -32,7 +32,7 @@ export function MatchRow({
   anchorId,
   todayDateKey,
 }: MatchRowProps) {
-  const isLive = isLiveFixtureStatus(fixture.status);
+  const isLive = isPresentationLiveFixture(fixture);
   const minuteLabel = formatFixtureMinute(fixture);
   const showAiUpdated =
     fixture.aiUpdatedAt != null && isAiUpdatedMarkerFresh(fixture.aiUpdatedAt);

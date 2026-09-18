@@ -94,13 +94,26 @@ describe("footballService", () => {
         path: "/fixtures",
       })
     );
+    const liveFixture = {
+      ...sampleFixture,
+      status: "2H" as const,
+      kickoffAt: new Date().toISOString(),
+      liveClock: {
+        ...sampleFixture.liveClock,
+        lastProviderSyncAt: new Date().toISOString(),
+        statusExtraMinute: sampleFixture.liveClock?.statusExtraMinute ?? null,
+        periodFirstStartAt: sampleFixture.liveClock?.periodFirstStartAt ?? null,
+        periodSecondStartAt:
+          sampleFixture.liveClock?.periodSecondStartAt ?? null,
+      },
+    };
     const dbSpy = vi
       .spyOn(dbRead, "readLiveFixturesFromDb")
-      .mockResolvedValue([sampleFixture]);
+      .mockResolvedValue([liveFixture]);
 
     const result = await footballService.listLiveFixtures();
 
-    expect(result.data).toEqual([sampleFixture]);
+    expect(result.data).toEqual([liveFixture]);
     expect(result.meta.stale).toBe(true);
     expect(dbSpy).toHaveBeenCalledOnce();
   });

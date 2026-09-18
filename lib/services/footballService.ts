@@ -98,6 +98,7 @@ import {
   providerTeamSquadKey,
   providerTeamStatisticsKey,
 } from "@/lib/redis/keys";
+import { isAuthoritativeLivePresentation } from "@/lib/live/live-presentation";
 import {
   TEAM_MATCHES_FUTURE_DAYS,
   TEAM_MATCHES_PAST_DAYS,
@@ -322,7 +323,9 @@ export async function listLiveFixtures(): Promise<ServiceResult<Fixture[]>> {
 
   const filtered = {
     ...result,
-    value: filterAllowlistedFixtures(result.value),
+    value: filterAllowlistedFixtures(result.value).filter((fixture) =>
+      isAuthoritativeLivePresentation(fixture)
+    ),
   };
 
   return toServiceResult(filtered);

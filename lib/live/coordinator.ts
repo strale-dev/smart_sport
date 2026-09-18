@@ -13,6 +13,7 @@ import {
   shouldKeepMatchPollRunning,
 } from "@/lib/live/viewers";
 import { acquireLock } from "@/lib/redis/lock";
+import { shouldTailPollLiveFixture } from "@/lib/live/live-tail-poll";
 import {
   isLiveFixtureStatus,
   lockFixturePollKey,
@@ -62,26 +63,11 @@ export async function ensureWorkerRunning(
 export async function shouldContinueFixturePoll(
   fixtureProviderId: number
 ): Promise<boolean> {
-  if (!(await shouldKeepMatchPollRunning(fixtureProviderId))) {
-    return false;
-  }
-
-  try {
-    const client = createAdminClient();
-    const { data } = await client
-      .from("fixtures")
-      .select("status")
-      .eq("provider_id", fixtureProviderId)
-      .maybeSingle();
-
-    if (!data?.status) {
-      return true;
-    }
-
-    return isLiveFixtureStatus(data.status);
-  } catch {
+  if (await shouldKeepMatchPollRunning(fixtureProviderId)) {
     return true;
   }
+
+  return shouldTailPollLiveFixture(fixtureProviderId);
 }
 
 export async function shouldContinueLiveCenterPoll(): Promise<boolean> {

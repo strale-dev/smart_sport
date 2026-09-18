@@ -9,6 +9,10 @@ export const INGESTION_LEAGUE_PROVIDER_IDS = [
   78, // Bundesliga
   61, // Ligue 1
   2, // UEFA Champions League
+  3, // UEFA Europa League
+  848, // UEFA Conference League
+  94, // Portugal Primeira Liga
+  88, // Netherlands Eredivisie
   286, // Super Liga (Serbia)
 ] as const;
 

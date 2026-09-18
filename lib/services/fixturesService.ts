@@ -1,3 +1,5 @@
+import { finalizeExpiredStaleLiveFixturesInDb } from "@/lib/live/finalize-expired-stale-live";
+import { resolvePresentationFixtures } from "@/lib/live/live-presentation";
 import {
   buildUpcomingAndPastDayGroups,
   collectActiveLeagueIds,
@@ -46,6 +48,8 @@ export async function getFixturesData(
   timeZone: string,
   now = new Date()
 ): Promise<FixturesData> {
+  await finalizeExpiredStaleLiveFixturesInDb(now);
+
   const { fromUtc, toUtcExclusive, todayDateKey } = buildTimezoneWindow(
     now,
     timeZone,
@@ -53,7 +57,8 @@ export async function getFixturesData(
     FIXTURES_WINDOW_DAYS
   );
   const result = await getMatchesInRange(fromUtc, toUtcExclusive);
-  const allFixtures = result.data;
+  const nowMs = now.getTime();
+  const allFixtures = resolvePresentationFixtures(result.data, nowMs);
   const filtered = filterByLeague(allFixtures, params.league);
 
   const { upcomingDayGroups, pastDayGroups } = buildUpcomingAndPastDayGroups(

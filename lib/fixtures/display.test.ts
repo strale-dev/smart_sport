@@ -70,6 +70,12 @@ function buildFixture(
     venue: null,
     referee: null,
     round: null,
+    liveClock: {
+      statusExtraMinute: null,
+      lastProviderSyncAt: kickoffAt,
+      periodFirstStartAt: kickoffAt,
+      periodSecondStartAt: null,
+    },
     ...restOverrides,
     score: { ...emptyScore(), ...scoreOverrides },
   };
@@ -84,9 +90,16 @@ describe("formatMatchHeaderStatusLabel", () => {
   });
 
   it("formats live minute", () => {
-    const fixture = buildFixture(1, kickoff, {
+    const liveKickoff = new Date(Date.now() - 90 * 60 * 1000).toISOString();
+    const fixture = buildFixture(1, liveKickoff, {
       status: "2H",
       minute: 67,
+      liveClock: {
+        statusExtraMinute: null,
+        lastProviderSyncAt: new Date().toISOString(),
+        periodFirstStartAt: liveKickoff,
+        periodSecondStartAt: null,
+      },
     });
     expect(formatMatchHeaderStatusLabel(fixture, BELGRADE)).toBe("67'");
   });

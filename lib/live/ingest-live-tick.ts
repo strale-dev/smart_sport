@@ -9,6 +9,7 @@ import {
   type AuthoritativeLiveState,
 } from "@/lib/live/authoritative-fingerprint";
 import { buildMatchLiveSnapshot } from "@/lib/live/build-match-snapshot";
+import { logFixtureStatusTransition } from "@/lib/live/fixture-status-log";
 import type { MatchLiveSnapshot } from "@/lib/live/live-fetch";
 import { isLivePollingEnabled } from "@/lib/env";
 import {
@@ -159,7 +160,18 @@ export async function ingestLiveFixtureTick(
   }
 
   if (changeFlags.fixture) {
+    const oldStatus = previousState?.fixture.status ?? null;
     await ingestFixtureFromRaw(client, fixturePayload.raw, syncedAt);
+    if (oldStatus !== nextFixture.status) {
+      logFixtureStatusTransition({
+        fixtureProviderId,
+        oldStatus,
+        newStatus: nextFixture.status,
+        score: `${nextFixture.score.home ?? 0}-${nextFixture.score.away ?? 0}`,
+        source: "ingest-live-tick",
+        timestamp: syncedAt,
+      });
+    }
   }
 
   const fixtureUuid = await getFixtureUuidByProviderId(

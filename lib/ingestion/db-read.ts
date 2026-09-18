@@ -1,4 +1,5 @@
 import { getIngestionConfig } from "@/lib/ingestion/config";
+import { isAuthoritativeLivePresentation } from "@/lib/live/live-presentation";
 import { buildPlayerContributionBadges } from "@/lib/players/badges";
 import { ageFromDateOfBirth } from "@/lib/players/display";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -418,7 +419,9 @@ export async function readLiveFixturesFromDb(): Promise<Fixture[]> {
     throw new Error(`Failed to read live fixtures: ${error.message}`);
   }
 
-  return ((data ?? []) as FixtureRow[]).map(mapFixtureRow);
+  return ((data ?? []) as FixtureRow[])
+    .map(mapFixtureRow)
+    .filter((fixture) => isAuthoritativeLivePresentation(fixture));
 }
 
 export async function readTeamByProviderIdFromDb(

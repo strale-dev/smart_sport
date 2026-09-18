@@ -8,8 +8,16 @@ import {
 } from "@/lib/ingestion/config";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import { ingestFixtureFromRaw } from "@/lib/ingestion/upsert";
+import {
+  reconcileStaleLiveFixtures,
+  type ReconcileStaleLiveResult,
+} from "@/lib/live/reconcile-stale-live";
 import { getRedis } from "@/lib/redis/client";
-import { CACHE_TTL, providerFixturesLiveKey } from "@/lib/redis/keys";
+import {
+  CACHE_TTL,
+  isLiveFixtureStatus,
+  providerFixturesLiveKey,
+} from "@/lib/redis/keys";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Fixture } from "@/types/domain";
 
@@ -25,6 +33,7 @@ export type IngestLiveCenterTickResult = {
     stoppedForTimeBudget?: boolean;
     fixtureErrors?: number;
     lastFixtureError?: string;
+    reconcile?: ReconcileStaleLiveResult["stats"];
   };
 };
 
@@ -53,6 +62,7 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
   const allowlisted = rawFixtures.filter((raw) =>
     isLeagueInAllowlist(raw.league.id, config)
   );
+  const activeLiveProviderIds = allowlisted.map((raw) => raw.fixture.id);
   const fixturesFilteredOut = rawFixtures.length - allowlisted.length;
   const domainFixtures: Fixture[] = [];
   let stoppedForTimeBudget = false;
@@ -81,9 +91,12 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
   const redis = getRedis();
   if (redis && domainFixtures.length > 0) {
     try {
+      const liveOnly = domainFixtures.filter((fixture) =>
+        isLiveFixtureStatus(fixture.status)
+      );
       await redis.set(
         providerFixturesLiveKey(),
-        { value: domainFixtures, cachedAt: syncedAt },
+        { value: liveOnly, cachedAt: syncedAt },
         { ex: CACHE_TTL.fixturesLiveFresh }
       );
     } catch (error) {
@@ -95,12 +108,18 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
   const ok =
     allowlisted.length === 0 || fixturesUpserted > 0 || stoppedForTimeBudget;
 
+  const reconcileResult = await reconcileStaleLiveFixtures({
+    activeLiveProviderIds,
+    source: "sync-live-center",
+  });
+
   return {
     ok,
     stats: {
       apiRequests,
       fixturesUpserted,
       fixturesFilteredOut,
+      reconcile: reconcileResult.stats,
       ...(stoppedForTimeBudget
         ? {
             fixturesRemaining: allowlisted.length - fixturesUpserted,

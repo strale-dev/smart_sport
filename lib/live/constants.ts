@@ -78,10 +78,14 @@ export const LIVE_LEAGUE_TABS: LiveLeagueTab[] = [
   { providerId: 78, label: "Bundesliga", shortLabel: "BL" },
   { providerId: 61, label: "Ligue 1" },
   { providerId: 2, label: "Champions League", shortLabel: "UCL" },
+  { providerId: 3, label: "Europa League", shortLabel: "UEL" },
+  { providerId: 848, label: "Conference League", shortLabel: "UECL" },
 ];
 
 /** Leagues shown in the "More" dropdown. */
 export const LIVE_LEAGUE_MORE: LiveLeagueTab[] = [
+  { providerId: 94, label: "Primeira Liga" },
+  { providerId: 88, label: "Eredivisie" },
   { providerId: 286, label: "Super Liga" },
 ];
 
