@@ -12,10 +12,38 @@ import {
 describe("TimelineCard", () => {
   it("renders events when present (B1 regression)", () => {
     const fixture = makeMatchTestFixture("2H");
-    render(<TimelineCard fixture={fixture} events={[makeGoalEvent(10)]} />);
+    render(
+      <TimelineCard
+        fixture={fixture}
+        events={[
+          {
+            ...makeGoalEvent(10, 10),
+            playerName: "Alex Striker",
+            assistPlayerName: "Sam Playmaker",
+          },
+        ]}
+      />
+    );
 
     expect(screen.getByText("Timeline")).toBeInTheDocument();
-    expect(screen.queryByText("No events yet")).not.toBeInTheDocument();
+    expect(screen.getByText("Alex Striker")).toBeInTheDocument();
+    expect(screen.getByText(/Assist: Sam Playmaker/)).toBeInTheDocument();
+  });
+
+  it("shows newest event first", () => {
+    const fixture = makeMatchTestFixture("2H");
+    render(
+      <TimelineCard
+        fixture={fixture}
+        events={[
+          { ...makeGoalEvent(10, 10), playerName: "First" },
+          { ...makeGoalEvent(10, 80), playerName: "Latest" },
+        ]}
+      />
+    );
+
+    const names = screen.getAllByText(/First|Latest/);
+    expect(names[0]?.textContent).toBe("Latest");
   });
 
   it("shows live empty state when no events", () => {

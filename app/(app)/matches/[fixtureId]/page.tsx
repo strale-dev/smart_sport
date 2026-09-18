@@ -125,6 +125,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
               <MatchOverviewPanel
                 fixture={fixture}
                 liveSnapshot={initialLiveSnapshot}
+                returnTo={returnTo}
               />
             </Suspense>
           }

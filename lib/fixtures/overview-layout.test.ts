@@ -45,36 +45,44 @@ describe("overview card visibility", () => {
   it("hides timeline and momentum before kickoff", () => {
     expect(isOverviewCardVisible("timeline", "pre")).toBe(false);
     expect(isOverviewCardVisible("momentum", "pre")).toBe(false);
-    expect(isOverviewCardVisible("comparison", "pre")).toBe(true);
+    expect(isOverviewCardVisible("standingsSnippet", "pre")).toBe(true);
+    expect(isOverviewCardVisible("h2hCompact", "pre")).toBe(true);
     expect(isOverviewCardVisible("formPreview", "pre")).toBe(true);
-    expect(isOverviewCardVisible("h2hPreview", "pre")).toBe(true);
-    expect(isOverviewCardVisible("formPreview", "live")).toBe(false);
-    expect(isOverviewCardVisible("h2hPreview", "live")).toBe(false);
+    expect(isOverviewCardVisible("formPreview", "live")).toBe(true);
+    expect(isOverviewCardVisible("h2hCompact", "live")).toBe(false);
   });
 
-  it("orders pre-match overview comparison then form/H2H (PRD §6.4 group)", () => {
+  it("orders pre-match overview per redesign", () => {
     expect(getOverviewCardOrder("pre")).toEqual([
-      "comparison",
+      "aiEngine",
+      "standingsSnippet",
+      "h2hCompact",
       "formPreview",
-      "h2hPreview",
+      "matchDetails",
       "playersToWatch",
       "lineupTeaser",
     ]);
   });
 
-  it("shows lineup teaser in pre and live modes", () => {
-    expect(isOverviewCardVisible("lineupTeaser", "pre")).toBe(true);
-    expect(isOverviewCardVisible("lineupTeaser", "live")).toBe(true);
+  it("orders live in-progress overview", () => {
+    expect(getOverviewCardOrder("live")).toEqual([
+      "aiEngine",
+      "timeline",
+      "momentum",
+      "matchDetails",
+      "formPreview",
+      "lineupTeaser",
+    ]);
   });
 
-  it("orders live/FT overview stats before momentum, timeline after comparison", () => {
-    expect(getOverviewCardOrder("live")).toEqual([
-      "probabilityDelta",
-      "liveStats",
-      "momentum",
-      "comparison",
+  it("orders finished overview with player of the match", () => {
+    expect(getOverviewCardOrder("finished")).toEqual([
+      "aiEngine",
       "timeline",
-      "playersToWatch",
+      "momentum",
+      "playerOfMatch",
+      "matchDetails",
+      "formPreview",
       "lineupTeaser",
     ]);
   });
@@ -82,9 +90,10 @@ describe("overview card visibility", () => {
   it("shows B1 finished-overview cards when layout is live (FT uses live layout)", () => {
     expect(getOverviewLayout("FT")).toBe("live");
     expect(getMatchOverviewRenderMode("FT")).toBe("finished");
-    expect(isOverviewCardVisible("timeline", "live")).toBe(true);
-    expect(isOverviewCardVisible("liveStats", "live")).toBe(true);
-    expect(isOverviewCardVisible("momentum", "live")).toBe(true);
+    expect(isOverviewCardVisible("timeline", "finished")).toBe(true);
+    expect(isOverviewCardVisible("momentum", "finished")).toBe(true);
+    expect(isOverviewCardVisible("playerOfMatch", "finished")).toBe(true);
+    expect(isOverviewCardVisible("playerOfMatch", "live")).toBe(false);
   });
 });
 

@@ -92,6 +92,9 @@ export type PrematchModelOutput = {
   predictedOutcome: "1" | "X" | "2";
 };
 
+/** Subset sent to clients for post-match accuracy checks. */
+export type PrematchPredictionSnapshot = PrematchModelOutput;
+
 export type PrematchPredictionResult = PrematchModelOutput & {
   fixtureId: string;
   fixtureExternalId: number;

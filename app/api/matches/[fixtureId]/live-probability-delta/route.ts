@@ -54,15 +54,17 @@ export async function GET(
       readLatestLivePrediction(fixture.id),
     ]);
 
+    const prematchResult = prematchRow
+      ? mapPredictionRowToResult(
+          prematchRow,
+          fixtureExternalId,
+          modelVersion.version,
+          true
+        )
+      : null;
+
     const body: LiveProbabilityDeltaResponse = {
-      prematch: prematchRow
-        ? mapPredictionRowToResult(
-            prematchRow,
-            fixtureExternalId,
-            modelVersion.version,
-            true
-          ).winProbabilities
-        : null,
+      prematch: prematchResult?.winProbabilities ?? null,
       live: liveRow
         ? mapLivePredictionRowToResult(
             liveRow,
@@ -72,6 +74,19 @@ export async function GET(
           ).winProbabilities
         : null,
       liveMinute: liveRow?.minute ?? null,
+      prematchPrediction: prematchResult
+        ? {
+            winProbabilities: prematchResult.winProbabilities,
+            expectedGoalsHome: prematchResult.expectedGoalsHome,
+            expectedGoalsAway: prematchResult.expectedGoalsAway,
+            expectedGoalsTotalMin: prematchResult.expectedGoalsTotalMin,
+            expectedGoalsTotalMax: prematchResult.expectedGoalsTotalMax,
+            bttsProb: prematchResult.bttsProb,
+            weakerTeamScoringProb: prematchResult.weakerTeamScoringProb,
+            confidence: prematchResult.confidence,
+            predictedOutcome: prematchResult.predictedOutcome,
+          }
+        : null,
     };
 
     return NextResponse.json(body, { status: 200 });

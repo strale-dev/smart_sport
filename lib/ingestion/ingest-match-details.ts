@@ -3,7 +3,9 @@ import {
   getFixturePlayers as getFixturePlayersEndpoint,
   getFixtureStatistics as getFixtureStatisticsEndpoint,
 } from "@/lib/api-football/endpoints/fixtures";
+import { optionalProviderFetch } from "@/lib/api-football/safe-call";
 import { ingestLineupsFromProvider } from "@/lib/ingestion/ingest-lineups";
+import { ingestFixtureSidelinedFromProvider } from "@/lib/ingestion/ingest-sidelined";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import {
   getFixtureUuidByProviderId,
@@ -11,13 +13,19 @@ import {
   upsertFixtureStatistics,
   upsertPlayerMatchPerformances,
 } from "@/lib/ingestion/match-details-upsert";
-import { getRedis } from "@/lib/redis/client";
+import { writeCachedValue } from "@/lib/redis/cache";
 import {
+  CACHE_TTL,
   providerFixtureEventsKey,
   providerFixturePlayersKey,
   providerFixtureStatsKey,
 } from "@/lib/redis/keys";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+export type IngestMatchDetailsOptions = {
+  /** Overview hydrate skips lineups — lineups tab owns that flow for now. */
+  skipLineups?: boolean;
+};
 
 export type IngestMatchDetailsResult = {
   ok: boolean;
@@ -33,7 +41,8 @@ export type IngestMatchDetailsResult = {
 };
 
 export async function ingestMatchDetailsFromProvider(
-  fixtureProviderId: number
+  fixtureProviderId: number,
+  options: IngestMatchDetailsOptions = {}
 ): Promise<IngestMatchDetailsResult> {
   const client = createAdminClient();
   const fixtureId = await getFixtureUuidByProviderId(client, fixtureProviderId);
@@ -54,81 +63,148 @@ export async function ingestMatchDetailsFromProvider(
   }
 
   let apiRequests = 0;
+  let eventsCount = 0;
+  let statisticsCount = 0;
+  let playerPerformancesCount = 0;
+  let lineupsCount = 0;
 
   await throttleProviderRequest();
-  const events = await getFixtureEventsEndpoint(fixtureProviderId);
-  apiRequests += 1;
-
-  await throttleProviderRequest();
-  const statistics = await getFixtureStatisticsEndpoint(fixtureProviderId);
-  apiRequests += 1;
-
-  const lineupsResult = await ingestLineupsFromProvider(fixtureProviderId);
-  apiRequests += lineupsResult.stats.apiRequests;
-
-  await throttleProviderRequest();
-  const playerPerformances = await getFixturePlayersEndpoint(fixtureProviderId);
-  apiRequests += 1;
-
-  const eventsCount = await upsertFixtureEvents(client, fixtureId, events);
-  const statisticsCount = await upsertFixtureStatistics(
-    client,
-    fixtureId,
-    statistics
+  const eventsResult = await optionalProviderFetch(
+    `fixture ${fixtureProviderId} events`,
+    () => getFixtureEventsEndpoint(fixtureProviderId)
   );
-  const playerPerformancesCount = await upsertPlayerMatchPerformances(
-    client,
-    fixtureId,
-    playerPerformances
-  );
+  apiRequests += 1;
 
-  const syncedAt = new Date().toISOString();
-  const redis = getRedis();
-
-  if (redis) {
-    await Promise.all([
-      redis.set(
-        providerFixtureEventsKey(fixtureProviderId),
-        { value: events, cachedAt: syncedAt },
-        { ex: 86_400 }
-      ),
-      redis.set(
-        providerFixtureStatsKey(fixtureProviderId),
-        { value: statistics, cachedAt: syncedAt },
-        { ex: 86_400 }
-      ),
-      redis.set(
-        providerFixturePlayersKey(fixtureProviderId),
-        { value: playerPerformances, cachedAt: syncedAt },
-        { ex: 86_400 }
-      ),
-    ]);
+  if (eventsResult.ok) {
+    eventsCount = await upsertFixtureEvents(
+      client,
+      fixtureId,
+      eventsResult.value
+    );
+    await writeCachedValue(
+      providerFixtureEventsKey(fixtureProviderId),
+      eventsResult.value,
+      CACHE_TTL.fixtureEventsStale
+    );
   }
 
-  if (!lineupsResult.ok) {
-    return {
-      ok: false,
-      fixtureProviderId,
-      stats: {
-        events: eventsCount,
-        statistics: statisticsCount,
-        lineups: 0,
-        playerPerformances: playerPerformancesCount,
-        apiRequests,
-      },
-      reason: lineupsResult.reason,
-    };
+  await throttleProviderRequest();
+  const statisticsResult = await optionalProviderFetch(
+    `fixture ${fixtureProviderId} statistics`,
+    () => getFixtureStatisticsEndpoint(fixtureProviderId)
+  );
+  apiRequests += 1;
+
+  if (statisticsResult.ok) {
+    statisticsCount = await upsertFixtureStatistics(
+      client,
+      fixtureId,
+      statisticsResult.value
+    );
+    await writeCachedValue(
+      providerFixtureStatsKey(fixtureProviderId),
+      statisticsResult.value,
+      CACHE_TTL.fixtureStatsStale
+    );
   }
+
+  if (!options.skipLineups) {
+    try {
+      const lineupsResult = await ingestLineupsFromProvider(fixtureProviderId);
+      apiRequests += lineupsResult.stats.apiRequests;
+      lineupsCount = lineupsResult.stats.lineups;
+    } catch (error) {
+      console.warn(
+        `[ingest] lineups skipped for fixture ${fixtureProviderId}`,
+        error
+      );
+    }
+  }
+
+  await throttleProviderRequest();
+  const playersResult = await optionalProviderFetch(
+    `fixture ${fixtureProviderId} players`,
+    () => getFixturePlayersEndpoint(fixtureProviderId)
+  );
+  apiRequests += 1;
+
+  if (playersResult.ok) {
+    playerPerformancesCount = await upsertPlayerMatchPerformances(
+      client,
+      fixtureId,
+      playersResult.value
+    );
+    await writeCachedValue(
+      providerFixturePlayersKey(fixtureProviderId),
+      playersResult.value,
+      CACHE_TTL.fixtureStatsStale
+    );
+  }
+
+  const anyProviderOk =
+    eventsResult.ok || statisticsResult.ok || playersResult.ok;
 
   return {
-    ok: true,
+    ok: anyProviderOk,
     fixtureProviderId,
     stats: {
       events: eventsCount,
       statistics: statisticsCount,
-      lineups: lineupsResult.stats.lineups,
+      lineups: lineupsCount,
       playerPerformances: playerPerformancesCount,
       apiRequests,
     },
+    reason: anyProviderOk
+      ? undefined
+      : [
+          !eventsResult.ok ? eventsResult.reason : null,
+          !statisticsResult.ok ? statisticsResult.reason : null,
+          !playersResult.ok ? playersResult.reason : null,
+        ]
+          .filter(Boolean)
+          .join(" | "),
   };
+}
+
+export async function ingestFixturePlayerPerformancesFromProvider(
+  fixtureProviderId: number
+): Promise<{ ok: boolean; playerPerformances: number; reason?: string }> {
+  const client = createAdminClient();
+  const fixtureId = await getFixtureUuidByProviderId(client, fixtureProviderId);
+
+  if (!fixtureId) {
+    return {
+      ok: false,
+      playerPerformances: 0,
+      reason: "Fixture not found in Postgres",
+    };
+  }
+
+  await throttleProviderRequest();
+  const playersResult = await optionalProviderFetch(
+    `fixture ${fixtureProviderId} players`,
+    () => getFixturePlayersEndpoint(fixtureProviderId)
+  );
+
+  if (!playersResult.ok) {
+    return {
+      ok: false,
+      playerPerformances: 0,
+      reason: playersResult.reason,
+    };
+  }
+
+  const playerPerformancesCount = await upsertPlayerMatchPerformances(
+    client,
+    fixtureId,
+    playersResult.value
+  );
+
+  await writeCachedValue(
+    providerFixturePlayersKey(fixtureProviderId),
+    playersResult.value,
+    CACHE_TTL.fixtureStatsStale
+  );
+
+  return { ok: true, playerPerformances: playerPerformancesCount };
 }

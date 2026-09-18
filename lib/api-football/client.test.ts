@@ -8,8 +8,15 @@ vi.mock("p-retry", async (importOriginal) => {
   };
 });
 
-import { apiFootballFetch } from "@/lib/api-football/client";
-import { ApiFootballQuotaError } from "@/lib/api-football/errors";
+import {
+  apiFootballFetch,
+  apiFootballFetchResponse,
+} from "@/lib/api-football/client";
+import {
+  ApiFootballError,
+  ApiFootballQuotaError,
+} from "@/lib/api-football/errors";
+import { optionalProviderFetch } from "@/lib/api-football/safe-call";
 import { resetInFlightDedupForTests } from "@/lib/api-football/dedup";
 import {
   getInMemoryQuotaSnapshot,
@@ -201,6 +208,48 @@ describe("apiFootballFetch", () => {
 
     expect(result.response).toHaveLength(1);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an HTTP 200 envelope carrying provider errors", async () => {
+    const fixture = loadApiFootballFixture("ip-not-allowed.json");
+    const fetchImpl = vi.fn().mockResolvedValue(
+      mockResponse(fixture, {
+        headers: {
+          "x-ratelimit-requests-remaining": "7499",
+        },
+      })
+    );
+
+    const error = await apiFootballFetch(
+      "/fixtures/events",
+      { fixture: 1570378 },
+      { fetchImpl }
+    ).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ApiFootballError);
+    expect((error as ApiFootballError).providerErrors).toEqual({
+      Ip: "This IP is not allowed to call the API, check the list of allowed IPs in the dashboard.",
+    });
+  });
+
+  it("surfaces the provider error reason instead of an empty result", async () => {
+    const fixture = loadApiFootballFixture("ip-not-allowed.json");
+    const fetchImpl = vi.fn().mockResolvedValue(mockResponse(fixture));
+
+    const result = await optionalProviderFetch("fixture events", () =>
+      apiFootballFetchResponse(
+        "/fixtures/events",
+        { fixture: 1570378 },
+        {
+          fetchImpl,
+        }
+      )
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toContain(
+      "This IP is not allowed to call the API"
+    );
   });
 
   it("maps exhausted 429 retries to ApiFootballQuotaError", async () => {

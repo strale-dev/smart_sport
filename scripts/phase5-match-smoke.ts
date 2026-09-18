@@ -63,6 +63,7 @@ const deltaFixture: LiveProbabilityDeltaResponse = {
   prematch: { home: 0.45, draw: 0.28, away: 0.27 },
   live: { home: 0.58, draw: 0.22, away: 0.2 },
   liveMinute: 67,
+  prematchPrediction: null,
 };
 
 assertProbabilitySum("prematch", deltaFixture.prematch);

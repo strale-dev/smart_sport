@@ -1052,3 +1052,10 @@ See [ROADMAP.md Phase 1 — API-Football Pro key cutover](./ROADMAP.md#api-footb
 ### 24.4 Manual QA per phase
 
 Cursor `AGENTS.md` rule: **do not** ship a phase without verifying real provider data, desktop + mobile widths, and error behavior. Each phase closes with a manual QA checklist run.
+
+### 24.5 Phase 7 quality gates
+
+- Fast gate: `npm.cmd run phase7:check` (typecheck, lint, unit tests, PRD heuristics, LCP static audit).
+- Full gate: `npm.cmd run phase7:check:full` (adds Playwright axe, Lighthouse, k6 when installed).
+- Checklist and sign-off: [QA-PHASE7.md](./QA-PHASE7.md).
+- k6: [scripts/k6/README.md](../scripts/k6/README.md).

@@ -100,20 +100,39 @@ function FormLabel({
   );
 }
 
-function FormControl({ ...props }: React.ComponentProps<"div">) {
+function FormControl({
+  children,
+  ...props
+}: React.ComponentProps<"div"> & { children?: React.ReactNode }) {
   const { error, formItemId, formDescriptionId, formMessageId } =
     useFormField();
+
+  const ariaDescribedBy = !error
+    ? formDescriptionId
+    : `${formDescriptionId} ${formMessageId}`;
+
+  if (React.isValidElement(children)) {
+    return React.cloneElement(
+      children as React.ReactElement<Record<string, unknown>>,
+      {
+        id: formItemId,
+        "aria-describedby": ariaDescribedBy,
+        "aria-invalid": !!error,
+        ...props,
+      }
+    );
+  }
 
   return (
     <div
       data-slot="form-control"
       id={formItemId}
-      aria-describedby={
-        !error ? formDescriptionId : `${formDescriptionId} ${formMessageId}`
-      }
+      aria-describedby={ariaDescribedBy}
       aria-invalid={!!error}
       {...props}
-    />
+    >
+      {children}
+    </div>
   );
 }
 

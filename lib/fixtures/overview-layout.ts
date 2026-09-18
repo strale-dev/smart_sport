@@ -8,31 +8,43 @@ export type OverviewLayoutMode = "pre" | "live";
 export type MatchOverviewRenderMode = "pre" | "finished" | "live";
 
 export type OverviewCardId =
-  | "probabilityDelta"
+  | "aiEngine"
   | "timeline"
   | "momentum"
-  | "liveStats"
   | "formPreview"
-  | "h2hPreview"
-  | "comparison"
+  | "matchDetails"
+  | "standingsSnippet"
+  | "h2hCompact"
   | "playersToWatch"
-  | "lineupTeaser";
+  | "lineupTeaser"
+  | "playerOfMatch";
 
 const PRE_MATCH_ORDER: OverviewCardId[] = [
-  "comparison",
+  "aiEngine",
+  "standingsSnippet",
+  "h2hCompact",
   "formPreview",
-  "h2hPreview",
+  "matchDetails",
   "playersToWatch",
   "lineupTeaser",
 ];
 
-const LIVE_MATCH_ORDER: OverviewCardId[] = [
-  "probabilityDelta",
-  "liveStats",
-  "momentum",
-  "comparison",
+const LIVE_IN_PROGRESS_ORDER: OverviewCardId[] = [
+  "aiEngine",
   "timeline",
-  "playersToWatch",
+  "momentum",
+  "matchDetails",
+  "formPreview",
+  "lineupTeaser",
+];
+
+const FINISHED_ORDER: OverviewCardId[] = [
+  "aiEngine",
+  "timeline",
+  "momentum",
+  "playerOfMatch",
+  "matchDetails",
+  "formPreview",
   "lineupTeaser",
 ];
 
@@ -59,14 +71,21 @@ export function getMatchOverviewRenderMode(
 }
 
 export function getOverviewCardOrder(
-  mode: OverviewLayoutMode
+  renderMode: MatchOverviewRenderMode
 ): OverviewCardId[] {
-  return mode === "live" ? LIVE_MATCH_ORDER : PRE_MATCH_ORDER;
+  switch (renderMode) {
+    case "pre":
+      return PRE_MATCH_ORDER;
+    case "live":
+      return LIVE_IN_PROGRESS_ORDER;
+    case "finished":
+      return FINISHED_ORDER;
+  }
 }
 
 export function isOverviewCardVisible(
   cardId: OverviewCardId,
-  mode: OverviewLayoutMode
+  renderMode: MatchOverviewRenderMode
 ): boolean {
-  return getOverviewCardOrder(mode).includes(cardId);
+  return getOverviewCardOrder(renderMode).includes(cardId);
 }

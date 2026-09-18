@@ -13,15 +13,18 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe("Match page regression (guest)", () => {
-  test("FT overview shows stats when data exists (B1)", async ({ page }) => {
+  test("FT overview shows timeline and momentum when data exists (B1)", async ({
+    page,
+  }) => {
     await page.goto(`/matches/${ftFixtureId}`);
 
     await expect(page.getByText("AI match analysis")).toBeVisible({
       timeout: 30_000,
     });
 
-    await expect(page.getByText("Stats not available yet")).toHaveCount(0);
-    await expect(page.getByText("Live stats")).toBeVisible();
+    await expect(page.getByText("AI engine", { exact: true })).toBeVisible();
+    await expect(page.getByText("Timeline")).toBeVisible();
+    await expect(page.getByText("Match momentum")).toBeVisible();
 
     await page.getByRole("tab", { name: "Lineups" }).click();
     await expect(page.getByRole("tab", { name: "Lineups" })).toHaveAttribute(
@@ -70,21 +73,16 @@ test.describe("Match page regression (guest)", () => {
     await expect(page.getByText("Recent form").first()).toBeVisible();
   });
 
-  test("NS overview lineup teaser CTA opens AI Engine tab (U3)", async ({
+  test("NS overview shows standings snippet and match details (U3)", async ({
     page,
   }) => {
     await page.goto(`/matches/${nsFixtureId}`);
 
-    await expect(page.getByText("Lineups not confirmed yet")).toBeVisible({
+    await expect(page.getByText("Standings")).toBeVisible({
       timeout: 30_000,
     });
-
-    await page.getByRole("link", { name: /preview with ai/i }).click();
-
-    await expect(page.getByRole("tab", { name: "AI Engine" })).toHaveAttribute(
-      "aria-selected",
-      "true"
-    );
+    await expect(page.getByText("Match details")).toBeVisible();
+    await expect(page.getByText("Lineups not confirmed yet")).toHaveCount(0);
   });
 
   test("P1 density and hero (guest)", async ({ page }) => {
@@ -153,7 +151,7 @@ test.describe("Match page regression (guest)", () => {
     ).toBe(false);
 
     await page.goto(`/matches/${ftFixtureId}`);
-    await expect(page.getByText("Live stats")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Timeline")).toBeVisible({ timeout: 30_000 });
     const ftHeading = page.getByRole("heading", { level: 1 });
     await expect(ftHeading).toContainText(/vs/i);
     const ftHeaderCard = ftHeading.locator(
@@ -179,20 +177,12 @@ test.describe("Match page regression (guest)", () => {
 
     await page.goto(`/matches/${liveFixtureId}`);
 
-    await expect(page.getByText("Live stats")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Timeline")).toBeVisible({ timeout: 30_000 });
 
-    const emptyStats = page.getByText("Stats not in yet");
     const emptyTimeline = page.getByText("No events yet");
 
     await expect
-      .poll(
-        async () => {
-          const statsEmpty = await emptyStats.count();
-          const timelineEmpty = await emptyTimeline.count();
-          return statsEmpty + timelineEmpty;
-        },
-        { timeout: 3_000 }
-      )
-      .toBeLessThan(2);
+      .poll(async () => emptyTimeline.count(), { timeout: 3_000 })
+      .toBe(0);
   });
 });

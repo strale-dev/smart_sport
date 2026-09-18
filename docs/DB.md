@@ -495,6 +495,8 @@ create table public.lineups (
   team_id       uuid not null references public.teams(id) on delete cascade,
   formation     text,                              -- '4-3-3' etc.
   coach_name    text,
+  coach_provider_id integer,
+  coach_photo_url text,
   is_confirmed  boolean not null default false,    -- true after official announcement
   provider_payload jsonb,
   captured_at   timestamptz not null default now(),
@@ -525,6 +527,27 @@ create table public.lineup_players (
 
 create index lineup_players_lineup_id_idx on public.lineup_players (lineup_id);
 create index lineup_players_player_id_idx on public.lineup_players (player_id);
+```
+
+### 6.5b `fixture_sidelined_players`
+
+Injuries and suspensions for a fixture (API-Football `/injuries`).
+
+```sql
+create table public.fixture_sidelined_players (
+  id                  uuid primary key default gen_random_uuid(),
+  fixture_id          uuid not null references public.fixtures(id) on delete cascade,
+  team_id             uuid not null references public.teams(id) on delete cascade,
+  player_id           uuid references public.players(id) on delete set null,
+  player_provider_id  integer,
+  player_name         text not null,
+  kind                text not null check (kind in ('injury', 'suspension', 'other')),
+  reason              text,
+  provider_payload    jsonb,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now(),
+  unique (fixture_id, team_id, player_provider_id, kind)
+);
 ```
 
 ### 6.6 `player_match_performances`

@@ -698,11 +698,11 @@ Public launch on Vercel, PostHog dashboards ready, legal reviewed, marketing sur
 
 **Quality**
 
-- [ ] Manual QA sweep on desktop (Chrome + Safari + Firefox) and mobile (iOS Safari + Android Chrome).
-- [ ] Lighthouse: performance ≥ 80 mobile, ≥ 90 desktop; accessibility ≥ 95.
-- [ ] `axe` accessibility audit — no critical violations.
-- [ ] Every PRD principle sanity-checked (no fake data, all states covered).
-- [ ] Load test key endpoints with `k6` script — 50 concurrent users on `/matches/[id]` and `/dashboard`.
+- [ ] Manual QA sweep on desktop (Chrome + Safari + Firefox) and mobile (iOS Safari + Android Chrome). _(Checklist: [QA-PHASE7.md](./QA-PHASE7.md); multi-browser Playwright: `npm.cmd run e2e:quality`.)_
+- [ ] Lighthouse: performance ≥ 80 mobile, ≥ 90 desktop; accessibility ≥ 95. _(Gate: `npm.cmd run quality:lighthouse`; full: `npm.cmd run phase7:check:full`.)_
+- [ ] `axe` accessibility audit — no critical violations. _(Gate: `npm.cmd run quality:axe` — automated; founder sign-off on preview.)_
+- [ ] Every PRD principle sanity-checked (no fake data, all states covered). _(Auto: `npm.cmd run quality:prd-audit` + manual §4 in QA-PHASE7.)_
+- [ ] Load test key endpoints with `k6` script — 50 concurrent users on `/matches/[id]` and `/dashboard`. _(See [scripts/k6/README.md](../scripts/k6/README.md); `npm.cmd run quality:k6`.)_
 
 **Legal & compliance**
 
@@ -905,8 +905,8 @@ A founder can open **typical allowlist fixtures** (FT, live, or NS near kickoff)
 - [ ] **P8-UI-4** — AI cards + global disclaimer (§5, §14.1).
 - [ ] **P8-UI-5** — Motion + `prefers-reduced-motion` (§14.7).
 - [ ] **P8-UI-6** — Mobile §14.6 on match, team, player.
-- [ ] **P8-UI-7** — Lighthouse match ≥80 mobile on Vercel preview (§15.1).
-- [ ] **P8-UI-8** — `axe` — no critical a11y on match, dashboard, landing.
+- [ ] **P8-UI-7** — Lighthouse match ≥80 mobile on Vercel preview (§15.1). _(Same gate as Phase 7 `quality:lighthouse`.)_
+- [ ] **P8-UI-8** — `axe` — no critical a11y on match, dashboard, landing. _( `npm.cmd run quality:axe`.)_
 
 ### 16.4 — Core surfaces (PRD §6.2–6.3, §6.5–6.7)
 

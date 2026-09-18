@@ -1,31 +1,29 @@
-import { LiveProbabilityDeltaClient } from "@/components/match/LiveProbabilityDeltaClient";
 import { MatchOverviewLiveClient } from "@/components/match/MatchOverviewLiveClient";
 import { OverviewTabContent } from "@/components/match/OverviewTabContent";
-import { aggregateForm } from "@/lib/analytics/compute-form";
-import {
-  getMatchOverviewRenderMode,
-  getOverviewLayout,
-} from "@/lib/fixtures/overview-layout";
-import { shouldReuseLiveOverviewSnapshot } from "@/lib/match/overview-panel-invariants";
-import { computeMatchMomentum } from "@/lib/momentum/computeMatchMomentum";
 import { summarizeH2HMeetings } from "@/lib/analytics/compute-h2h";
-import { getH2H, getRecentForm } from "@/lib/services/analyticsService";
+import { getMatchOverviewRenderMode } from "@/lib/fixtures/overview-layout";
 import {
-  getFixtureEvents,
-  getFixtureLineups,
-  getFixtureStatistics,
-} from "@/lib/services/footballService";
+  readFixtureEventsFromDb,
+  readFixturePlayerPerformancesFromDb,
+  readFixtureStatisticsFromDb,
+  readLineupsFromDb,
+  readFixtureSidelinedFromDb,
+  readStandingsFromDb,
+} from "@/lib/ingestion/db-read";
+import { hydrateMatchOverviewFromProvider } from "@/lib/ingestion/ensure-match-overview";
+import { getUnavailableOverviewCards } from "@/lib/match/overview-block-status";
+import { pickPlayerOfTheMatch } from "@/lib/match/pick-player-of-the-match";
+import { computeMatchMomentum } from "@/lib/momentum/computeMatchMomentum";
+import { computeH2H, computeRecentForm } from "@/lib/services/analyticsService";
 import type { MatchLiveSnapshot } from "@/lib/live/live-fetch";
 import { getPlayersToWatch } from "@/lib/services/playersToWatchService";
-import type { Fixture, FormSnapshot, H2HSummary } from "@/types/domain";
+import type { Fixture, H2HSummary, StandingsGroup } from "@/types/domain";
 
 type MatchOverviewPanelProps = {
   fixture: Fixture;
   liveSnapshot?: MatchLiveSnapshot;
+  returnTo: string;
 };
-
-const EMPTY_FORM_5: FormSnapshot = aggregateForm([], "ALL", 5);
-const EMPTY_FORM_10: FormSnapshot = aggregateForm([], "ALL", 10);
 
 function emptyH2hSummary(fixture: Fixture): H2HSummary {
   return summarizeH2HMeetings(
@@ -39,82 +37,80 @@ function emptyH2hSummary(fixture: Fixture): H2HSummary {
 
 export async function MatchOverviewPanel({
   fixture,
-  liveSnapshot,
+  liveSnapshot: _liveSnapshot,
+  returnTo,
 }: MatchOverviewPanelProps) {
   const fixtureId = fixture.externalId;
-  const overviewMode = getOverviewLayout(fixture.status);
   const renderMode = getMatchOverviewRenderMode(fixture.status);
-  const needsFormFallback = overviewMode === "pre";
-  const snapshotForReuse =
-    shouldReuseLiveOverviewSnapshot(renderMode, liveSnapshot) && liveSnapshot
-      ? liveSnapshot
-      : undefined;
+
+  const hydrateReport = await hydrateMatchOverviewFromProvider(fixture);
+  const unavailableCards = getUnavailableOverviewCards(hydrateReport);
+
+  const needsPreExtras = renderMode === "pre";
+  const needsFinishedPlayers = renderMode === "finished";
+  const needsLineupPerformances =
+    renderMode === "finished" || renderMode === "live";
 
   const [
-    statsResult,
-    eventsResult,
-    homeForm5,
-    homeForm10,
-    awayForm5,
-    awayForm10,
+    stats,
+    events,
+    homeForm3,
+    awayForm3,
     h2hAll,
     playersToWatch,
-    lineupsResult,
+    lineups,
+    sidelined,
+    standings,
+    players,
+    lineupPerformances,
   ] = await Promise.all([
-    snapshotForReuse
-      ? Promise.resolve({ data: snapshotForReuse.statistics })
-      : getFixtureStatistics(fixtureId),
-    snapshotForReuse
-      ? Promise.resolve({ data: snapshotForReuse.events })
-      : getFixtureEvents(fixtureId),
-    needsFormFallback
-      ? getRecentForm(fixture.homeTeam.externalId, {
-          matches: 5,
-          scope: "ALL",
-        })
-      : Promise.resolve(EMPTY_FORM_5),
-    needsFormFallback
-      ? getRecentForm(fixture.homeTeam.externalId, {
-          matches: 10,
-          scope: "ALL",
-        })
-      : Promise.resolve(EMPTY_FORM_10),
-    needsFormFallback
-      ? getRecentForm(fixture.awayTeam.externalId, {
-          matches: 5,
-          scope: "ALL",
-        })
-      : Promise.resolve(EMPTY_FORM_5),
-    needsFormFallback
-      ? getRecentForm(fixture.awayTeam.externalId, {
-          matches: 10,
-          scope: "ALL",
-        })
-      : Promise.resolve(EMPTY_FORM_10),
-    needsFormFallback
-      ? getH2H(fixture.homeTeam.externalId, fixture.awayTeam.externalId, {
+    readFixtureStatisticsFromDb(fixtureId),
+    readFixtureEventsFromDb(fixtureId),
+    computeRecentForm(fixture.homeTeam.externalId, {
+      matches: 3,
+      scope: "ALL",
+    }),
+    computeRecentForm(fixture.awayTeam.externalId, {
+      matches: 3,
+      scope: "ALL",
+    }),
+    needsPreExtras
+      ? computeH2H(fixture.homeTeam.externalId, fixture.awayTeam.externalId, {
           windowSize: 10,
           scope: "ALL",
         })
       : Promise.resolve(emptyH2hSummary(fixture)),
     getPlayersToWatch(fixture),
-    getFixtureLineups(fixtureId),
+    readLineupsFromDb(fixtureId),
+    readFixtureSidelinedFromDb(fixtureId),
+    needsPreExtras && fixture.seasonYear
+      ? readStandingsFromDb(fixture.league.externalId, fixture.seasonYear)
+      : Promise.resolve([] as StandingsGroup[]),
+    needsFinishedPlayers
+      ? readFixturePlayerPerformancesFromDb(fixtureId)
+      : Promise.resolve([]),
+    needsLineupPerformances
+      ? readFixturePlayerPerformancesFromDb(fixtureId)
+      : Promise.resolve([]),
   ]);
 
-  const stats = statsResult.data;
-  const events = eventsResult.data;
-  const lineups = lineupsResult.data;
+  const playerOfTheMatch = needsFinishedPlayers
+    ? pickPlayerOfTheMatch(players)
+    : null;
 
   if (renderMode === "live") {
     return (
       <MatchOverviewLiveClient
         fixture={fixture}
+        returnTo={returnTo}
         initialEvents={events}
         initialStatistics={stats}
-        homeForm={homeForm10}
-        awayForm={awayForm10}
+        homeForm3={homeForm3}
+        awayForm3={awayForm3}
         playersToWatch={playersToWatch}
         lineups={lineups}
+        lineupPerformances={lineupPerformances}
+        lineupSidelined={sidelined}
       />
     );
   }
@@ -127,26 +123,20 @@ export async function MatchOverviewPanel({
   return (
     <OverviewTabContent
       fixture={fixture}
-      stats={stats}
+      renderMode={renderMode}
+      returnTo={returnTo}
       events={events}
       momentumBuckets={momentumBuckets}
-      homeForm={homeForm10}
-      awayForm={awayForm10}
-      homeForm5={homeForm5}
-      awayForm5={awayForm5}
-      h2hAll={h2hAll}
+      homeForm3={homeForm3}
+      awayForm3={awayForm3}
+      h2h={h2hAll}
+      standings={standings}
       playersToWatch={playersToWatch}
       lineups={lineups}
-      probabilityDelta={
-        renderMode === "finished" ? (
-          <LiveProbabilityDeltaClient
-            key="probabilityDelta"
-            fixtureProviderId={fixture.externalId}
-            fixtureStatus={fixture.status}
-            emptyFixture={fixture}
-          />
-        ) : undefined
-      }
+      lineupPerformances={lineupPerformances}
+      lineupSidelined={sidelined}
+      playerOfTheMatch={playerOfTheMatch}
+      unavailableCards={unavailableCards}
     />
   );
 }

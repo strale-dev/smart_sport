@@ -29,7 +29,27 @@ export type CachedOptions<T> = {
   lockTtlSeconds?: number;
   maxLockWaitAttempts?: number;
   lockWaitMs?: number;
+  /** Opt out when an empty value is a stable fact rather than missing data. */
+  emptyFreshTtlSeconds?: number;
 };
+
+/**
+ * Provider failures are swallowed into empty values further up the stack, so an
+ * empty entry may be a failure in disguise. Keep it short-lived either way.
+ */
+export const EMPTY_RESULT_FRESH_TTL_SECONDS = 60;
+
+function isEmptyValue(value: unknown): boolean {
+  if (value == null) {
+    return true;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length === 0;
+  }
+
+  return false;
+}
 
 const memoryStore = new Map<string, CacheEnvelope<unknown>>();
 const memoryExpiresAt = new Map<string, number>();
@@ -51,19 +71,29 @@ function warnMemoryFallbackOnce(): void {
 }
 
 function resolveFreshTtlSeconds<T>(
-  freshTtlSeconds: number | ((value: T) => number),
+  options: Pick<CachedOptions<T>, "freshTtlSeconds" | "emptyFreshTtlSeconds">,
   value: T
 ): number {
-  return typeof freshTtlSeconds === "function"
-    ? freshTtlSeconds(value)
-    : freshTtlSeconds;
+  const configured =
+    typeof options.freshTtlSeconds === "function"
+      ? options.freshTtlSeconds(value)
+      : options.freshTtlSeconds;
+
+  if (!isEmptyValue(value)) {
+    return configured;
+  }
+
+  return Math.min(
+    configured,
+    options.emptyFreshTtlSeconds ?? EMPTY_RESULT_FRESH_TTL_SECONDS
+  );
 }
 
 function isFresh<T>(
   envelope: CacheEnvelope<T>,
-  freshTtlSeconds: number | ((value: T) => number)
+  options: Pick<CachedOptions<T>, "freshTtlSeconds" | "emptyFreshTtlSeconds">
 ): boolean {
-  const ttl = resolveFreshTtlSeconds(freshTtlSeconds, envelope.value);
+  const ttl = resolveFreshTtlSeconds(options, envelope.value);
   const ageMs = Date.now() - Date.parse(envelope.cachedAt);
   return ageMs <= ttl * 1000;
 }
@@ -128,7 +158,7 @@ async function loadFreshValue<T>(
     return null;
   }
 
-  if (!isFresh(envelope, options.freshTtlSeconds)) {
+  if (!isFresh(envelope, options)) {
     return null;
   }
 

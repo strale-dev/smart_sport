@@ -18,13 +18,3 @@ export function parseLineupGrid(grid: string | null): GridPosition | null {
 
   return { row, col };
 }
-
-export function gridToSvgPercent(
-  position: GridPosition,
-  maxRow = 5,
-  maxCol = 5
-): { x: number; y: number } {
-  const x = ((position.col - 0.5) / maxCol) * 100;
-  const y = ((position.row - 0.5) / maxRow) * 100;
-  return { x, y };
-}

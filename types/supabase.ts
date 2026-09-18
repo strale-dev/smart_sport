@@ -354,6 +354,70 @@ export type Database = {
           },
         ]
       }
+      fixture_sidelined_players: {
+        Row: {
+          created_at: string
+          fixture_id: string
+          id: string
+          kind: string
+          player_id: string | null
+          player_name: string
+          player_provider_id: number | null
+          provider_payload: Json | null
+          reason: string | null
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fixture_id: string
+          id?: string
+          kind: string
+          player_id?: string | null
+          player_name: string
+          player_provider_id?: number | null
+          provider_payload?: Json | null
+          reason?: string | null
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fixture_id?: string
+          id?: string
+          kind?: string
+          player_id?: string | null
+          player_name?: string
+          player_provider_id?: number | null
+          provider_payload?: Json | null
+          reason?: string | null
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixture_sidelined_players_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixture_sidelined_players_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixture_sidelined_players_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fixture_statistics: {
         Row: {
           ball_possession: number | null
@@ -887,6 +951,8 @@ export type Database = {
         Row: {
           captured_at: string
           coach_name: string | null
+          coach_photo_url: string | null
+          coach_provider_id: number | null
           fixture_id: string
           formation: string | null
           id: string
@@ -898,6 +964,8 @@ export type Database = {
         Insert: {
           captured_at?: string
           coach_name?: string | null
+          coach_photo_url?: string | null
+          coach_provider_id?: number | null
           fixture_id: string
           formation?: string | null
           id?: string
@@ -909,6 +977,8 @@ export type Database = {
         Update: {
           captured_at?: string
           coach_name?: string | null
+          coach_photo_url?: string | null
+          coach_provider_id?: number | null
           fixture_id?: string
           formation?: string | null
           id?: string

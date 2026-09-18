@@ -25,7 +25,7 @@ describe("getFixtureEmptyPhase", () => {
 describe("getMatchEmptyState", () => {
   it("lineups pre keeps QA title and adds AI CTA", () => {
     const state = getMatchEmptyState("lineups", baseContext);
-    expect(state.title).toBe("Lineups not confirmed yet");
+    expect(state.title).toBe("No lineups available yet");
     expect(state.actions?.[0]?.href).toContain("tab=ai");
   });
 

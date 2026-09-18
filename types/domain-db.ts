@@ -124,6 +124,8 @@ export type FixtureStatisticsInsert = {
 export type LineupInsert = {
   formation: string | null;
   coach_name: string | null;
+  coach_provider_id: number | null;
+  coach_photo_url: string | null;
   is_confirmed: boolean;
   provider_payload: Json;
 };

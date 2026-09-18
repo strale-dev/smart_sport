@@ -118,3 +118,23 @@ export async function getFixtureByIdWithRaw(id: number) {
   const raw = response[0];
   return raw ? { raw, domain: mapFixture(raw) } : null;
 }
+
+export async function listTeamLastFixturesRaw(
+  teamId: number,
+  last: number
+): Promise<RawApiFootballFixture[]> {
+  return apiFootballFetchResponse<RawApiFootballFixture>("/fixtures", {
+    team: teamId,
+    last,
+  });
+}
+
+export async function listHeadToHeadFixturesRaw(
+  teamAId: number,
+  teamBId: number
+): Promise<RawApiFootballFixture[]> {
+  return apiFootballFetchResponse<RawApiFootballFixture>(
+    "/fixtures/headtohead",
+    { h2h: `${teamAId}-${teamBId}` }
+  );
+}

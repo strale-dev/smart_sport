@@ -14,6 +14,8 @@ export const CACHE_TTL = {
   fixtureStatsStale: 86_400,
   fixtureLineupsFresh: 300,
   fixtureLineupsStale: 86_400,
+  fixtureSidelinedFresh: 300,
+  fixtureSidelinedStale: 86_400,
   teamFresh: 86_400,
   teamStale: 604_800,
   playerFresh: 86_400,
@@ -78,8 +80,16 @@ export function providerFixtureLineupsKey(fixtureId: number): string {
   return `provider:fixture:${fixtureId}:lineups`;
 }
 
+export function providerFixtureSidelinedKey(fixtureId: number): string {
+  return `provider:fixture:${fixtureId}:sidelined`;
+}
+
 export function providerFixturePlayersKey(fixtureId: number): string {
   return `provider:fixture:${fixtureId}:players`;
+}
+
+export function overviewHydrateLockKey(fixtureId: number): string {
+  return `lock:overview-hydrate:${fixtureId}`;
 }
 
 export function providerTeamKey(id: number): string {

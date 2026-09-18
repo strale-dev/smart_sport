@@ -124,7 +124,7 @@ async function queryTeamFixtures(
 
 export async function computeRecentForm(
   teamProviderId: number,
-  options: { matches: 5 | 10; scope?: FormScope }
+  options: { matches: 3 | 5 | 10; scope?: FormScope }
 ): Promise<FormSnapshot> {
   const scope = options.scope ?? "ALL";
   const teamUuid = await getTeamUuid(teamProviderId);
@@ -269,7 +269,7 @@ export async function computeH2H(
 
 export async function getRecentForm(
   teamProviderId: number,
-  options: { matches: 5 | 10; scope?: FormScope }
+  options: { matches: 3 | 5 | 10; scope?: FormScope }
 ): Promise<FormSnapshot> {
   const scope = options.scope ?? "ALL";
   const result = await cached({

@@ -55,11 +55,9 @@ if (
 const pagePath = path.join(repoRoot, "app/(app)/matches/[fixtureId]/page.tsx");
 const pageSource = fs.readFileSync(pagePath, "utf8");
 
-if (
-  !/<MatchHeader fixture=\{fixture\} \/>[\s\S]*<AIInsightProvider/.test(
-    pageSource
-  )
-) {
+const headerIdx = pageSource.indexOf("<MatchHeader");
+const providerIdx = pageSource.indexOf("<AIInsightProvider");
+if (headerIdx === -1 || providerIdx === -1 || headerIdx > providerIdx) {
   errors.push(
     "app/(app)/matches/[fixtureId]/page.tsx: MatchHeader should render outside AIInsightProvider"
   );

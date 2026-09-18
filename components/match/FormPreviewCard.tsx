@@ -14,7 +14,6 @@ import {
 import { buildMatchHref } from "@/lib/fixtures/match-url";
 import type { Fixture, FormSnapshot } from "@/types/domain";
 import { TrendingUpIcon } from "lucide-react";
-
 type FormPreviewCardProps = {
   fixture: Pick<
     Fixture,
@@ -22,6 +21,7 @@ type FormPreviewCardProps = {
   >;
   homeForm5: FormSnapshot;
   awayForm5: FormSnapshot;
+  windowSize?: number;
 };
 
 function TeamFormPreviewSection({
@@ -60,6 +60,7 @@ export function FormPreviewCard({
   fixture,
   homeForm5,
   awayForm5,
+  windowSize = 5,
 }: FormPreviewCardProps) {
   const matchesHref = buildMatchHref(fixture.externalId, "matches");
   const bothEmpty =
@@ -70,7 +71,9 @@ export function FormPreviewCard({
     <MatchAnalyticsCard>
       <MatchCardHeader className="gap-2">
         <MatchCardTitle>Recent form</MatchCardTitle>
-        <MatchCardDescription>Last 5 · All competitions</MatchCardDescription>
+        <MatchCardDescription>
+          Last {windowSize} · All competitions
+        </MatchCardDescription>
       </MatchCardHeader>
       <MatchCardContent className="space-y-4">
         <TeamFormPreviewSection

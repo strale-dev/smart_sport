@@ -4,8 +4,9 @@ import {
   getFixtureUuidByProviderId,
   upsertLineups,
 } from "@/lib/ingestion/match-details-upsert";
-import { getRedis } from "@/lib/redis/client";
-import { providerFixtureLineupsKey } from "@/lib/redis/keys";
+import { writeCachedValue } from "@/lib/redis/cache";
+import { CACHE_TTL, providerFixtureLineupsKey } from "@/lib/redis/keys";
+import { ingestFixtureSidelinedFromProvider } from "@/lib/ingestion/ingest-sidelined";
 import { dispatchLineupConfirmedNotifications } from "@/lib/notifications/dispatch-lineup-confirmed";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -44,14 +45,18 @@ export async function ingestLineupsFromProvider(
     await dispatchLineupConfirmedNotifications(fixtureProviderId);
   }
 
-  const syncedAt = new Date().toISOString();
-  const redis = getRedis();
+  await writeCachedValue(
+    providerFixtureLineupsKey(fixtureProviderId),
+    lineups,
+    CACHE_TTL.fixtureLineupsStale
+  );
 
-  if (redis) {
-    await redis.set(
-      providerFixtureLineupsKey(fixtureProviderId),
-      { value: lineups, cachedAt: syncedAt },
-      { ex: 86_400 }
+  try {
+    await ingestFixtureSidelinedFromProvider(fixtureProviderId);
+  } catch (error) {
+    console.warn(
+      `[ingest] sidelined skipped for fixture ${fixtureProviderId}`,
+      error
     );
   }
 

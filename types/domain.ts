@@ -109,6 +109,8 @@ export type FixtureEvent = {
   teamExternalId: number | null;
   playerExternalId: number | null;
   assistPlayerExternalId: number | null;
+  playerName?: string | null;
+  assistPlayerName?: string | null;
   type: string;
   detail: string | null;
   comments: string | null;
@@ -143,14 +145,27 @@ export type LineupPlayer = {
   grid: string | null;
   isStarting: boolean;
   isCaptain: boolean;
+  photoUrl?: string | null;
 };
 
 export type Lineup = {
   teamExternalId: number;
   formation: string | null;
   coachName: string | null;
+  coachExternalId?: number | null;
+  coachPhotoUrl?: string | null;
   isConfirmed: boolean;
   players: LineupPlayer[];
+};
+
+export type FixtureSidelinedKind = "injury" | "suspension" | "other";
+
+export type FixtureSidelinedPlayer = {
+  teamExternalId: number;
+  playerExternalId: number | null;
+  name: string;
+  kind: FixtureSidelinedKind;
+  reason: string | null;
 };
 
 export type FixturePlayerPerformance = {

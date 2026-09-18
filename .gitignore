@@ -16,6 +16,9 @@
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+/playwright/.auth/
+.k6-auth.env
+.lighthouse-quality-*.json
 
 # next.js
 /.next/

@@ -1,5 +1,6 @@
 import {
   getFixtureById as getFixtureByIdEndpoint,
+  getFixtureByIdWithRaw,
   getFixtureEvents as getFixtureEventsEndpoint,
   getFixtureLineups as getFixtureLineupsEndpoint,
   getFixturePlayers as getFixturePlayersEndpoint,
@@ -8,6 +9,7 @@ import {
   listFixturesByLeagueSeason as listFixturesByLeagueSeasonEndpoint,
   listLiveFixtures as listLiveFixturesEndpoint,
 } from "@/lib/api-football/endpoints/fixtures";
+import { getFixtureInjuries as getFixtureInjuriesEndpoint } from "@/lib/api-football/endpoints/injuries";
 import {
   getLeagueById as getLeagueByIdEndpoint,
   getStandings as getStandingsEndpoint,
@@ -36,18 +38,22 @@ import {
 import { filterAllowlistedFixtures } from "@/lib/fixtures/navigable";
 import { addUtcDays, utcDateString } from "@/lib/fixtures/window";
 import { isLeagueInAllowlist } from "@/lib/ingestion/config";
+import { ensureFixturePersisted } from "@/lib/ingestion/ensure-fixture-persisted";
 import {
   fillFixturesForUtcDateFromProvider,
   fillFixturesForUtcDateRangeFromProvider,
 } from "@/lib/services/fixture-provider-fill";
 import {
+  getFixtureUuidByProviderId,
   persistPlayerProfile,
+  upsertLineups,
   upsertSquadPlayers,
 } from "@/lib/ingestion/match-details-upsert";
 import { squadPlayerToDomainPlayer } from "@/lib/players/from-squad";
 import {
   readFixtureByProviderIdFromDb,
   readFixtureEventsFromDb,
+  readFixturePlayerPerformancesFromDb,
   readFixtureStatisticsFromDb,
   readFixturesForDateFromDb,
   readFixturesForLeagueSeasonFromDb,
@@ -55,6 +61,7 @@ import {
   readFixturesInRangeFromDb,
   readLeagueDetailFromDb,
   readLineupsFromDb,
+  readFixtureSidelinedFromDb,
   readLiveFixturesFromDb,
   readPlayerByProviderIdFromDb,
   readSeasonsByLeagueFromDb,
@@ -76,6 +83,7 @@ import {
   providerFixtureEventsKey,
   providerFixtureKey,
   providerFixtureLineupsKey,
+  providerFixtureSidelinedKey,
   providerFixturePlayersKey,
   providerFixturesDateKey,
   providerFixturesLiveKey,
@@ -99,6 +107,7 @@ import {
   providerTeamStatisticsKey,
 } from "@/lib/redis/keys";
 import { isAuthoritativeLivePresentation } from "@/lib/live/live-presentation";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   TEAM_MATCHES_FUTURE_DAYS,
   TEAM_MATCHES_PAST_DAYS,
@@ -109,6 +118,7 @@ import type {
   Fixture,
   FixtureEvent,
   FixturePlayerPerformance,
+  FixtureSidelinedPlayer,
   FixtureTeamStatistics,
   LeagueDetail,
   LeaguePlayerLeaderboardRow,
@@ -274,17 +284,23 @@ export async function getFixtureById(
           return fromDb;
         }
 
+        await ensureFixturePersisted(id);
+        const persisted = await readFixtureByProviderIdFromDb(id);
+        if (persisted) {
+          return persisted;
+        }
+
         const fromProvider = await safeOptionalProviderFetch(
           `fixture ${id}`,
-          () => getFixtureByIdEndpoint(id),
+          () => getFixtureByIdWithRaw(id),
           null
         );
 
         if (
-          fromProvider &&
-          isLeagueInAllowlist(fromProvider.league.externalId)
+          fromProvider?.domain &&
+          isLeagueInAllowlist(fromProvider.domain.league.externalId)
         ) {
-          return fromProvider;
+          return fromProvider.domain;
         }
 
         return null;
@@ -331,8 +347,14 @@ export async function listLiveFixtures(): Promise<ServiceResult<Fixture[]>> {
   return toServiceResult(filtered);
 }
 
+export type FootballProviderOptions = {
+  /** Prefer API-Football over DB (match Overview and other real-time views). */
+  forceProvider?: boolean;
+};
+
 export async function getFixtureEvents(
-  fixtureId: number
+  fixtureId: number,
+  options: FootballProviderOptions = {}
 ): Promise<ServiceResult<FixtureEvent[]>> {
   const result = await cachedProviderOrDb({
     key: providerFixtureEventsKey(fixtureId),
@@ -341,13 +363,15 @@ export async function getFixtureEvents(
     providerFn: () => getFixtureEventsEndpoint(fixtureId),
     dbFn: () => readFixtureEventsFromDb(fixtureId),
     label: "getFixtureEvents",
+    forceProvider: options.forceProvider,
   });
 
   return toServiceResult(result);
 }
 
 export async function getFixtureStatistics(
-  fixtureId: number
+  fixtureId: number,
+  options: FootballProviderOptions = {}
 ): Promise<ServiceResult<FixtureTeamStatistics[]>> {
   const result = await cachedProviderOrDb({
     key: providerFixtureStatsKey(fixtureId),
@@ -356,54 +380,81 @@ export async function getFixtureStatistics(
     providerFn: () => getFixtureStatisticsEndpoint(fixtureId),
     dbFn: () => readFixtureStatisticsFromDb(fixtureId),
     label: "getFixtureStatistics",
+    forceProvider: options.forceProvider,
   });
 
   return toServiceResult(result);
 }
 
 export async function getFixtureLineups(
-  fixtureId: number
+  fixtureId: number,
+  options: FootballProviderOptions = {}
 ): Promise<ServiceResult<Lineup[]>> {
   const result = await cachedProviderOrDb({
     key: providerFixtureLineupsKey(fixtureId),
     freshTtlSeconds: CACHE_TTL.fixtureLineupsFresh,
     staleTtlSeconds: CACHE_TTL.fixtureLineupsStale,
-    providerFn: () => getFixtureLineupsEndpoint(fixtureId),
+    providerFn: async () => {
+      const lineups = await getFixtureLineupsEndpoint(fixtureId);
+      if (lineups.length === 0) {
+        return lineups;
+      }
+
+      try {
+        const client = createAdminClient();
+        const fixtureUuid = await getFixtureUuidByProviderId(client, fixtureId);
+        if (fixtureUuid) {
+          await upsertLineups(client, fixtureUuid, lineups);
+        }
+      } catch (error) {
+        console.warn(
+          `[footballService] failed to persist lineups ${fixtureId}`,
+          error
+        );
+      }
+
+      return lineups;
+    },
     dbFn: () => readLineupsFromDb(fixtureId),
     label: "getFixtureLineups",
+    forceProvider: options.forceProvider,
+  });
+
+  return toServiceResult(result);
+}
+
+export async function getFixtureSidelined(
+  fixtureId: number,
+  options: FootballProviderOptions = {}
+): Promise<ServiceResult<FixtureSidelinedPlayer[]>> {
+  const result = await cachedProviderOrDb({
+    key: providerFixtureSidelinedKey(fixtureId),
+    freshTtlSeconds: CACHE_TTL.fixtureSidelinedFresh,
+    staleTtlSeconds: CACHE_TTL.fixtureSidelinedStale,
+    providerFn: () => getFixtureInjuriesEndpoint(fixtureId),
+    dbFn: () => readFixtureSidelinedFromDb(fixtureId),
+    label: "getFixtureSidelined",
+    forceProvider: options.forceProvider,
   });
 
   return toServiceResult(result);
 }
 
 export async function getFixturePlayers(
-  fixtureId: number
+  fixtureId: number,
+  options: FootballProviderOptions = {}
 ): Promise<ServiceResult<FixturePlayerPerformance[]>> {
-  if (isApiFootballIngestOnly()) {
-    return emptyIngestOnlyResult([]);
-  }
+  const result = await cachedProviderOrDb({
+    key: providerFixturePlayersKey(fixtureId),
+    freshTtlSeconds: CACHE_TTL.fixtureStatsFresh,
+    staleTtlSeconds: CACHE_TTL.fixtureStatsStale,
+    providerFn: () => getFixturePlayersEndpoint(fixtureId),
+    dbFn: () => readFixturePlayerPerformancesFromDb(fixtureId),
+    label: "getFixturePlayers",
+    forceProvider: options.forceProvider,
+  });
 
-  const players = await safeOptionalProviderFetch(
-    "getFixturePlayers",
-    async () => {
-      const result = await cached({
-        key: providerFixturePlayersKey(fixtureId),
-        freshTtlSeconds: CACHE_TTL.fixtureStatsFresh,
-        staleTtlSeconds: CACHE_TTL.fixtureStatsStale,
-        fn: () => getFixturePlayersEndpoint(fixtureId),
-      });
-      return result.value;
-    },
-    []
-  );
-
-  return {
-    data: players,
-    meta: {
-      cached: false,
-      stale: players.length === 0,
-    },
-  };
+  return toServiceResult(result);
 }
 
 export async function getTeamById(
@@ -623,13 +674,26 @@ export async function listSeasonsByLeague(
 
 export async function getStandings(
   leagueId: number,
-  season: number
+  season: number,
+  options: FootballProviderOptions = {}
 ): Promise<ServiceResult<StandingsGroup[]>> {
   const result = await cached({
     key: providerStandingsKey(leagueId, season),
     freshTtlSeconds: CACHE_TTL.standingsFresh,
     staleTtlSeconds: CACHE_TTL.standingsStale,
     fn: async () => {
+      if (options.forceProvider) {
+        const fromApi = await safeOptionalProviderFetch(
+          `standings ${leagueId}/${season}`,
+          () => getStandingsEndpoint(leagueId, season),
+          []
+        );
+        if (fromApi.length > 0) {
+          return fromApi;
+        }
+        return readStandingsFromDb(leagueId, season);
+      }
+
       if (isApiFootballIngestOnly()) {
         const fromDb = await readStandingsFromDb(leagueId, season);
         if (fromDb.length > 0) {

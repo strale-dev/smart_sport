@@ -10,6 +10,17 @@ export type LiveSnapshotSlice = {
   statistics?: FixtureTeamStatistics[] | null;
 };
 
+function preferLiveArray<T>(
+  live: T[] | null | undefined,
+  initial: T[] | null | undefined
+): T[] {
+  if (live && live.length > 0) {
+    return live;
+  }
+
+  return initial ?? [];
+}
+
 /** Prefer live context values; fall back to SSR snapshot when context is empty or missing. */
 export function mergeLiveSnapshotSlice(
   live: LiveSnapshotSlice | null | undefined,
@@ -20,8 +31,8 @@ export function mergeLiveSnapshotSlice(
   statistics: FixtureTeamStatistics[];
 } {
   const fixture = live?.fixture ?? initial.fixture ?? null;
-  const events = live?.events ?? initial.events ?? [];
-  const statistics = live?.statistics ?? initial.statistics ?? [];
+  const events = preferLiveArray(live?.events, initial.events);
+  const statistics = preferLiveArray(live?.statistics, initial.statistics);
 
   return { fixture, events, statistics };
 }

@@ -215,6 +215,8 @@ export function lineupToInsert(
   return {
     formation: lineup.formation,
     coach_name: lineup.coachName,
+    coach_provider_id: lineup.coachExternalId ?? null,
+    coach_photo_url: lineup.coachPhotoUrl ?? null,
     is_confirmed: lineup.isConfirmed,
     provider_payload: rawPayload as LineupInsert["provider_payload"],
   };

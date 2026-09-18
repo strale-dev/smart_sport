@@ -20,7 +20,9 @@ export type MatchEmptyStateId =
   | "relatedFixtures"
   | "playersToWatchPredicted"
   | "playersToWatchActual"
-  | "liveProbabilityDelta";
+  | "liveProbabilityDelta"
+  | "aiEngine"
+  | "potm";
 
 export type MatchEmptyTeamRef = {
   externalId: number;
@@ -112,9 +114,9 @@ function lineupsEmpty(
   }
 
   return {
-    title: "Lineups not confirmed yet",
+    title: "No lineups available yet",
     description:
-      "Official or predicted starting elevens usually appear closer to kickoff.",
+      "Predicted or confirmed starting elevens appear here once the provider publishes them (often within an hour of kickoff).",
     actions: [
       {
         label: "Preview with AI",
@@ -372,6 +374,7 @@ export function getMatchEmptyState(
       };
 
     case "liveProbabilityDelta":
+    case "aiEngine":
       return {
         title: "No model baseline yet",
         description:
@@ -382,6 +385,13 @@ export function getMatchEmptyState(
             href: buildMatchHref(fixtureId, "ai"),
           },
         ],
+      };
+
+    case "potm":
+      return {
+        title: "Player ratings not available",
+        description:
+          "Full-time player ratings from the provider are not in yet for this match.",
       };
 
     default: {

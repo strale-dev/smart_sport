@@ -40,6 +40,55 @@ describe("cached", () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  it("re-fetches an empty value once the short empty TTL lapses", async () => {
+    const key = "provider:test:empty-short-ttl";
+    const fn = vi.fn().mockResolvedValue(["late-arrival"]);
+
+    await writeCacheEnvelopeForTests(
+      key,
+      {
+        value: [],
+        cachedAt: new Date(Date.now() - 120_000).toISOString(),
+      },
+      86_400
+    );
+
+    const result = await cached({
+      key,
+      // A long fresh TTL must not keep an empty entry alive.
+      freshTtlSeconds: 86_400,
+      staleTtlSeconds: 86_400,
+      fn,
+    });
+
+    expect(result.value).toEqual(["late-arrival"]);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("still serves a non-empty value for its full fresh TTL", async () => {
+    const key = "provider:test:non-empty-long-ttl";
+    const fn = vi.fn().mockResolvedValue(["refetched"]);
+
+    await writeCacheEnvelopeForTests(
+      key,
+      {
+        value: ["cached"],
+        cachedAt: new Date(Date.now() - 120_000).toISOString(),
+      },
+      86_400
+    );
+
+    const result = await cached({
+      key,
+      freshTtlSeconds: 86_400,
+      staleTtlSeconds: 86_400,
+      fn,
+    });
+
+    expect(result.value).toEqual(["cached"]);
+    expect(fn).not.toHaveBeenCalled();
+  });
+
   it("returns cached value on fresh hit", async () => {
     const fn = vi.fn().mockResolvedValue({ id: 1 });
 

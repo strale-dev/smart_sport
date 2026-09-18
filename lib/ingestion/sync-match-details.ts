@@ -1,6 +1,10 @@
 import { getIngestionConfig } from "@/lib/ingestion/config";
+import { ingestLineupsFromProvider } from "@/lib/ingestion/ingest-lineups";
 import { ingestMatchDetailsFromProvider } from "@/lib/ingestion/ingest-match-details";
-import { fixtureHasMatchDetails } from "@/lib/ingestion/match-details-upsert";
+import {
+  fixtureHasLineups,
+  fixtureHasMatchDetails,
+} from "@/lib/ingestion/match-details-upsert";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const TERMINAL_STATUSES = ["FT", "AET", "PEN"] as const;
@@ -63,7 +67,12 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
     throw new Error(`Failed to load fixtures: ${fixturesError.message}`);
   }
 
-  const candidates = [];
+  type Candidate = {
+    provider_id: number;
+    needs: "details" | "lineups";
+  };
+
+  const candidates: Candidate[] = [];
 
   for (const fixture of fixtures ?? []) {
     if (candidates.length >= batchSize) {
@@ -72,7 +81,13 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
 
     const hasDetails = await fixtureHasMatchDetails(client, fixture.id);
     if (!hasDetails) {
-      candidates.push(fixture);
+      candidates.push({ provider_id: fixture.provider_id, needs: "details" });
+      continue;
+    }
+
+    const hasLineups = await fixtureHasLineups(client, fixture.id);
+    if (!hasLineups) {
+      candidates.push({ provider_id: fixture.provider_id, needs: "lineups" });
     }
   }
 
@@ -80,6 +95,15 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
   let apiRequests = 0;
 
   for (const fixture of candidates) {
+    if (fixture.needs === "lineups") {
+      const result = await ingestLineupsFromProvider(fixture.provider_id);
+      apiRequests += result.stats.apiRequests;
+      if (result.ok) {
+        ingested += 1;
+      }
+      continue;
+    }
+
     const result = await ingestMatchDetailsFromProvider(fixture.provider_id);
     apiRequests += result.stats.apiRequests;
 

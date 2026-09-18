@@ -21,6 +21,7 @@ describe("mergeLiveSnapshotSlice", () => {
       { events, statistics, fixture: null }
     );
     expect(result.events).toBe(liveEvents);
+    expect(result.statistics).toBe(statistics);
     expect(result.fixture).toBe(fixture);
   });
 
@@ -41,8 +42,11 @@ describe("mergeLiveSnapshotSlice", () => {
     expect(result.statistics).toBe(statistics);
   });
 
-  it("keeps initial stats when live is empty object without arrays (B2)", () => {
-    const result = mergeLiveSnapshotSlice({}, { events, statistics, fixture });
+  it("keeps initial arrays when live snapshot is empty", () => {
+    const result = mergeLiveSnapshotSlice(
+      { events: [], statistics: [], fixture },
+      { events, statistics }
+    );
     expect(result.events).toBe(events);
     expect(result.statistics).toBe(statistics);
   });

@@ -1,3 +1,4 @@
+export { getFixtureInjuries } from "@/lib/api-football/endpoints/injuries";
 export {
   getFixtureById,
   getFixtureByIdWithRaw,
@@ -8,7 +9,9 @@ export {
   listFixturesByDate,
   listFixturesByLeagueSeason,
   listFixturesByPlayer,
+  listHeadToHeadFixturesRaw,
   listLiveFixtures,
+  listTeamLastFixturesRaw,
 } from "@/lib/api-football/endpoints/fixtures";
 export {
   getLeagueById,

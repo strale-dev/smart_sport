@@ -10,6 +10,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   FixtureEvent,
   FixturePlayerPerformance,
+  FixtureSidelinedPlayer,
   FixtureTeamStatistics,
   Lineup,
   Player,
@@ -228,12 +229,12 @@ export async function upsertFixtureEvents(
       const playerId = await upsertPlayerRef(
         client,
         event.playerExternalId,
-        null
+        event.playerName ?? null
       );
       const assistPlayerId = await upsertPlayerRef(
         client,
         event.assistPlayerExternalId,
-        null
+        event.assistPlayerName ?? null
       );
 
       const insert = fixtureEventToInsert(event);
@@ -311,6 +312,8 @@ export async function upsertLineups(
           team_id: teamId,
           formation: insert.formation,
           coach_name: insert.coach_name,
+          coach_provider_id: insert.coach_provider_id,
+          coach_photo_url: insert.coach_photo_url,
           is_confirmed: insert.is_confirmed,
           provider_payload: asDbJson(insert.provider_payload),
         },
@@ -449,6 +452,108 @@ export async function fixtureHasMatchDetails(
     .eq("fixture_id", fixtureId);
 
   throwIfError(error, "Failed to check fixture events");
+
+  if ((count ?? 0) === 0) {
+    return false;
+  }
+
+  // Every provider event names a player, so a set with no linkage at all is a
+  // partial ingest rather than real data — treat it as missing so it re-ingests.
+  const { count: linkedCount, error: linkedError } = await client
+    .from("fixture_events")
+    .select("*", { count: "exact", head: true })
+    .eq("fixture_id", fixtureId)
+    .not("player_id", "is", null);
+
+  throwIfError(linkedError, "Failed to check fixture event player linkage");
+  return (linkedCount ?? 0) > 0;
+}
+
+export async function fixtureHasPlayerPerformances(
+  client: AdminClient,
+  fixtureId: string
+): Promise<boolean> {
+  const { count, error } = await client
+    .from("player_match_performances")
+    .select("*", { count: "exact", head: true })
+    .eq("fixture_id", fixtureId);
+
+  throwIfError(error, "Failed to check player match performances");
+  return (count ?? 0) > 0;
+}
+
+export async function upsertFixtureSidelined(
+  client: AdminClient,
+  fixtureId: string,
+  sidelined: FixtureSidelinedPlayer[]
+): Promise<number> {
+  const { error: deleteError } = await client
+    .from("fixture_sidelined_players")
+    .delete()
+    .eq("fixture_id", fixtureId);
+
+  throwIfError(deleteError, "Failed to clear fixture sidelined players");
+
+  if (sidelined.length === 0) {
+    return 0;
+  }
+
+  const rows = await Promise.all(
+    sidelined.map(async (entry) => {
+      const teamId = await getTeamUuidByProviderId(
+        client,
+        entry.teamExternalId
+      );
+      if (!teamId) {
+        return null;
+      }
+
+      const playerId = entry.playerExternalId
+        ? await upsertPlayerRef(client, entry.playerExternalId, entry.name)
+        : null;
+
+      return {
+        fixture_id: fixtureId,
+        team_id: teamId,
+        player_id: playerId,
+        player_provider_id: entry.playerExternalId,
+        player_name: entry.name,
+        kind: entry.kind,
+        reason: entry.reason,
+        provider_payload: asDbJson({
+          kind: entry.kind,
+          reason: entry.reason,
+        }),
+      };
+    })
+  );
+
+  const insertRows = rows.filter(
+    (row): row is NonNullable<(typeof rows)[number]> => row != null
+  );
+
+  if (insertRows.length === 0) {
+    return 0;
+  }
+
+  const { error: insertError } = await client
+    .from("fixture_sidelined_players")
+    .insert(insertRows);
+
+  throwIfError(insertError, "Failed to insert fixture sidelined players");
+  return insertRows.length;
+}
+
+export async function fixtureHasLineups(
+  client: AdminClient,
+  fixtureId: string
+): Promise<boolean> {
+  const { count, error } = await client
+    .from("lineups")
+    .select("*", { count: "exact", head: true })
+    .eq("fixture_id", fixtureId);
+
+  throwIfError(error, "Failed to check lineups");
   return (count ?? 0) > 0;
 }
 

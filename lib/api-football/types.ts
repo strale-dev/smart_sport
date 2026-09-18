@@ -174,6 +174,32 @@ export type RawApiFootballLineup = {
   substitutes: RawApiFootballLineupPlayer[];
 };
 
+export type RawApiFootballInjury = {
+  player: {
+    id: number | null;
+    name: string;
+    photo: string | null;
+    type: string | null;
+    reason: string | null;
+  };
+  team: {
+    id: number;
+    name: string;
+    logo: string | null;
+  };
+  fixture: {
+    id: number;
+  };
+  league: {
+    id: number;
+    name: string;
+    country: string;
+    logo: string | null;
+    flag: string | null;
+    season: number;
+  };
+};
+
 export type RawApiFootballFixturePlayerStat = {
   games: {
     minutes: number | null;

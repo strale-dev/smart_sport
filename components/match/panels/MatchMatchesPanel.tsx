@@ -1,8 +1,9 @@
 import { FormCard } from "@/components/match/FormCard";
 import { H2HCard } from "@/components/match/H2HCard";
 import { MatchTeamsFixturesList } from "@/components/match/MatchTeamsFixturesList";
+import { hydrateMatchOverviewFromProvider } from "@/lib/ingestion/ensure-match-overview";
 import { mergeTeamFixtures } from "@/lib/match/merge-team-fixtures";
-import { getH2H, getRecentForm } from "@/lib/services/analyticsService";
+import { computeH2H, computeRecentForm } from "@/lib/services/analyticsService";
 import { getFixturesForTeam } from "@/lib/services/footballService";
 import type { Fixture } from "@/types/domain";
 
@@ -11,6 +12,8 @@ type MatchMatchesPanelProps = {
 };
 
 export async function MatchMatchesPanel({ fixture }: MatchMatchesPanelProps) {
+  await hydrateMatchOverviewFromProvider(fixture);
+
   const [
     homeForm5,
     homeForm10,
@@ -21,15 +24,27 @@ export async function MatchMatchesPanel({ fixture }: MatchMatchesPanelProps) {
     { data: homeTeamFixtures },
     { data: awayTeamFixtures },
   ] = await Promise.all([
-    getRecentForm(fixture.homeTeam.externalId, { matches: 5, scope: "ALL" }),
-    getRecentForm(fixture.homeTeam.externalId, { matches: 10, scope: "ALL" }),
-    getRecentForm(fixture.awayTeam.externalId, { matches: 5, scope: "ALL" }),
-    getRecentForm(fixture.awayTeam.externalId, { matches: 10, scope: "ALL" }),
-    getH2H(fixture.homeTeam.externalId, fixture.awayTeam.externalId, {
+    computeRecentForm(fixture.homeTeam.externalId, {
+      matches: 5,
+      scope: "ALL",
+    }),
+    computeRecentForm(fixture.homeTeam.externalId, {
+      matches: 10,
+      scope: "ALL",
+    }),
+    computeRecentForm(fixture.awayTeam.externalId, {
+      matches: 5,
+      scope: "ALL",
+    }),
+    computeRecentForm(fixture.awayTeam.externalId, {
+      matches: 10,
+      scope: "ALL",
+    }),
+    computeH2H(fixture.homeTeam.externalId, fixture.awayTeam.externalId, {
       windowSize: 10,
       scope: "ALL",
     }),
-    getH2H(fixture.homeTeam.externalId, fixture.awayTeam.externalId, {
+    computeH2H(fixture.homeTeam.externalId, fixture.awayTeam.externalId, {
       windowSize: 10,
       scope: "SAME_COMP",
       leagueProviderId: fixture.league.externalId,

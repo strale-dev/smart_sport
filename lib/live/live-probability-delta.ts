@@ -1,9 +1,13 @@
-import type { WinProbabilities } from "@/types/prediction";
+import type {
+  PrematchPredictionSnapshot,
+  WinProbabilities,
+} from "@/types/prediction";
 
 export type LiveProbabilityDeltaResponse = {
   prematch: WinProbabilities | null;
   live: WinProbabilities | null;
   liveMinute: number | null;
+  prematchPrediction: PrematchPredictionSnapshot | null;
 };
 
 export async function fetchLiveProbabilityDelta(

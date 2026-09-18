@@ -1,6 +1,5 @@
 "use client";
 
-import { LiveProbabilityDeltaClient } from "@/components/match/LiveProbabilityDeltaClient";
 import { OverviewTabContent } from "@/components/match/OverviewTabContent";
 import { useMatchLiveContext } from "@/components/match/MatchLiveSession";
 import { mergeLiveSnapshotSlice } from "@/lib/live/merge-snapshot";
@@ -11,27 +10,35 @@ import type {
   FixtureEvent,
   FixtureTeamStatistics,
   FormSnapshot,
+  FixturePlayerPerformance,
+  FixtureSidelinedPlayer,
   Lineup,
 } from "@/types/domain";
 
 type MatchOverviewLiveClientProps = {
   fixture: Fixture;
+  returnTo: string;
   initialEvents: FixtureEvent[];
   initialStatistics: FixtureTeamStatistics[];
-  homeForm: FormSnapshot;
-  awayForm: FormSnapshot;
+  homeForm3: FormSnapshot;
+  awayForm3: FormSnapshot;
   playersToWatch: PlayersToWatchResult;
   lineups: Lineup[];
+  lineupPerformances: FixturePlayerPerformance[];
+  lineupSidelined: FixtureSidelinedPlayer[];
 };
 
 export function MatchOverviewLiveClient({
   fixture: serverFixture,
+  returnTo,
   initialEvents,
   initialStatistics,
-  homeForm,
-  awayForm,
+  homeForm3,
+  awayForm3,
   playersToWatch,
   lineups,
+  lineupPerformances,
+  lineupSidelined,
 }: MatchOverviewLiveClientProps) {
   const live = useMatchLiveContext();
 
@@ -52,21 +59,16 @@ export function MatchOverviewLiveClient({
   return (
     <OverviewTabContent
       fixture={fixture}
-      stats={stats}
+      renderMode="live"
+      returnTo={returnTo}
       events={events}
       momentumBuckets={momentumBuckets}
-      homeForm={homeForm}
-      awayForm={awayForm}
+      homeForm3={homeForm3}
+      awayForm3={awayForm3}
       playersToWatch={playersToWatch}
       lineups={lineups}
-      probabilityDelta={
-        <LiveProbabilityDeltaClient
-          key="probabilityDelta"
-          fixtureProviderId={fixture.externalId}
-          fixtureStatus={fixture.status}
-          emptyFixture={fixture}
-        />
-      }
+      lineupPerformances={lineupPerformances}
+      lineupSidelined={lineupSidelined}
     />
   );
 }

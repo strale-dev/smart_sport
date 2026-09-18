@@ -45,6 +45,8 @@ export function mapFixtureEvent(
     teamExternalId: raw.team.id,
     playerExternalId: raw.player.id,
     assistPlayerExternalId: raw.assist.id,
+    playerName: raw.player.name ?? null,
+    assistPlayerName: raw.assist.name ?? null,
     type: raw.type,
     detail: raw.detail ?? null,
     comments: raw.comments,
@@ -115,6 +117,8 @@ export function mapLineup(raw: RawApiFootballLineup): Lineup {
     teamExternalId: raw.team.id,
     formation: raw.formation,
     coachName: raw.coach.name,
+    coachExternalId: raw.coach.id,
+    coachPhotoUrl: raw.coach.photo,
     isConfirmed: players.length > 0,
     players,
   };

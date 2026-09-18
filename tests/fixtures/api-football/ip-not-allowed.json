@@ -1,0 +1,15 @@
+{
+  "get": "fixtures/events",
+  "parameters": {
+    "fixture": "1570378"
+  },
+  "errors": {
+    "Ip": "This IP is not allowed to call the API, check the list of allowed IPs in the dashboard."
+  },
+  "results": 0,
+  "paging": {
+    "current": 1,
+    "total": 1
+  },
+  "response": []
+}
