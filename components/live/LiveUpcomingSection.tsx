@@ -19,6 +19,10 @@ export function LiveUpcomingSection({
           title="No live matches right now"
           description="Check back when matches kick off, or browse fixtures starting soon."
           className="mx-auto w-full max-w-md py-0"
+          actions={[
+            { label: "Browse fixtures", href: "/fixtures" },
+            { label: "Open Live Center", href: "/live", variant: "outline" },
+          ]}
         />
       </div>
 

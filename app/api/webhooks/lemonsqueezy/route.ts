@@ -10,7 +10,9 @@ import { PaymentSuccessEmail } from "@/lib/emails/templates/PaymentSuccessEmail"
 import { SubscriptionCancelledEmail } from "@/lib/emails/templates/SubscriptionCancelledEmail";
 import { getLemonSqueezyWebhookSecret } from "@/lib/env";
 import { env } from "@/lib/env.server";
+import { captureBillingLifecycleEvent } from "@/lib/posthog/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/types/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -83,9 +85,44 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
+    const providerSubscriptionId = payload.data?.id ?? null;
+    let priorStatus: Database["public"]["Enums"]["subscription_status"] | null =
+      null;
+
+    if (providerSubscriptionId) {
+      const { data: priorRow } = await createAdminClient()
+        .from("subscriptions")
+        .select("status")
+        .eq("provider_subscription_id", providerSubscriptionId)
+        .maybeSingle();
+      priorStatus = priorRow?.status ?? null;
+    }
+
     const syncResult = await syncSubscriptionFromWebhook(payload);
     if (!syncResult || syncResult.skippedStale) {
       return NextResponse.json({ ok: true, skipped: true });
+    }
+
+    if (
+      eventName === "subscription_payment_success" &&
+      priorStatus === "TRIALING"
+    ) {
+      await captureBillingLifecycleEvent({
+        userId: syncResult.userId,
+        event: "trial_converted",
+        providerSubscriptionId,
+      });
+    }
+
+    if (
+      eventName === "subscription_cancelled" ||
+      eventName === "subscription_expired"
+    ) {
+      await captureBillingLifecycleEvent({
+        userId: syncResult.userId,
+        event: "subscription_cancelled",
+        providerSubscriptionId,
+      });
     }
 
     const email = await readUserEmail(syncResult.userId);

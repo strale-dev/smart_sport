@@ -22,6 +22,7 @@ export function PlayerMatchesTab({ playerId, history }: PlayerMatchesTabProps) {
         icon={CalendarDaysIcon}
         title="No matches yet"
         description="Match appearances will appear once the provider publishes player performance data."
+        actions={[{ label: "Browse fixtures", href: "/fixtures" }]}
       />
     );
   }

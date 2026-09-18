@@ -791,8 +791,8 @@ Via OpenAI's Structured Outputs (`response_format: { type: "json_schema", strict
 - Providers: **Email + password**, **Google OAuth**.
 - SSR-safe sessions via `@supabase/ssr` (`lib/supabase/{server,client,middleware}.ts`).
 - **Proxy** (`proxy.ts`) refreshes tokens on every request and enforces route guards.
-- **Route protection**: `/dashboard`, `/live`, `/predictions`, `/profile`, and `/favorites` require an authenticated user; unauth users are redirected to `/login?returnTo=...`. Guest-ok app routes include `/fixtures`, `/matches/[id]`, `/teams/[id]`, `/players/[id]`, and `/leagues/[id]`.
-- **Guest mode**: `/matches/[id]`, `/teams/[id]`, `/players/[id]`, `/leagues/[id]` **do not** require auth but the AI Hero and Predictions Center are locked behind a signup wall (blur overlay + CTA) rendered from `entitlementService.canViewAI(user)`.
+- **Route protection**: `/dashboard`, `/profile`, and `/favorites` require an authenticated user; unauth users are redirected to `/login?returnTo=...`. Guest-ok app routes include `/fixtures`, `/live`, `/predictions`, `/matches/[id]`, `/teams/[id]`, `/players/[id]`, and `/leagues/[id]`.
+- **Guest mode**: `/matches/[id]`, `/teams/[id]`, `/players/[id]`, `/leagues/[id]`, and `/predictions` **do not** require auth but the AI Hero and Predictions Center are locked behind a signup wall (blur overlay + CTA) when `entitlementService.canViewAI(user)` is false (anonymous users).
 - **Auth routes**: `/login`, `/signup`, `/reset-password`, `/update-password` live in the `(auth)` route group. Callback is `/api/auth/callback`.
 - **Account deletion**: server action calls `auth.admin.deleteUser` + cleans user-owned rows in a transaction.
 

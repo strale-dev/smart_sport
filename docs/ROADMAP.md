@@ -287,7 +287,7 @@ The authenticated app shell exists. Users can sign up (email + Google), navigate
 - [x] Scroll anchor on today (or live match / nearest day with fixtures).
 - [x] Empty states for no follows and no matches in window.
 - [x] Unit tests for timezone grouping and anchor logic.
-- [ ] Follow/Unfollow UI (Phase 6) — until then, follows are seeded manually for QA.
+- [x] Follow/Unfollow UI (Phase 6) — `FollowToggle` on team/player/league pages; optional `phase6:follow-smoke` with `PHASE6_QA_USER_ID`.
 
 **Match page skeleton**
 
@@ -309,7 +309,7 @@ Run automated gates first: `npm.cmd run phase2:check`. Then complete the manual 
 
 **Out of scope (does not block Phase 2 close-out):**
 
-- Follow/Unfollow UI — Phase 6 (follows seeded manually for `/favorites` QA).
+- Follow/Unfollow UI ships in Phase 6 (`FollowToggle`); Phase 2 `/favorites` feed was read-only until then.
 - Google OAuth — optional bonus; email auth is sufficient for DoD.
 
 #### Automated gates (`npm run phase2:check`)
@@ -605,10 +605,10 @@ Users can start a 7-day trial (card required), become paying subscribers, and hi
 
 **Follows & favorites (fully wired)**
 
-- [ ] Follow/Unfollow buttons on team, player, league pages.
-- [ ] Favorite button on match page (bookmark to `public.favorites`; separate from `/favorites` team feed).
-- [ ] Dashboard "Your teams/players" section becomes real.
-- [ ] Wire follow actions into the existing `/favorites` feed (no page rebuild needed).
+- [x] Follow/Unfollow buttons on team, player, league pages.
+- [x] Favorite button on match page (bookmark to `public.favorites`; separate from `/favorites` team feed).
+- [x] Dashboard "Your teams/players" section becomes real.
+- [x] Wire follow actions into the existing `/favorites` feed (no page rebuild needed).
 
 **Notifications**
 
@@ -637,17 +637,31 @@ Users can start a 7-day trial (card required), become paying subscribers, and hi
 
 **Profile & preferences**
 
-- [ ] `/profile` — display name, avatar upload (Supabase Storage).
-- [ ] `/profile/preferences` — timezone, preferred league, notification + sound toggles.
-- [ ] Account deletion server action.
+- [x] `/profile` — display name, avatar upload (Supabase Storage).
+- [x] `/profile/preferences` — timezone, preferred league, notification + sound toggles.
+- [x] Account deletion server action.
 
 ### Definition of Done
 
-- [ ] End-to-end: sign up → start trial → hit webhook → get PREMIUM tier → generate unlimited AI insights.
+Run automated gates first: `npm.cmd run phase6:check`. Then complete the **founder manual gate** in [BILLING-E2E.md](./BILLING-E2E.md).
+
+#### Automated gates (`npm run phase6:check`)
+
+- [x] `npm.cmd run typecheck`, `lint`, `test:ci`, and `build` pass.
+- [x] `verify:ingestion` — fixtures present for UTC today.
+- [x] `phase6:webhook-smoke` — LemonSqueezy webhook sync + idempotency (vitest, no network).
+- [x] `phase6:entitlements-smoke` — FREE cap vs PREMIUM bypass + Sentry breadcrumb on deny.
+- [x] `phase4:match-smoke` + `phase5:match-smoke` — regression after entitlement gating.
+- [ ] Optional: `PHASE6_QA_USER_ID=<uuid> npm run phase6:follow-smoke` — follow row round-trip.
+
+#### Manual — founder gate (required before Phase 6 is “done”)
+
+- [ ] End-to-end: sign up → start trial → hit webhook → get PREMIUM tier → generate unlimited AI insights ([BILLING-E2E.md](./BILLING-E2E.md)).
 - [ ] Cancel trial → tier reverts to FREE at period end; follows/favorites intact.
 - [ ] Free user hitting daily AI cap sees `AI_LIMIT_REACHED` and upgrade CTA.
 - [ ] Notification for a goal fires within 10s of provider confirmation for the followed team.
 - [ ] Sentry breadcrumbs show entitlement decisions on gated endpoints.
+- [ ] PostHog Live Events: `trial_started`, `follow_added`, `trial_converted` / `subscription_cancelled`, `ai_limit_reached`.
 
 ### Risks / watch-outs
 
@@ -676,11 +690,11 @@ Public launch on Vercel, PostHog dashboards ready, legal reviewed, marketing sur
 
 **Analytics dashboards (PostHog)**
 
-- [ ] Funnel: `landing_view` → `signup_completed` → `trial_started` → `trial_converted`.
-- [ ] Retention chart D1/D7/D30.
-- [ ] DAU trend widget.
-- [ ] AI usage per user per day.
-- [ ] Match views heatmap by league.
+- [x] Funnel: `landing_view` → `signup_completed` → `trial_started` → `trial_converted`. _(Dashboard: [ANALYTICS-DASHBOARDS.md](./ANALYTICS-DASHBOARDS.md).)_
+- [x] Retention chart D1/D7/D30.
+- [x] DAU trend widget.
+- [x] AI usage per user per day.
+- [x] Match views heatmap by league.
 
 **Quality**
 

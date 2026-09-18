@@ -96,7 +96,10 @@ export function LeagueDetailsTabs({
       </TabsContent>
 
       <TabsContent value="top-stats">
-        <LeagueTopStatsTab leaderboards={topStats} />
+        <LeagueTopStatsTab
+          leaderboards={topStats}
+          leagueExternalId={league.externalId}
+        />
       </TabsContent>
     </Tabs>
   );

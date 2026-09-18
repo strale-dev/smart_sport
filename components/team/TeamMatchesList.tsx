@@ -46,6 +46,7 @@ export function TeamMatchesList({
         icon={CalendarDaysIcon}
         title="No matches yet"
         description="Fixtures for this team will appear here once they are synced."
+        actions={[{ label: "Browse fixtures", href: "/fixtures" }]}
       />
     );
   }

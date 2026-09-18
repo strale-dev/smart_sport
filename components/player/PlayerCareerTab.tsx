@@ -50,6 +50,7 @@ export function PlayerCareerTab({ career }: PlayerCareerTabProps) {
         icon={BriefcaseIcon}
         title="Career history unavailable"
         description="Previous clubs will appear once transfer or squad history is available from the provider."
+        actions={[{ label: "Browse fixtures", href: "/fixtures" }]}
       />
     );
   }

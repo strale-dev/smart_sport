@@ -45,6 +45,7 @@ export function PlayerAttributeOverviewCard({
             icon={RadarIcon}
             title="Attributes unavailable"
             description="Season statistics will appear once the provider publishes them for this competition."
+            actions={[{ label: "Browse fixtures", href: "/fixtures" }]}
           />
         </CardContent>
       </Card>
@@ -66,6 +67,7 @@ export function PlayerAttributeOverviewCard({
             icon={RadarIcon}
             title="Attributes unavailable"
             description="Not enough season data to build an attribute profile yet."
+            actions={[{ label: "Browse fixtures", href: "/fixtures" }]}
           />
         </CardContent>
       </Card>

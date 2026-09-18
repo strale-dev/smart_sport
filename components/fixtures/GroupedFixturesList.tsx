@@ -48,6 +48,14 @@ export function GroupedFixturesList({ data }: GroupedFixturesListProps) {
             icon={UsersIcon}
             title="No followed teams yet"
             description="Follow clubs to see their upcoming and recent matches here."
+            actions={[
+              { label: "Browse fixtures", href: "/fixtures" },
+              {
+                label: "Go to dashboard",
+                href: "/dashboard",
+                variant: "outline",
+              },
+            ]}
           />
           <p className="text-center">
             <Link
@@ -66,6 +74,7 @@ export function GroupedFixturesList({ data }: GroupedFixturesListProps) {
         icon={CalendarDaysIcon}
         title="No matches for your teams"
         description="There are no followed-team fixtures in the last 30 days or next year."
+        actions={[{ label: "Browse all fixtures", href: "/fixtures" }]}
       />
     );
   }

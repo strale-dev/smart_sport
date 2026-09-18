@@ -26,6 +26,9 @@ export async function getPostHogClient(): Promise<PostHog | null> {
         opt_out_capturing_by_default: true,
         autocapture: false,
       });
+      posthog.register({
+        app_env: publicEnv.NEXT_PUBLIC_APP_ENV,
+      });
       posthogInstance = posthog;
       return posthog;
     });

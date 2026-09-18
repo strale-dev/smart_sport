@@ -11,15 +11,27 @@ import type { LeagueStatLeaderboard } from "@/types/domain";
 
 type LeagueTopStatsTabProps = {
   leaderboards: LeagueStatLeaderboard[];
+  leagueExternalId: number;
 };
 
-function StatLeaderboardTable({ id, label, rows }: LeagueStatLeaderboard) {
+function StatLeaderboardTable({
+  id,
+  label,
+  rows,
+  leagueExternalId,
+}: LeagueStatLeaderboard & { leagueExternalId: number }) {
   if (rows.length === 0) {
     return (
       <EmptyState
         icon={BarChart3Icon}
         title={`No ${label.toLowerCase()} data`}
         description="Statistics for this category are not available for this season yet."
+        actions={[
+          {
+            label: "Browse league fixtures",
+            href: `/fixtures?league=${leagueExternalId}`,
+          },
+        ]}
       />
     );
   }
@@ -77,13 +89,22 @@ function StatLeaderboardTable({ id, label, rows }: LeagueStatLeaderboard) {
   );
 }
 
-export function LeagueTopStatsTab({ leaderboards }: LeagueTopStatsTabProps) {
+export function LeagueTopStatsTab({
+  leaderboards,
+  leagueExternalId,
+}: LeagueTopStatsTabProps) {
   if (leaderboards.length === 0) {
     return (
       <EmptyState
         icon={BarChart3Icon}
         title="Top stats unavailable"
         description="Player statistics are not available for this league and season yet."
+        actions={[
+          {
+            label: "Browse league fixtures",
+            href: `/fixtures?league=${leagueExternalId}`,
+          },
+        ]}
       />
     );
   }
@@ -105,7 +126,10 @@ export function LeagueTopStatsTab({ leaderboards }: LeagueTopStatsTabProps) {
 
       {leaderboards.map((leaderboard) => (
         <TabsContent key={leaderboard.id} value={leaderboard.id}>
-          <StatLeaderboardTable {...leaderboard} />
+          <StatLeaderboardTable
+            {...leaderboard}
+            leagueExternalId={leagueExternalId}
+          />
         </TabsContent>
       ))}
     </Tabs>

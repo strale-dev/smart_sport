@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { AppFooter } from "@/components/layout/AppFooter";
+import { CookieConsentShell } from "@/components/marketing/CookieConsentShell";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { TopNav } from "@/components/layout/TopNav";
 import { NotificationBellContainer } from "@/components/notifications/NotificationBellContainer";
@@ -44,7 +46,9 @@ export function AppShell({
             </div>
           </main>
 
+          <AppFooter />
           <MobileNav user={user} />
+          <CookieConsentShell />
         </div>
       </SoundPreferencesProvider>
     </ViewerTimezoneProvider>

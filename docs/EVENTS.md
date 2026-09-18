@@ -44,11 +44,32 @@
 
 Event names are registered in `lib/posthog/events.ts`; wire capture when manual PostHog QA begins.
 
+## Phase 6 — Accounts, billing, follows
+
+| Event                       | Trigger                                         | Properties                            | Source                                                               | Funnel             |
+| --------------------------- | ----------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------- | ------------------ |
+| `follow_added`              | User follows team/player/league                 | `object_type`, `provider_id`          | `components/follow/FollowToggle.tsx`                                 | Activation         |
+| `follow_removed`            | User unfollows                                  | `object_type`, `provider_id`          | `components/follow/FollowToggle.tsx`                                 | Engagement         |
+| `favorite_added`            | User bookmarks a match                          | `fixture_id`                          | `components/follow/FavoriteMatchToggle.tsx`                          | Engagement         |
+| `favorite_removed`          | User removes match bookmark                     | `fixture_id`                          | `components/follow/FavoriteMatchToggle.tsx`                          | Engagement         |
+| `trial_started`             | User submits pricing checkout (before redirect) | `source`                              | `components/billing/StartTrialButton.tsx`                            | Trial funnel       |
+| `trial_converted`           | First payment after trial (webhook)             | `provider_subscription_id`, `app_env` | `app/api/webhooks/lemonsqueezy/route.ts` via `lib/posthog/server.ts` | Trial conversion   |
+| `subscription_cancelled`    | Subscription cancelled or expired (webhook)     | `provider_subscription_id`, `app_env` | `app/api/webhooks/lemonsqueezy/route.ts` via `lib/posthog/server.ts` | Churn              |
+| `predictions_center_viewed` | Predictions Center page loads (once per visit)  | `is_guest`, `pick_count`              | `components/predictions/PredictionsViewAnalytics.tsx`                | Predictions funnel |
+
 ### Notes
 
 - **Identify:** `signup_completed` and `login_completed` call `posthog.identify(userId)` before capture.
 - **Auth callback:** OAuth and email-confirmation flows redirect with `?auth_event=signup|login`; `AuthAnalytics` captures after consent is ready, then strips the query param.
 - **Guest funnel:** `match_viewed.is_guest = true` for anonymous viewers on guest-OK routes.
+
+---
+
+## Dashboards (Phase 7)
+
+Launch board, metric definitions, and QA checklist: **[ANALYTICS-DASHBOARDS.md](./ANALYTICS-DASHBOARDS.md)**.
+
+Product events used for DAU/retention: [`lib/posthog/product-events.ts`](../lib/posthog/product-events.ts).
 
 ---
 
@@ -67,7 +88,5 @@ Event names are registered in `lib/posthog/events.ts`; wire capture when manual 
 
 From [Tech.md §21.1](./Tech.md#211-posthog) — not yet implemented:
 
-- `trial_started`, `trial_converted`, `subscription_cancelled`
 - `live_match_viewed`
-- `follow_added`, `favorite_added`
 - `paywall_shown`

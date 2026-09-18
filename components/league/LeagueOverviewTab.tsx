@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { buildFixturesHref } from "@/lib/fixtures/url";
 import { buildLeagueHref } from "@/lib/leagues/url";
 import { findLeagueSeason } from "@/lib/leagues/season";
 import { selectRelevantStandingsGroup } from "@/lib/standings/select-relevant-group";
@@ -188,6 +189,14 @@ export function LeagueOverviewTab({
               icon={TrophyIcon}
               title="Standings preview unavailable"
               description="Open the Standings tab once table data is available."
+              actions={[
+                {
+                  label: "Open Standings tab",
+                  href: buildLeagueHref(league.externalId, {
+                    tab: "standings",
+                  }),
+                },
+              ]}
             />
           </CardContent>
         </Card>
@@ -235,6 +244,14 @@ export function LeagueOverviewTab({
               icon={UsersIcon}
               title="Top scorers unavailable"
               description="Goal scoring leaders will appear once provider data is available."
+              actions={[
+                {
+                  label: "Open Top stats tab",
+                  href: buildLeagueHref(league.externalId, {
+                    tab: "top-stats",
+                  }),
+                },
+              ]}
             />
           </CardContent>
         </Card>
@@ -265,6 +282,12 @@ export function LeagueOverviewTab({
               icon={CalendarDaysIcon}
               title="No upcoming fixtures"
               description="There are no scheduled matches left in this season window."
+              actions={[
+                {
+                  label: "Browse league fixtures",
+                  href: buildFixturesHref({ league: league.externalId }),
+                },
+              ]}
             />
           </CardContent>
         </Card>

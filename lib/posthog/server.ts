@@ -89,3 +89,35 @@ export async function captureAiInsightGenerated(
 
   await posthog.shutdown();
 }
+
+export type BillingLifecycleEventInput = {
+  userId: string;
+  event: "trial_converted" | "subscription_cancelled";
+  providerSubscriptionId?: string | null;
+};
+
+export async function captureBillingLifecycleEvent(
+  input: BillingLifecycleEventInput
+): Promise<void> {
+  const posthogKey = getServerEnv().NEXT_PUBLIC_POSTHOG_KEY;
+
+  if (!isPostHogProjectKey(posthogKey)) {
+    console.warn(
+      "[posthog] NEXT_PUBLIC_POSTHOG_KEY must be a Project API key (phc_...) for server capture"
+    );
+    return;
+  }
+
+  const posthog = getPostHog();
+
+  posthog.capture({
+    distinctId: input.userId,
+    event: input.event,
+    properties: {
+      provider_subscription_id: input.providerSubscriptionId ?? null,
+      app_env: env.NEXT_PUBLIC_APP_ENV,
+    },
+  });
+
+  await posthog.shutdown();
+}

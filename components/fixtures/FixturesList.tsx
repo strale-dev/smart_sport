@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { CalendarDaysIcon } from "lucide-react";
 
 import { FixturesNowAnchor } from "@/components/fixtures/FixturesNowAnchor";
@@ -128,17 +127,25 @@ export function FixturesList({ data }: FixturesListProps) {
               ? "Try another league or browse all upcoming matches."
               : "Check back when new matches are synced."
           }
+          actions={
+            data.filters.league != null
+              ? [
+                  {
+                    label: "View all leagues",
+                    href: buildFixturesHref({}),
+                  },
+                  { label: "Live Center", href: "/live", variant: "outline" },
+                ]
+              : [
+                  { label: "Live Center", href: "/live" },
+                  {
+                    label: "Predictions Center",
+                    href: "/predictions",
+                    variant: "outline",
+                  },
+                ]
+          }
         />
-        {data.filters.league != null ? (
-          <p className="text-center">
-            <Link
-              href={buildFixturesHref({})}
-              className="text-primary text-sm font-medium hover:underline"
-            >
-              View all leagues
-            </Link>
-          </p>
-        ) : null}
       </div>
     );
   }

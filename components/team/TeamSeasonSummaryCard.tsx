@@ -49,6 +49,7 @@ export function TeamSeasonSummaryCard({
             icon={TrophyIcon}
             title="Season summary unavailable"
             description="Sync fixtures for this team to infer its primary competition."
+            actions={[{ label: "Browse fixtures", href: "/fixtures" }]}
           />
         </CardContent>
       </Card>

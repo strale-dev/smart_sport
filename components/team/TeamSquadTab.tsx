@@ -59,6 +59,7 @@ export function TeamSquadTab({ squad }: TeamSquadTabProps) {
         icon={UsersIcon}
         title="Squad unavailable"
         description="The provider has not published a roster for this team yet."
+        actions={[{ label: "Browse fixtures", href: "/fixtures" }]}
       />
     );
   }

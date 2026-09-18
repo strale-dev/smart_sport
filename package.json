@@ -62,6 +62,10 @@
     "phase5:check": "node scripts/phase5-dod-check.mjs",
     "phase5:match-smoke": "tsx ./scripts/phase5-match-smoke.ts",
     "phase5:live-center-smoke": "tsx ./scripts/phase5-live-center-smoke.ts",
+    "phase6:check": "node scripts/phase6-dod-check.mjs",
+    "phase6:webhook-smoke": "tsx ./scripts/phase6-webhook-smoke.ts",
+    "phase6:entitlements-smoke": "tsx ./scripts/phase6-entitlements-smoke.ts",
+    "phase6:follow-smoke": "tsx --import ./scripts/preload-env.ts ./scripts/phase6-follow-smoke.ts",
     "quota:smoke": "tsx --import ./scripts/preload-env.ts ./scripts/quota-smoke.ts",
     "auth:configure-supabase": "tsx --import ./scripts/preload-env.ts ./scripts/configure-supabase-auth.ts",
     "auth:push-config": "supabase config push --yes"

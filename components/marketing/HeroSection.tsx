@@ -1,4 +1,4 @@
-import { HeroProductMock } from "@/components/marketing/HeroProductMock";
+import { LandingProductShowcase } from "@/components/marketing/LandingProductShowcase";
 import { WaitlistForm } from "@/components/marketing/WaitlistForm";
 import { BRAND, landingCopy } from "@/lib/marketing/copy";
 
@@ -24,7 +24,7 @@ export function HeroSection() {
           <WaitlistForm source="landing_hero" className="max-w-md" />
         </div>
       </div>
-      <HeroProductMock />
+      <LandingProductShowcase />
     </section>
   );
 }

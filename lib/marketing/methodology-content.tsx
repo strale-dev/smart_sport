@@ -91,7 +91,36 @@ export function MethodologyContent() {
 
       <section className="space-y-3">
         <h2 className="font-heading text-xl font-medium">
-          6. AI explanation layer
+          6. Predictions Center (Top 10 picks)
+        </h2>
+        <p className="text-muted-foreground leading-relaxed">
+          Each UTC day we rank upcoming allowlist fixtures (status NS/TBD) that
+          have a fresh pre-match model output. A fixture must pass configurable
+          thresholds — by default: max outcome probability ≥ 55%, confidence ≥
+          MEDIUM, and data quality ≥ PARTIAL.
+        </p>
+        <p className="text-muted-foreground leading-relaxed">
+          Ranking score ={" "}
+          <span className="font-mono text-sm">
+            model_probability × confidence_score × data_quality_score
+          </span>
+          . Confidence scores: HIGH 1.0, MEDIUM 0.85, LOW 0.65. Data quality:
+          COMPLETE 1.0, PARTIAL 0.75. We show the top 10 after sorting. There
+          are no betting odds, no bookmaker data, and no &quot;value edge&quot;
+          language — only transparent model estimates.
+        </p>
+        <p className="text-muted-foreground text-sm">
+          Tune thresholds in deployment with{" "}
+          <span className="font-mono">TOP_PICKS_MIN_MODEL_PROBABILITY</span>,{" "}
+          <span className="font-mono">TOP_PICKS_MIN_CONFIDENCE</span>,{" "}
+          <span className="font-mono">TOP_PICKS_MIN_DATA_QUALITY</span>, and{" "}
+          <span className="font-mono">TOP_PICKS_LIMIT</span>.
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-heading text-xl font-medium">
+          7. AI explanation layer
         </h2>
         <p className="text-muted-foreground leading-relaxed">
           The LLM receives structured model outputs and trusted context only. It
@@ -102,7 +131,7 @@ export function MethodologyContent() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-heading text-xl font-medium">7. Limitations</h2>
+        <h2 className="font-heading text-xl font-medium">8. Limitations</h2>
         <p className="text-muted-foreground leading-relaxed">
           Cold-start leagues and partial data reduce confidence. The MVP model
           is intentionally interpretable rather than a black-box neural network.

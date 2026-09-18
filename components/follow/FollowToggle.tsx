@@ -8,6 +8,8 @@ import { showFollowActionErrorToast } from "@/components/follow/follow-action-to
 import { Button } from "@/components/ui/button";
 import { toggleFollow } from "@/lib/follow/actions";
 import { loginHref } from "@/lib/auth/return-to";
+import { captureClientEvent } from "@/lib/posthog/client";
+import { POSTHOG_EVENTS } from "@/lib/posthog/events";
 import type { Database } from "@/types/supabase";
 
 type FollowObjectType = Database["public"]["Enums"]["follow_object"];
@@ -60,6 +62,12 @@ export function FollowToggle({
         }
 
         setFollowing(result.following);
+        void captureClientEvent(
+          result.following
+            ? POSTHOG_EVENTS.followAdded
+            : POSTHOG_EVENTS.followRemoved,
+          { object_type: objectType, provider_id: providerId }
+        );
       } catch {
         setFollowing(previous);
         showFollowActionErrorToast("UNKNOWN");

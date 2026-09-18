@@ -11,7 +11,7 @@ export const AI_DISCLAIMER =
 export const landingCopy = {
   hero: {
     subheadline:
-      "Real football data, statistical modeling, and AI explanations — so you understand every match, not just the scoreline. No betting odds. No bookmakers. Just football intelligence.",
+      "Real football data, statistical modeling, and AI explanations — plus a Predictions Center with transparent high-confidence picks. No betting odds. No bookmakers. Just football intelligence.",
     waitlistHint: "Join the waitlist for early access.",
   },
   features: [
@@ -57,7 +57,7 @@ export const legalMeta = {
     title: "Terms of Service",
     description: "Terms governing your use of Scorence.",
   },
-  lastUpdated: "2026-08-28",
+  lastUpdated: "2026-09-18",
   selfReviewNote:
-    "This document has been prepared for self-review. Formal legal review is planned before public launch (Phase 7).",
+    "Self-reviewed for MVP launch against product requirements (no gambling positioning, GDPR, subprocessors). Formal counsel optional for your jurisdiction.",
 } as const;

@@ -353,3 +353,7 @@ export function liveDetectorSnapshotKey(fixtureProviderId: number): string {
 export function liveDetectorLockKey(fixtureProviderId: number): string {
   return `live:detector:lock:${fixtureProviderId}`;
 }
+
+export function predictionsTopPicksKey(utcDate: string): string {
+  return `predictions:top-picks:${utcDate}`;
+}

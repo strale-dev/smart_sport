@@ -19,6 +19,14 @@ export const POSTHOG_EVENTS = {
   matchScoreFlipped: "match_score_flipped",
   liveMeaningfulEventReceived: "live_meaningful_event_received",
   liveCenterAiUpdatedMarkerRendered: "live_center_ai_updated_marker_rendered",
+  followAdded: "follow_added",
+  followRemoved: "follow_removed",
+  favoriteAdded: "favorite_added",
+  favoriteRemoved: "favorite_removed",
+  trialStarted: "trial_started",
+  trialConverted: "trial_converted",
+  subscriptionCancelled: "subscription_cancelled",
+  predictionsCenterViewed: "predictions_center_viewed",
 } as const;
 
 export type PostHogEventName =

@@ -8,6 +8,8 @@ import { showFollowActionErrorToast } from "@/components/follow/follow-action-to
 import { Button } from "@/components/ui/button";
 import { toggleFavorite } from "@/lib/follow/actions";
 import { loginHref } from "@/lib/auth/return-to";
+import { captureClientEvent } from "@/lib/posthog/client";
+import { POSTHOG_EVENTS } from "@/lib/posthog/events";
 
 type FavoriteMatchToggleProps = {
   fixtureProviderId: number;
@@ -53,6 +55,12 @@ export function FavoriteMatchToggle({
         }
 
         setFavorited(result.favorited);
+        void captureClientEvent(
+          result.favorited
+            ? POSTHOG_EVENTS.favoriteAdded
+            : POSTHOG_EVENTS.favoriteRemoved,
+          { fixture_id: fixtureProviderId }
+        );
       } catch {
         setFavorited(previous);
         showFollowActionErrorToast("UNKNOWN");

@@ -63,6 +63,7 @@ export function TeamStatisticsTab({
         icon={BarChart3Icon}
         title="Statistics unavailable"
         description="Season statistics will appear once the provider publishes them for this competition."
+        actions={[{ label: "Browse fixtures", href: "/fixtures" }]}
       />
     );
   }
