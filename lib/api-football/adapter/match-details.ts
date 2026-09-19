@@ -27,6 +27,20 @@ function getStatisticValue(
   return item?.value ?? null;
 }
 
+function getStatisticValueFirst(
+  statistics: RawApiFootballStatisticItem[],
+  types: string[]
+): number | string | null {
+  for (const type of types) {
+    const value = getStatisticValue(statistics, type);
+    if (value != null) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 export function mapFixtureEvent(
   raw: RawApiFootballEvent,
   fixtureExternalId: number
@@ -89,6 +103,19 @@ export function mapFixtureStatistics(
     expectedGoals: parseNullableFloat(
       getStatisticValue(stats, "expected_goals")
     ),
+    distanceCovered: parseNullableFloat(
+      getStatisticValueFirst(stats, [
+        "Distance Covered",
+        "distance_covered",
+        "Distance covered",
+      ])
+    ),
+    bigChances: parseNullableInt(
+      getStatisticValueFirst(stats, ["Big Chances", "big_chances"])
+    ),
+    freeKicks: parseNullableInt(
+      getStatisticValueFirst(stats, ["Free Kicks", "Free kicks"])
+    ),
   };
 }
 
@@ -145,6 +172,8 @@ export function mapFixturePlayerPerformance(
       shotsOnTarget: stat.shots.on,
       passes: stat.passes.total,
       keyPasses: stat.passes.key,
+      tacklesTotal: stat.tackles.total,
+      duelsTotal: stat.duels.total,
       wasStarter: !stat.games.substitute,
       wasCaptain: stat.games.captain,
     }))

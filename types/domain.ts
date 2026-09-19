@@ -135,6 +135,9 @@ export type FixtureTeamStatistics = {
   passesAccurate: number | null;
   passesPercent: number | null;
   expectedGoals: number | null;
+  distanceCovered: number | null;
+  bigChances: number | null;
+  freeKicks: number | null;
 };
 
 export type LineupPlayer = {
@@ -185,6 +188,8 @@ export type FixturePlayerPerformance = {
   shotsOnTarget: number | null;
   passes: number | null;
   keyPasses: number | null;
+  tacklesTotal: number | null;
+  duelsTotal: number | null;
   wasStarter: boolean;
   wasCaptain: boolean;
 };

@@ -132,6 +132,9 @@ describe("computeMatchMomentum", () => {
         passesAccurate: null,
         passesPercent: null,
         expectedGoals: null,
+        distanceCovered: null,
+        bigChances: null,
+        freeKicks: null,
       },
       {
         teamExternalId: 2,
@@ -152,6 +155,9 @@ describe("computeMatchMomentum", () => {
         passesAccurate: null,
         passesPercent: null,
         expectedGoals: null,
+        distanceCovered: null,
+        bigChances: null,
+        freeKicks: null,
       },
     ];
 

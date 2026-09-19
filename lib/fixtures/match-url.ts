@@ -2,6 +2,7 @@ export const MATCH_TABS = [
   "overview",
   "ai",
   "lineups",
+  "statistics",
   "standings",
   "matches",
 ] as const;

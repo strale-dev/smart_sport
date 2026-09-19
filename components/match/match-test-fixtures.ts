@@ -84,6 +84,9 @@ export function makeTeamStats(teamExternalId: number): FixtureTeamStatistics {
     passesAccurate: null,
     passesPercent: null,
     expectedGoals: null,
+    distanceCovered: null,
+    bigChances: null,
+    freeKicks: null,
   };
 }
 

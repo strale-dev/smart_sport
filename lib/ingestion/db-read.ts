@@ -1852,6 +1852,9 @@ function mapFixtureStatisticsRow(
     passesPercent: row.passes_percent,
     expectedGoals:
       row.expected_goals !== null ? Number(row.expected_goals) : null,
+    distanceCovered: null,
+    bigChances: null,
+    freeKicks: null,
   };
 }
 
@@ -2046,12 +2049,28 @@ type FixturePlayerPerformanceDbRow = {
   saves: number | null;
   was_captain: boolean | null;
   was_starter: boolean | null;
+  provider_payload: Record<string, unknown> | null;
   player: {
     provider_id: number;
     full_name: string | null;
   } | null;
   team: { provider_id: number } | null;
 };
+
+function playerTacklesDuelsFromPayload(
+  payload: Record<string, unknown> | null
+): { tacklesTotal: number | null; duelsTotal: number | null } {
+  if (!payload) {
+    return { tacklesTotal: null, duelsTotal: null };
+  }
+
+  const tacklesTotal =
+    typeof payload.tacklesTotal === "number" ? payload.tacklesTotal : null;
+  const duelsTotal =
+    typeof payload.duelsTotal === "number" ? payload.duelsTotal : null;
+
+  return { tacklesTotal, duelsTotal };
+}
 
 export async function readFixturePlayerPerformancesFromDb(
   providerId: number
@@ -2079,6 +2098,7 @@ export async function readFixturePlayerPerformancesFromDb(
       saves,
       was_captain,
       was_starter,
+      provider_payload,
       player:players!player_match_performances_player_id_fkey (
         provider_id,
         full_name
@@ -2101,6 +2121,8 @@ export async function readFixturePlayerPerformancesFromDb(
       continue;
     }
 
+    const fromPayload = playerTacklesDuelsFromPayload(row.provider_payload);
+
     performances.push({
       teamExternalId: row.team.provider_id,
       playerExternalId: row.player.provider_id,
@@ -2118,6 +2140,8 @@ export async function readFixturePlayerPerformancesFromDb(
       shotsOnTarget: row.shots_on_target,
       passes: row.passes,
       keyPasses: row.key_passes,
+      tacklesTotal: fromPayload.tacklesTotal,
+      duelsTotal: fromPayload.duelsTotal,
       wasStarter: row.was_starter ?? false,
       wasCaptain: row.was_captain ?? false,
     });

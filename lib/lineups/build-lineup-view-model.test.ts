@@ -56,6 +56,8 @@ describe("buildLineupViewModel", () => {
           shotsOnTarget: 3,
           passes: 20,
           keyPasses: 1,
+          tacklesTotal: null,
+          duelsTotal: null,
           wasStarter: true,
           wasCaptain: true,
         },

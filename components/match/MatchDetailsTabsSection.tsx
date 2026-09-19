@@ -11,6 +11,7 @@ type MatchDetailsTabsSectionProps = {
   awayTeam: Pick<TeamRef, "name" | "code">;
   overview: ReactNode;
   lineups: ReactNode;
+  statistics: ReactNode;
   standings: ReactNode;
   matches: ReactNode;
 };
@@ -19,7 +20,7 @@ function MatchDetailsTabsFallback() {
   return (
     <div className="w-full space-y-4">
       <div className="flex gap-4 overflow-hidden">
-        {Array.from({ length: 5 }).map((_, index) => (
+        {Array.from({ length: 6 }).map((_, index) => (
           <Skeleton key={index} className="h-8 w-20 shrink-0" />
         ))}
       </div>
@@ -35,6 +36,7 @@ export function MatchDetailsTabsSection({
   awayTeam,
   overview,
   lineups,
+  statistics,
   standings,
   matches,
 }: MatchDetailsTabsSectionProps) {
@@ -46,6 +48,7 @@ export function MatchDetailsTabsSection({
         awayTeam={awayTeam}
         overview={overview}
         lineups={lineups}
+        statistics={statistics}
         standings={standings}
         matches={matches}
       />

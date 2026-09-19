@@ -11,6 +11,7 @@ import { SoundToggle } from "@/components/sound/SoundToggle";
 import { MatchHeader } from "@/components/match/MatchHeader";
 import { MatchViewAnalytics } from "@/components/match/MatchViewAnalytics";
 import { MatchLineupsPanel } from "@/components/match/panels/MatchLineupsPanel";
+import { MatchStatisticsPanel } from "@/components/match/panels/MatchStatisticsPanel";
 import { MatchMatchesPanel } from "@/components/match/panels/MatchMatchesPanel";
 import { MatchOverviewPanel } from "@/components/match/panels/MatchOverviewPanel";
 import { MatchStandingsPanel } from "@/components/match/panels/MatchStandingsPanel";
@@ -132,6 +133,11 @@ export default async function MatchPage({ params }: MatchPageProps) {
           lineups={
             <Suspense fallback={<MatchTabPanelFallback />}>
               <MatchLineupsPanel fixture={fixture} />
+            </Suspense>
+          }
+          statistics={
+            <Suspense fallback={<MatchTabPanelFallback />}>
+              <MatchStatisticsPanel fixture={fixture} />
             </Suspense>
           }
           standings={

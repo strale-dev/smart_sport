@@ -134,6 +134,8 @@ describe("mapFixturePlayerPerformance", () => {
     expect(performances).toHaveLength(1);
     expect(performances[0]?.rating).toBe(8.1);
     expect(performances[0]?.goals).toBe(1);
+    expect(performances[0]?.tacklesTotal).toBe(2);
+    expect(performances[0]?.duelsTotal).toBe(10);
   });
 });
 

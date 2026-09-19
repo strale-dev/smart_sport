@@ -11,6 +11,7 @@ describe("parseMatchTab", () => {
   it("accepts valid tab values", () => {
     expect(parseMatchTab("ai")).toBe("ai");
     expect(parseMatchTab("lineups")).toBe("lineups");
+    expect(parseMatchTab("statistics")).toBe("statistics");
     expect(parseMatchTab("standings")).toBe("standings");
     expect(parseMatchTab("matches")).toBe("matches");
     expect(parseMatchTab("form")).toBe("standings");
