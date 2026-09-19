@@ -27,6 +27,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const result = await runFixturePollChainTick(fixtureProviderId);
-  return NextResponse.json(result);
+  try {
+    const result = await runFixturePollChainTick(fixtureProviderId);
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error(
+      `[live/poll-tick] unhandled error for fixture ${fixtureProviderId}`,
+      error
+    );
+    return NextResponse.json({
+      ok: false,
+      fixtureProviderId,
+      reason: "internal_tick_error",
+    });
+  }
 }

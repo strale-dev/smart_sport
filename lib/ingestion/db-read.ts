@@ -1468,18 +1468,34 @@ function canonicalTeamPair(teamAId: string, teamBId: string): [string, string] {
 /** PostgREST rejects very large `in.(...)` filters (URL length). */
 const TEAM_PROVIDER_ID_IN_CHUNK_SIZE = 500;
 
+function normalizeTeamProviderIds(providerIds: number[]): number[] {
+  const unique = new Set<number>();
+  for (const id of providerIds) {
+    if (Number.isInteger(id) && id > 0) {
+      unique.add(id);
+    }
+  }
+
+  return [...unique];
+}
+
 async function readTeamsByProviderIds(
   client: ReturnType<typeof createAdminClient>,
   providerIds: number[]
 ): Promise<Array<{ id: string; provider_id: number }>> {
-  if (providerIds.length === 0) {
+  const normalizedIds = normalizeTeamProviderIds(providerIds);
+  if (normalizedIds.length === 0) {
     return [];
   }
 
   const teams: Array<{ id: string; provider_id: number }> = [];
 
-  for (let i = 0; i < providerIds.length; i += TEAM_PROVIDER_ID_IN_CHUNK_SIZE) {
-    const chunk = providerIds.slice(i, i + TEAM_PROVIDER_ID_IN_CHUNK_SIZE);
+  for (
+    let i = 0;
+    i < normalizedIds.length;
+    i += TEAM_PROVIDER_ID_IN_CHUNK_SIZE
+  ) {
+    const chunk = normalizedIds.slice(i, i + TEAM_PROVIDER_ID_IN_CHUNK_SIZE);
     const { data, error } = await client
       .from("teams")
       .select("id, provider_id")
@@ -1493,6 +1509,64 @@ async function readTeamsByProviderIds(
   }
 
   return teams;
+}
+
+const H2H_PAIR_OR_FILTER_CHUNK = 40;
+
+type H2hSummaryRow = {
+  team_a_id: string;
+  team_b_id: string;
+  team_a_wins: number | null;
+  team_b_wins: number | null;
+  draws: number | null;
+  window_size: number | null;
+  captured_at: string;
+};
+
+function h2hPairKey(teamAId: string, teamBId: string): string {
+  return `${teamAId}:${teamBId}`;
+}
+
+async function readLatestH2hSummariesForPairs(
+  client: ReturnType<typeof createAdminClient>,
+  pairs: Array<{ teamAId: string; teamBId: string }>
+): Promise<Map<string, H2hSummaryRow>> {
+  const latestByPair = new Map<string, H2hSummaryRow>();
+  if (pairs.length === 0) {
+    return latestByPair;
+  }
+
+  for (let i = 0; i < pairs.length; i += H2H_PAIR_OR_FILTER_CHUNK) {
+    const chunk = pairs.slice(i, i + H2H_PAIR_OR_FILTER_CHUNK);
+    const orFilter = chunk
+      .map(
+        (pair) =>
+          `and(team_a_id.eq.${pair.teamAId},team_b_id.eq.${pair.teamBId})`
+      )
+      .join(",");
+
+    const { data, error } = await client
+      .from("h2h_summaries")
+      .select(
+        "team_a_id, team_b_id, team_a_wins, team_b_wins, draws, window_size, captured_at"
+      )
+      .eq("scope", "ALL")
+      .or(orFilter)
+      .order("captured_at", { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to read H2H summaries batch: ${error.message}`);
+    }
+
+    for (const row of data ?? []) {
+      const key = h2hPairKey(row.team_a_id, row.team_b_id);
+      if (!latestByPair.has(key)) {
+        latestByPair.set(key, row);
+      }
+    }
+  }
+
+  return latestByPair;
 }
 
 export async function readH2hInterestForFixtures(
@@ -1534,33 +1608,25 @@ export async function readH2hInterestForFixtures(
     });
   }
 
-  await Promise.all(
-    pairLookups.map(async ({ fixtureExternalId, teamAId, teamBId }) => {
-      const { data, error } = await client
-        .from("h2h_summaries")
-        .select("team_a_wins, team_b_wins, draws, window_size")
-        .eq("team_a_id", teamAId)
-        .eq("team_b_id", teamBId)
-        .eq("scope", "ALL")
-        .order("captured_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+  const uniquePairs = new Map<string, { teamAId: string; teamBId: string }>();
+  for (const { teamAId, teamBId } of pairLookups) {
+    uniquePairs.set(h2hPairKey(teamAId, teamBId), { teamAId, teamBId });
+  }
 
-      if (error) {
-        throw new Error(
-          `Failed to read H2H summary for fixture ${fixtureExternalId}: ${error.message}`
-        );
-      }
+  const summariesByPair = await readLatestH2hSummariesForPairs(client, [
+    ...uniquePairs.values(),
+  ]);
 
-      if (!data?.window_size || data.window_size <= 0) {
-        return;
-      }
+  for (const { fixtureExternalId, teamAId, teamBId } of pairLookups) {
+    const data = summariesByPair.get(h2hPairKey(teamAId, teamBId));
+    if (!data?.window_size || data.window_size <= 0) {
+      continue;
+    }
 
-      const meetings =
-        (data.team_a_wins ?? 0) + (data.team_b_wins ?? 0) + (data.draws ?? 0);
-      result.set(fixtureExternalId, meetings / data.window_size);
-    })
-  );
+    const meetings =
+      (data.team_a_wins ?? 0) + (data.team_b_wins ?? 0) + (data.draws ?? 0);
+    result.set(fixtureExternalId, meetings / data.window_size);
+  }
 
   return result;
 }

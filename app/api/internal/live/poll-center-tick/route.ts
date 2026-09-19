@@ -16,6 +16,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const result = await runLiveCenterPollChainTick();
-  return NextResponse.json(result);
+  try {
+    const result = await runLiveCenterPollChainTick();
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("[live/poll-center-tick] unhandled error", error);
+    return NextResponse.json({
+      ok: false,
+      reason: "internal_tick_error",
+    });
+  }
 }

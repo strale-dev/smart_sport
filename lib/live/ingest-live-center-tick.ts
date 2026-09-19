@@ -1,4 +1,6 @@
 import { apiFootballFetchResponse } from "@/lib/api-football/client";
+import { ApiFootballError } from "@/lib/api-football/errors";
+import { formatApiFootballFailureReason } from "@/lib/api-football/safe-call";
 import type { RawApiFootballFixture } from "@/lib/api-football/types";
 import { isLivePollingEnabled } from "@/lib/env";
 import { cronIngestBudgetExceeded } from "@/lib/ingestion/cron-budget";
@@ -50,12 +52,34 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
   const client = createAdminClient();
   const syncedAt = new Date().toISOString();
 
-  await throttleProviderRequest();
-  const rawFixtures = await apiFootballFetchResponse<RawApiFootballFixture>(
-    "/fixtures",
-    { live: "all" },
-    { priority: "critical" }
-  );
+  let rawFixtures: RawApiFootballFixture[];
+  try {
+    await throttleProviderRequest();
+    rawFixtures = await apiFootballFetchResponse<RawApiFootballFixture>(
+      "/fixtures",
+      { live: "all" },
+      { priority: "critical" }
+    );
+  } catch (error) {
+    const reason =
+      error instanceof ApiFootballError
+        ? formatApiFootballFailureReason(error)
+        : error instanceof Error
+          ? error.message
+          : "Unknown provider error";
+    console.error("[sync-live-center] live fixtures fetch failed", reason);
+    return {
+      ok: false,
+      reason: "provider_fetch_failed",
+      stats: {
+        apiRequests: 1,
+        fixturesUpserted: 0,
+        fixturesFilteredOut: 0,
+        lastFixtureError: reason,
+      },
+    };
+  }
+
   const upsertStartedAtMs = Date.now();
   const apiRequests = 1;
 

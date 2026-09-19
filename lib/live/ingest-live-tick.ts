@@ -1,3 +1,7 @@
+import {
+  formatApiFootballFailureReason,
+  isOptionalProviderFailure,
+} from "@/lib/api-football/safe-call";
 import { mapFixtureLiveClockFromRaw } from "@/lib/api-football/adapter";
 import {
   getFixtureEvents as getFixtureEventsEndpoint,
@@ -112,26 +116,46 @@ export async function ingestLiveFixtureTick(
   const client = createAdminClient();
   let apiRequests = 0;
 
-  await throttleProviderRequest();
-  const fixturePayload = await getFixtureByIdWithRaw(fixtureProviderId);
-  apiRequests += 1;
+  let fixturePayload: Awaited<ReturnType<typeof getFixtureByIdWithRaw>>;
+  let events: Awaited<ReturnType<typeof getFixtureEventsEndpoint>>;
+  let statistics: Awaited<ReturnType<typeof getFixtureStatisticsEndpoint>>;
 
-  if (!fixturePayload) {
-    return {
-      ok: false,
-      fixtureProviderId,
-      reason: "fixture_not_found",
-      stats: { events: 0, statistics: 0, apiRequests },
-    };
+  try {
+    await throttleProviderRequest();
+    fixturePayload = await getFixtureByIdWithRaw(fixtureProviderId);
+    apiRequests += 1;
+
+    if (!fixturePayload) {
+      return {
+        ok: false,
+        fixtureProviderId,
+        reason: "fixture_not_found",
+        stats: { events: 0, statistics: 0, apiRequests },
+      };
+    }
+
+    await throttleProviderRequest();
+    events = await getFixtureEventsEndpoint(fixtureProviderId);
+    apiRequests += 1;
+
+    await throttleProviderRequest();
+    statistics = await getFixtureStatisticsEndpoint(fixtureProviderId);
+    apiRequests += 1;
+  } catch (error) {
+    if (isOptionalProviderFailure(error)) {
+      console.warn(
+        `[ingest-live-tick] fixture ${fixtureProviderId} provider unavailable — ${formatApiFootballFailureReason(error)}`
+      );
+      return {
+        ok: false,
+        fixtureProviderId,
+        reason: "provider_unavailable",
+        stats: { events: 0, statistics: 0, apiRequests },
+      };
+    }
+
+    throw error;
   }
-
-  await throttleProviderRequest();
-  const events = await getFixtureEventsEndpoint(fixtureProviderId);
-  apiRequests += 1;
-
-  await throttleProviderRequest();
-  const statistics = await getFixtureStatisticsEndpoint(fixtureProviderId);
-  apiRequests += 1;
 
   const syncedAt = new Date().toISOString();
   const nextFixture: Fixture = {

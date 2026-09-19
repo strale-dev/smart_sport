@@ -206,29 +206,37 @@ export async function runFixturePollChainTick(
   }
 
   try {
-    const tickResult = await runFixtureLiveIngestAndPipeline(fixtureProviderId);
+    try {
+      const tickResult =
+        await runFixtureLiveIngestAndPipeline(fixtureProviderId);
 
-    if (
-      tickResult.changed &&
-      tickResult.nextSnapshot &&
-      tickResult.pipelineResult
-    ) {
-      await dispatchNotificationsFromLive({
-        fixtureProviderId,
-        prevSnapshot: tickResult.prevSnapshot,
-        nextSnapshot: tickResult.nextSnapshot,
-        pipelineResult: tickResult.pipelineResult,
-      });
+      if (
+        tickResult.changed &&
+        tickResult.nextSnapshot &&
+        tickResult.pipelineResult
+      ) {
+        await dispatchNotificationsFromLive({
+          fixtureProviderId,
+          prevSnapshot: tickResult.prevSnapshot,
+          nextSnapshot: tickResult.nextSnapshot,
+          pipelineResult: tickResult.pipelineResult,
+        });
+      }
+
+      if (tickResult.changed && tickResult.syncedAt) {
+        await broadcastMatchUpdate(fixtureProviderId, tickResult.syncedAt, {
+          meaningfulEvents: tickResult.meaningfulEvents,
+          snapshot: tickResult.snapshot,
+        });
+      }
+
+      await writeLastPollAt(lastAtKey, Date.now());
+    } catch (error) {
+      console.error(
+        `[live/poll-tick] fixture ${fixtureProviderId} tick failed`,
+        error
+      );
     }
-
-    if (tickResult.changed && tickResult.syncedAt) {
-      await broadcastMatchUpdate(fixtureProviderId, tickResult.syncedAt, {
-        meaningfulEvents: tickResult.meaningfulEvents,
-        snapshot: tickResult.snapshot,
-      });
-    }
-
-    await writeLastPollAt(lastAtKey, Date.now());
   } finally {
     await releaseLock(detectorLockKey);
   }

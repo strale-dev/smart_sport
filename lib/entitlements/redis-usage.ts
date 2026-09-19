@@ -117,7 +117,14 @@ export async function incrementRedisUsageCounters(
     );
   }
 
-  await pipeline.exec();
+  const hasCounterIncrements =
+    Boolean(increment.predictions) ||
+    Boolean(increment.deepAnalyses) ||
+    Boolean(increment.generations);
+
+  if (hasCounterIncrements) {
+    await pipeline.exec();
+  }
 
   if (increment.liveFixtureUuid) {
     await redis.sadd(

@@ -1,4 +1,6 @@
 import { apiFootballFetchResponse } from "@/lib/api-football/client";
+import { ApiFootballError } from "@/lib/api-football/errors";
+import { formatApiFootballFailureReason } from "@/lib/api-football/safe-call";
 import type { RawApiFootballFixture } from "@/lib/api-football/types";
 import { cronIngestBudgetExceeded } from "@/lib/ingestion/cron-budget";
 import {
@@ -60,11 +62,34 @@ export async function syncFixturesToday(
   const date = anchor.toISOString().slice(0, 10);
   const syncedAt = anchor.toISOString();
 
-  await throttleProviderRequest();
-  const rawFixtures = await apiFootballFetchResponse<RawApiFootballFixture>(
-    "/fixtures",
-    { date }
-  );
+  let rawFixtures: RawApiFootballFixture[];
+  try {
+    await throttleProviderRequest();
+    rawFixtures = await apiFootballFetchResponse<RawApiFootballFixture>(
+      "/fixtures",
+      { date }
+    );
+  } catch (error) {
+    const reason =
+      error instanceof ApiFootballError
+        ? formatApiFootballFailureReason(error)
+        : error instanceof Error
+          ? error.message
+          : "Unknown provider error";
+    console.error("[sync-fixtures-today] fixtures fetch failed", reason);
+    return {
+      ok: false,
+      job: "sync-fixtures-today",
+      stats: {
+        date,
+        apiRequests: 1,
+        fixturesUpserted: 0,
+        fixturesFilteredOut: 0,
+        lastFixtureError: reason,
+      },
+    };
+  }
+
   const upsertStartedAtMs = Date.now();
 
   const allowlisted = rawFixtures

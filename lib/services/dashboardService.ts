@@ -25,7 +25,7 @@ import {
 } from "@/lib/ingestion/db-read";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import {
-  getMatchesForDate,
+  getMatchesInRange,
   listLiveFixtures,
 } from "@/lib/services/footballService";
 import type { Fixture } from "@/types/domain";
@@ -57,15 +57,12 @@ function addUtcDays(date: string, days: number): string {
   return next.toISOString().slice(0, 10);
 }
 
-async function fetchFixturesForDates(dates: string[]): Promise<Fixture[]> {
-  const results = await Promise.all(
-    dates.map(async (date) => {
-      const { data } = await getMatchesForDate(date);
-      return data;
-    })
-  );
+function fixtureUtcDateKey(fixture: Fixture): string {
+  return fixture.kickoffAt.slice(0, 10);
+}
 
-  return dedupeFixtures(results.flat());
+function fixturesOnUtcDate(fixtures: Fixture[], dateKey: string): Fixture[] {
+  return fixtures.filter((fixture) => fixtureUtcDateKey(fixture) === dateKey);
 }
 
 async function buildImportanceContext(
@@ -77,7 +74,10 @@ async function buildImportanceContext(
     await Promise.all([
       readLeaguePrestigeMap(),
       readStandingsRanksForFixtures(fixtures),
-      readH2hInterestForFixtures(fixtures),
+      readH2hInterestForFixtures(fixtures).catch((error) => {
+        console.warn("[dashboard] H2H interest lookup failed:", error);
+        return new Map<number, number>();
+      }),
     ]);
 
   return {
@@ -112,25 +112,25 @@ export async function getDashboardData(
   const today = utcDateString(now);
   const yesterday = addUtcDays(today, -1);
   const tomorrow = addUtcDays(today, 1);
-  const upcomingDates = Array.from({ length: UPCOMING_DAYS }, (_, index) =>
-    addUtcDays(today, index + 1)
-  );
+  const upcomingFrom = addUtcDays(today, 1);
+  const upcomingThrough = addUtcDays(today, UPCOMING_DAYS);
+  const rangeFrom = yesterday;
+  const rangeToExclusive = addUtcDays(today, UPCOMING_DAYS + 1);
 
-  const [
-    todayFixtures,
-    yesterdayFixtures,
-    tomorrowFixtures,
-    liveResult,
-    upcomingFixtures,
-    aiInsights,
-  ] = await Promise.all([
-    getMatchesForDate(today).then(({ data }) => data),
-    getMatchesForDate(yesterday).then(({ data }) => data),
-    getMatchesForDate(tomorrow).then(({ data }) => data),
+  const [rangeResult, liveResult, aiInsights] = await Promise.all([
+    getMatchesInRange(rangeFrom, rangeToExclusive),
     listLiveFixtures(),
-    fetchFixturesForDates(upcomingDates),
     readRecentPredictionChanges(5).catch(() => [] as PredictionChangeSummary[]),
   ]);
+
+  const rangeFixtures = dedupeFixtures(rangeResult.data);
+  const todayFixtures = fixturesOnUtcDate(rangeFixtures, today);
+  const yesterdayFixtures = fixturesOnUtcDate(rangeFixtures, yesterday);
+  const tomorrowFixtures = fixturesOnUtcDate(rangeFixtures, tomorrow);
+  const upcomingFixtures = rangeFixtures.filter((fixture) => {
+    const dateKey = fixtureUtcDateKey(fixture);
+    return dateKey >= upcomingFrom && dateKey <= upcomingThrough;
+  });
 
   const liveFixtures = filterAllowlistedFixtures(liveResult.data);
   const forwardFallback = buildForwardFallbackFixtures({
