@@ -1465,6 +1465,36 @@ function canonicalTeamPair(teamAId: string, teamBId: string): [string, string] {
   return teamAId < teamBId ? [teamAId, teamBId] : [teamBId, teamAId];
 }
 
+/** PostgREST rejects very large `in.(...)` filters (URL length). */
+const TEAM_PROVIDER_ID_IN_CHUNK_SIZE = 500;
+
+async function readTeamsByProviderIds(
+  client: ReturnType<typeof createAdminClient>,
+  providerIds: number[]
+): Promise<Array<{ id: string; provider_id: number }>> {
+  if (providerIds.length === 0) {
+    return [];
+  }
+
+  const teams: Array<{ id: string; provider_id: number }> = [];
+
+  for (let i = 0; i < providerIds.length; i += TEAM_PROVIDER_ID_IN_CHUNK_SIZE) {
+    const chunk = providerIds.slice(i, i + TEAM_PROVIDER_ID_IN_CHUNK_SIZE);
+    const { data, error } = await client
+      .from("teams")
+      .select("id, provider_id")
+      .in("provider_id", chunk);
+
+    if (error) {
+      throw new Error(`Failed to read teams for H2H lookup: ${error.message}`);
+    }
+
+    teams.push(...(data ?? []));
+  }
+
+  return teams;
+}
+
 export async function readH2hInterestForFixtures(
   fixtures: Fixture[]
 ): Promise<Map<number, number>> {
@@ -1481,19 +1511,10 @@ export async function readH2hInterestForFixtures(
     providerIds.add(fixture.awayTeam.externalId);
   }
 
-  const { data: teams, error: teamsError } = await client
-    .from("teams")
-    .select("id, provider_id")
-    .in("provider_id", [...providerIds]);
-
-  if (teamsError) {
-    throw new Error(
-      `Failed to read teams for H2H lookup: ${teamsError.message}`
-    );
-  }
+  const teams = await readTeamsByProviderIds(client, [...providerIds]);
 
   const uuidByProvider = new Map<number, string>();
-  for (const team of teams ?? []) {
+  for (const team of teams) {
     uuidByProvider.set(team.provider_id, team.id);
   }
 
