@@ -74,7 +74,7 @@ export type PrematchAiContext = {
   lineups: import("@/lib/ai/context-helpers").LineupTeamContext[] | null;
   sidelined: Array<{
     teamExternalId: number;
-    playerExternalId: number;
+    playerExternalId: number | null;
     name: string;
     kind: string;
     reason: string | null;

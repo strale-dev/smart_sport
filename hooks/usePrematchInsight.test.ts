@@ -56,6 +56,31 @@ const baseInsight = {
   analysis: null,
 };
 
+const basePrediction = {
+  type: "PREMATCH",
+  fixtureExternalId: 123,
+  fixtureId: "fixture-uuid",
+  modelVersionId: "mv-1",
+  modelVersion: "1.0.0",
+  predictionId: "pred-1",
+  inputSnapshot: {} as PrematchPredictionResult["inputSnapshot"],
+  createdAt: "2026-01-01T12:00:00.000Z",
+  fromCache: true,
+  winProbabilities: { home: 0.48, draw: 0.27, away: 0.25 },
+  predictedOutcome: "1",
+  expectedGoalsHome: 1.5,
+  expectedGoalsAway: 1.1,
+  expectedGoalsTotal: 2.6,
+  expectedGoalsTotalMin: 2,
+  expectedGoalsTotalMax: 3,
+  over2Prob: 0.5,
+  over3Prob: 0.28,
+  under2Prob: 0.5,
+  bttsProb: 0.52,
+  weakerTeamScoringProb: 0.31,
+  confidence: "MEDIUM",
+} satisfies PrematchPredictionResult;
+
 describe("usePrematchInsight support modules", () => {
   beforeEach(() => {
     __resetPrematchInsightFetchCacheForTests();
@@ -90,6 +115,7 @@ describe("usePrematchInsight support modules", () => {
         {
           status: "OK",
           insight: baseInsight,
+          prediction: basePrediction,
           cached: true,
           insightMode: "prematch",
         },
@@ -177,6 +203,7 @@ describe("usePrematchInsight support modules", () => {
           ({
             status: "OK",
             insight: baseInsight,
+            prediction: basePrediction,
             cached: false,
             insightMode: "prematch",
           }) satisfies PrematchInsightResponse,

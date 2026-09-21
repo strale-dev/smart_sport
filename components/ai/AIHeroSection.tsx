@@ -91,7 +91,7 @@ export function AIHeroSection({
     return <AIHeroSkeleton />;
   }
 
-  if (state === "generating" && prediction) {
+  if (state === "generating" && prediction && prediction.type === "PREMATCH") {
     return (
       <AIHeroFallbackCard
         prediction={prediction}

@@ -23,11 +23,19 @@ const deltaWithLive = {
     createdAt: "2026-01-01T00:00:00.000Z",
     winProbabilities: { home: 0.4, draw: 0.3, away: 0.3 },
     predictedOutcome: "1",
-    expectedGoalsRange: [2, 3],
-    weakerTeamScoringChance: 0.3,
+    expectedGoalsHome: 1.4,
+    expectedGoalsAway: 1.1,
+    expectedGoalsTotal: 2.5,
+    expectedGoalsTotalMin: 2,
+    expectedGoalsTotalMax: 3,
+    over2Prob: 0.55,
+    over3Prob: 0.3,
+    under2Prob: 0.45,
+    bttsProb: 0.52,
+    weakerTeamScoringProb: 0.3,
     confidence: "MEDIUM",
   },
-} satisfies LiveProbabilityDeltaResponse;
+} as LiveProbabilityDeltaResponse;
 
 describe("resolveLivePhaseViewModel", () => {
   it("shows fallback with delta while live insight GET is still pending", () => {

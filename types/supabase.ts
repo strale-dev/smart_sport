@@ -1424,6 +1424,69 @@ export type Database = {
           },
         ]
       }
+      prediction_evaluations: {
+        Row: {
+          actual_away_goals: number
+          actual_home_goals: number
+          details: Json | null
+          evaluated_at: string
+          fixture_id: string
+          hit_1x2: boolean | null
+          hit_btts: boolean | null
+          hit_over2: boolean | null
+          hit_over3: boolean | null
+          hit_total_goals_range: boolean | null
+          hit_weaker_scores: boolean | null
+          id: string
+          prediction_id: string
+        }
+        Insert: {
+          actual_away_goals: number
+          actual_home_goals: number
+          details?: Json | null
+          evaluated_at?: string
+          fixture_id: string
+          hit_1x2?: boolean | null
+          hit_btts?: boolean | null
+          hit_over2?: boolean | null
+          hit_over3?: boolean | null
+          hit_total_goals_range?: boolean | null
+          hit_weaker_scores?: boolean | null
+          id?: string
+          prediction_id: string
+        }
+        Update: {
+          actual_away_goals?: number
+          actual_home_goals?: number
+          details?: Json | null
+          evaluated_at?: string
+          fixture_id?: string
+          hit_1x2?: boolean | null
+          hit_btts?: boolean | null
+          hit_over2?: boolean | null
+          hit_over3?: boolean | null
+          hit_total_goals_range?: boolean | null
+          hit_weaker_scores?: boolean | null
+          id?: string
+          prediction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prediction_evaluations_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: true
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prediction_evaluations_prediction_id_fkey"
+            columns: ["prediction_id"]
+            isOneToOne: false
+            referencedRelation: "predictions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       predictions: {
         Row: {
           away_win_prob: number
@@ -1433,6 +1496,7 @@ export type Database = {
           draw_prob: number
           expected_goals_away: number | null
           expected_goals_home: number | null
+          expected_goals_total: number | null
           expected_goals_total_max: number | null
           expected_goals_total_min: number | null
           fixture_id: string
@@ -1441,6 +1505,8 @@ export type Database = {
           input_snapshot: Json
           minute: number | null
           model_version_id: string
+          over2_prob: number | null
+          over3_prob: number | null
           type: Database["public"]["Enums"]["prediction_type"]
           weaker_team_scoring_prob: number | null
         }
@@ -1452,6 +1518,7 @@ export type Database = {
           draw_prob: number
           expected_goals_away?: number | null
           expected_goals_home?: number | null
+          expected_goals_total?: number | null
           expected_goals_total_max?: number | null
           expected_goals_total_min?: number | null
           fixture_id: string
@@ -1460,6 +1527,8 @@ export type Database = {
           input_snapshot: Json
           minute?: number | null
           model_version_id: string
+          over2_prob?: number | null
+          over3_prob?: number | null
           type: Database["public"]["Enums"]["prediction_type"]
           weaker_team_scoring_prob?: number | null
         }
@@ -1471,6 +1540,7 @@ export type Database = {
           draw_prob?: number
           expected_goals_away?: number | null
           expected_goals_home?: number | null
+          expected_goals_total?: number | null
           expected_goals_total_max?: number | null
           expected_goals_total_min?: number | null
           fixture_id?: string
@@ -1479,6 +1549,8 @@ export type Database = {
           input_snapshot?: Json
           minute?: number | null
           model_version_id?: string
+          over2_prob?: number | null
+          over3_prob?: number | null
           type?: Database["public"]["Enums"]["prediction_type"]
           weaker_team_scoring_prob?: number | null
         }

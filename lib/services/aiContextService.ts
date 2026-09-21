@@ -26,7 +26,6 @@ import type {
   PrematchPredictionResult,
 } from "@/types/prediction";
 import { readLatestPrematchInsight } from "@/lib/ai/db";
-import { validateAIInsightPayload } from "@/lib/ai/schemas";
 import type { MeaningfulEventKind } from "@/lib/live/event-detector-types";
 import {
   getActiveModelVersion,
@@ -326,14 +325,7 @@ async function resolvePrematchReferenceForLive(
   );
 
   const prematchInsight = await readLatestPrematchInsight(fixtureRow.id);
-  let summary: string | null = null;
-  if (prematchInsight?.payload) {
-    try {
-      summary = validateAIInsightPayload(prematchInsight.payload).summary;
-    } catch {
-      summary = null;
-    }
-  }
+  const summary = prematchInsight?.summary?.trim() || null;
 
   return {
     winProbabilities: prematchResult.winProbabilities,

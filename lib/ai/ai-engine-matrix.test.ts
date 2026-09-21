@@ -13,6 +13,7 @@ import { DEFAULT_MODEL_COEFFICIENTS } from "@/lib/models/coefficients";
 import { probabilitiesSum } from "@/lib/models/logistic";
 import { WIN_PROBABILITY_MIN_FLOOR } from "@/lib/models/normalize-probabilities";
 import { scorePrematchFromFeatures } from "@/lib/models/features";
+import { sampleNarrativeForMerge } from "@/lib/ai/test-fixtures";
 import type { PrematchFeatureVector } from "@/types/prediction";
 
 function buildFeature(
@@ -63,30 +64,9 @@ function buildFeature(
 }
 
 const narrativeFixture = {
-  summary: "Home side enter with a narrow statistical edge in this fixture.",
-  advantage: "HOME" as const,
-  keyFactors: [
-    {
-      label: "Recent form",
-      weight: 0.4,
-      evidence: "Home team averaged 2.1 ppg over the last five matches.",
-    },
-    {
-      label: "Head-to-head",
-      weight: 0.3,
-      evidence: "The last three meetings produced two home wins.",
-    },
-  ],
-  scenarios: {
-    likely: "A tight home win with both teams scoring.",
-    best: "Home team control early and win comfortably.",
-    upset: "Away team absorb pressure and win on the counter.",
-  },
-  commentary:
-    "The model gives the home team a modest edge driven by stronger recent form and home advantage. Data quality is solid but not complete, so confidence stays medium rather than high.",
+  ...sampleNarrativeForMerge,
   dataUsed: ["Model prediction"],
   dataTimestamp: new Date().toISOString(),
-  dataQuality: "PARTIAL" as const,
 };
 
 function assertPredictionInvariants(

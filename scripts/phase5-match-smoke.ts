@@ -49,8 +49,11 @@ const sampleLiveInsight: LiveInsightResponse = {
       upset: "Away equalizer",
     },
     commentary: "A".repeat(60),
+    dataUsed: ["Model prediction", "Live match statistics"],
     dataTimestamp: new Date().toISOString(),
     dataQuality: "COMPLETE",
+    dataCoverage: null,
+    analysis: null,
   },
 };
 

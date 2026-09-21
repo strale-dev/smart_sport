@@ -1,36 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { mergeNarrativeWithPrediction } from "@/lib/ai/merge-insight";
+import { sampleNarrativeForMerge } from "@/lib/ai/test-fixtures";
 
 describe("mergeNarrativeWithPrediction", () => {
   it("uses prediction engine numbers for probabilities and goals", () => {
     const merged = mergeNarrativeWithPrediction(
-      {
-        summary: "Home edge based on recent form at home.",
-        advantage: "HOME",
-        keyFactors: [
-          {
-            label: "Form",
-            weight: 0.5,
-            evidence: "Home team won 3 of last 5 home matches.",
-          },
-          {
-            label: "Standings",
-            weight: 0.3,
-            evidence: "Home team sit 4th on 12 points.",
-          },
-        ],
-        scenarios: {
-          likely: "Home win",
-          best: "Comfortable home win",
-          upset: "Away steal a point",
-        },
-        commentary:
-          "The model favours the home side with a 52% win probability while away win sits near 22%.",
-        dataUsed: ["Model prediction", "Team form"],
-        dataTimestamp: "2026-09-01T12:00:00.000Z",
-        dataQuality: "PARTIAL",
-      },
+      sampleNarrativeForMerge,
       {
         winProbabilities: { home: 0.52, draw: 0.26, away: 0.22 },
         expectedGoalsTotalMin: 2,
