@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const getIngestionConfig = vi.fn();
 const ingestLineupsFromProvider = vi.fn();
 const fixtureNeedsLineupSync = vi.fn();
+const shouldRunNonCriticalIngestion = vi.fn();
+const findCompetition = vi.fn();
 
 const leagueChain = {
   in: vi.fn(),
@@ -32,6 +34,14 @@ vi.mock("@/lib/ingestion/config", () => ({
   getIngestionConfig,
 }));
 
+vi.mock("@/lib/ingestion/schedule", () => ({
+  shouldRunNonCriticalIngestion,
+}));
+
+vi.mock("@/lib/competitions/index", () => ({
+  findCompetition,
+}));
+
 vi.mock("@/lib/ingestion/ingest-lineups", () => ({
   ingestLineupsFromProvider,
 }));
@@ -55,6 +65,11 @@ describe("syncLineups", () => {
   beforeEach(async () => {
     vi.resetModules();
     vi.clearAllMocks();
+    shouldRunNonCriticalIngestion.mockResolvedValue(true);
+    findCompetition.mockImplementation((providerId: number) => ({
+      providerId,
+      capabilities: { lineups: providerId !== 999 },
+    }));
     leagueChain.in.mockResolvedValue({
       data: [{ id: "league-1" }],
       error: null,
@@ -110,6 +125,9 @@ describe("syncLineups", () => {
       skippedComplete: 0,
       errors: 0,
       apiRequests: 1,
+      leaguesRequested: 1,
+      leaguesWithLineups: 1,
+      leaguesSkippedNoLineups: 0,
     });
     expect(ingestLineupsFromProvider).toHaveBeenCalledWith(1001);
   });
@@ -128,5 +146,34 @@ describe("syncLineups", () => {
     expect(result.stats?.skippedComplete).toBe(1);
     expect(result.stats?.synced).toBe(0);
     expect(ingestLineupsFromProvider).not.toHaveBeenCalled();
+  });
+
+  it("skips when API quota is below the non-critical threshold", async () => {
+    shouldRunNonCriticalIngestion.mockResolvedValue(false);
+    getIngestionConfig.mockReturnValue({
+      lineupsSyncEnabled: true,
+      leagueProviderIds: [39],
+      lineupsSyncBatch: 30,
+    });
+
+    const { syncLineups } = await import("@/lib/ingestion/sync-lineups");
+    const result = await syncLineups();
+
+    expect(result.skipped).toBe(true);
+    expect(result.stats?.nonCriticalSkipped).toBe(true);
+    expect(client.from).not.toHaveBeenCalled();
+  });
+
+  it("excludes leagues with lineups capability disabled", async () => {
+    getIngestionConfig.mockReturnValue({
+      lineupsSyncEnabled: true,
+      leagueProviderIds: [39, 999],
+      lineupsSyncBatch: 30,
+    });
+
+    const { syncLineups } = await import("@/lib/ingestion/sync-lineups");
+    await syncLineups();
+
+    expect(leagueChain.in).toHaveBeenCalledWith("provider_id", [39]);
   });
 });

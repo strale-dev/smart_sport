@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +20,32 @@ import {
 type FixturesDiscoveryFiltersProps = {
   params: FixturesSearchParams;
 };
+
+function CompetitionSearchInput({
+  params,
+  navigate,
+}: {
+  params: FixturesSearchParams;
+  navigate: (next: Partial<FixturesSearchParams>) => void;
+}) {
+  const [query, setQuery] = useState(params.q ?? "");
+
+  return (
+    <Input
+      className="w-full sm:flex-1"
+      value={query}
+      onChange={(event) => setQuery(event.target.value)}
+      placeholder="Search competition…"
+      onKeyDown={(event) => {
+        if (event.key !== "Enter") {
+          return;
+        }
+        const value = query.trim();
+        navigate({ q: value || undefined, league: undefined });
+      }}
+    />
+  );
+}
 
 export function FixturesDiscoveryFilters({
   params,
@@ -60,17 +86,10 @@ export function FixturesDiscoveryFilters({
         </SelectContent>
       </Select>
 
-      <Input
-        className="w-full sm:flex-1"
-        defaultValue={params.q ?? ""}
-        placeholder="Search competition…"
-        onKeyDown={(event) => {
-          if (event.key !== "Enter") {
-            return;
-          }
-          const value = (event.currentTarget.value || "").trim();
-          navigate({ q: value || undefined, league: undefined });
-        }}
+      <CompetitionSearchInput
+        key={params.q ?? ""}
+        params={params}
+        navigate={navigate}
       />
     </div>
   );

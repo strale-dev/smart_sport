@@ -1,3 +1,10 @@
+import {
+  competitionSupportsFixtureEvents,
+  competitionSupportsFixtureStatistics,
+  competitionSupportsLineups,
+  competitionSupportsPlayerPerformances,
+} from "@/lib/competitions/capabilities";
+import { findCompetition } from "@/lib/competitions/index";
 import { getIngestionConfig } from "@/lib/ingestion/config";
 import { ingestLineupsFromProvider } from "@/lib/ingestion/ingest-lineups";
 import { ingestMatchDetailsFromProvider } from "@/lib/ingestion/ingest-match-details";
@@ -8,6 +15,16 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const TERMINAL_STATUSES = ["FT", "AET", "PEN"] as const;
+
+function competitionNeedsMatchDetailSync(providerId: number): boolean {
+  const competition = findCompetition(providerId);
+  return (
+    competitionSupportsFixtureEvents(competition) ||
+    competitionSupportsFixtureStatistics(competition) ||
+    competitionSupportsPlayerPerformances(competition) ||
+    competitionSupportsLineups(competition)
+  );
+}
 
 function getMatchDetailsSyncBatch(): number {
   const raw = process.env.MATCH_DETAILS_SYNC_BATCH;
@@ -33,10 +50,14 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
   const batchSize = getMatchDetailsSyncBatch();
   const cutoff = new Date(Date.now() - 48 * 3_600_000).toISOString();
 
+  const detailLeagueProviderIds = config.leagueProviderIds.filter((id) =>
+    competitionNeedsMatchDetailSync(id)
+  );
+
   const { data: leagues, error: leaguesError } = await client
     .from("leagues")
-    .select("id")
-    .in("provider_id", [...config.leagueProviderIds]);
+    .select("id, provider_id")
+    .in("provider_id", [...detailLeagueProviderIds]);
 
   if (leaguesError) {
     throw new Error(`Failed to load leagues: ${leaguesError.message}`);
@@ -53,10 +74,13 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
   }
 
   const leagueIds = leagues.map((league) => league.id);
+  const leagueProviderByUuid = new Map(
+    leagues.map((league) => [league.id, league.provider_id])
+  );
 
   const { data: fixtures, error: fixturesError } = await client
     .from("fixtures")
-    .select("id, provider_id, status, kickoff_at")
+    .select("id, provider_id, status, kickoff_at, league_id")
     .in("league_id", leagueIds)
     .in("status", [...TERMINAL_STATUSES])
     .gte("kickoff_at", cutoff)
@@ -79,6 +103,14 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
       break;
     }
 
+    const leagueProviderId = leagueProviderByUuid.get(fixture.league_id);
+    if (
+      leagueProviderId != null &&
+      !competitionNeedsMatchDetailSync(leagueProviderId)
+    ) {
+      continue;
+    }
+
     const hasDetails = await fixtureHasMatchDetails(client, fixture.id);
     if (!hasDetails) {
       candidates.push({ provider_id: fixture.provider_id, needs: "details" });
@@ -86,7 +118,10 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
     }
 
     const hasLineups = await fixtureHasLineups(client, fixture.id);
-    if (!hasLineups) {
+    if (
+      !hasLineups &&
+      competitionSupportsLineups(findCompetition(leagueProviderId ?? -1))
+    ) {
       candidates.push({ provider_id: fixture.provider_id, needs: "lineups" });
     }
   }

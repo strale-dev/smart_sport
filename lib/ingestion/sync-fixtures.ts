@@ -1,6 +1,13 @@
 import { apiFootballFetchResponse } from "@/lib/api-football/client";
 import type { RawApiFootballFixture } from "@/lib/api-football/types";
 import {
+  competitionSupportsFixtureEvents,
+  competitionSupportsFixtureStatistics,
+  competitionSupportsLineups,
+  competitionSupportsPlayerPerformances,
+} from "@/lib/competitions/capabilities";
+import { findCompetition } from "@/lib/competitions/index";
+import {
   buildFixtureDateWindow,
   getIngestionConfig,
   isLeagueInAllowlist,
@@ -17,6 +24,16 @@ import { getRedis } from "@/lib/redis/client";
 import { providerFixturesDateKey } from "@/lib/redis/keys";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Fixture } from "@/types/domain";
+
+function competitionSupportsAnyMatchDetails(providerId: number): boolean {
+  const competition = findCompetition(providerId);
+  return (
+    competitionSupportsFixtureEvents(competition) ||
+    competitionSupportsFixtureStatistics(competition) ||
+    competitionSupportsPlayerPerformances(competition) ||
+    competitionSupportsLineups(competition)
+  );
+}
 
 export type SyncFixturesResult = {
   ok: boolean;
@@ -104,7 +121,11 @@ export async function syncFixtures(
       fixturesUpserted += 1;
 
       const isTerminal = ["FT", "AET", "PEN"].includes(domain.status);
-      if (isTerminal && matchDetailsIngested === 0) {
+      if (
+        isTerminal &&
+        matchDetailsIngested === 0 &&
+        competitionSupportsAnyMatchDetails(domain.league.externalId)
+      ) {
         const hasDetails = await fixtureHasMatchDetails(client, fixtureId);
         if (!hasDetails) {
           await ingestMatchDetailsFromProvider(domain.externalId);

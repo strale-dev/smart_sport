@@ -13,6 +13,7 @@ import {
 } from "@/components/match/MatchAnalyticsCard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatFixtureKickoffDateTime } from "@/lib/fixtures/display";
+import { resolveMatchFixtureContext } from "@/lib/match/fixture-context";
 import { captureClientEvent } from "@/lib/posthog/client";
 import { POSTHOG_EVENTS } from "@/lib/posthog/events";
 import type { Fixture, H2HScope, H2HSummary } from "@/types/domain";
@@ -34,6 +35,11 @@ export function H2HCard({ fixture, h2hAll, h2hSameComp }: H2HCardProps) {
   const timeZone = useViewerTimezone();
   const [scope, setScope] = useState<H2HScope>("ALL");
   const summary = scope === "ALL" ? h2hAll : h2hSameComp;
+  const h2hSameCompLabel = resolveMatchFixtureContext({
+    leagueExternalId: fixture.league.externalId,
+    homeTeam: fixture.homeTeam,
+    awayTeam: fixture.awayTeam,
+  }).h2hSameCompLabel;
 
   function handleScopeChange(value: string) {
     const nextScope = value as H2HScope;
@@ -52,7 +58,7 @@ export function H2HCard({ fixture, h2hAll, h2hSameComp }: H2HCardProps) {
           <Tabs value={scope} onValueChange={handleScopeChange}>
             <TabsList>
               <TabsTrigger value="ALL">All comps</TabsTrigger>
-              <TabsTrigger value="SAME_COMP">Same league</TabsTrigger>
+              <TabsTrigger value="SAME_COMP">{h2hSameCompLabel}</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>

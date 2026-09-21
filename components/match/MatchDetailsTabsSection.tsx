@@ -9,6 +9,7 @@ type MatchDetailsTabsSectionProps = {
   fixtureId: number;
   homeTeam: Pick<TeamRef, "name" | "code">;
   awayTeam: Pick<TeamRef, "name" | "code">;
+  showStandingsTab?: boolean;
   overview: ReactNode;
   lineups: ReactNode;
   statistics: ReactNode;
@@ -34,6 +35,7 @@ export function MatchDetailsTabsSection({
   fixtureId,
   homeTeam,
   awayTeam,
+  showStandingsTab,
   overview,
   lineups,
   statistics,
@@ -46,6 +48,7 @@ export function MatchDetailsTabsSection({
         fixtureId={fixtureId}
         homeTeam={homeTeam}
         awayTeam={awayTeam}
+        showStandingsTab={showStandingsTab}
         overview={overview}
         lineups={lineups}
         statistics={statistics}

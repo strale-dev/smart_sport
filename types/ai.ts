@@ -16,14 +16,20 @@ export type PrematchAiContext = {
   league: {
     externalId: number;
     name: string;
+    category: string | null;
+    tier: number | null;
+    isInternational: boolean;
+    supportsStandings: boolean;
   };
   homeTeam: {
     externalId: number;
     name: string;
+    isNational: boolean;
   };
   awayTeam: {
     externalId: number;
     name: string;
+    isNational: boolean;
   };
   lineupsState: LineupsContextState;
   modelVersion: string;
@@ -86,14 +92,20 @@ export type LiveAiContext = {
   league: {
     externalId: number;
     name: string;
+    category: string | null;
+    tier: number | null;
+    isInternational: boolean;
+    supportsStandings: boolean;
   };
   homeTeam: {
     externalId: number;
     name: string;
+    isNational: boolean;
   };
   awayTeam: {
     externalId: number;
     name: string;
+    isNational: boolean;
   };
   modelVersion: string;
   promptVersion: string;

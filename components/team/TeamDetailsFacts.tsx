@@ -18,6 +18,10 @@ function formatVenue(team: Team): string | null {
 }
 
 export function TeamDetailsFacts({ team }: TeamDetailsFactsProps) {
+  const detailsTitle = team.isNational ? "Team details" : "Club details";
+  const emptyDetailsCopy = team.isNational
+    ? "Extra national team details are not available yet."
+    : "Extra club details are not available yet.";
   const venueLabel = formatVenue(team);
   const facts = [
     team.country?.name ? { label: "Country", value: team.country.name } : null,
@@ -38,12 +42,10 @@ export function TeamDetailsFacts({ team }: TeamDetailsFactsProps) {
     return (
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Club details</CardTitle>
+          <CardTitle>{detailsTitle}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-sm">
-            Extra club details are not available yet.
-          </p>
+          <p className="text-muted-foreground text-sm">{emptyDetailsCopy}</p>
         </CardContent>
       </Card>
     );
@@ -52,7 +54,7 @@ export function TeamDetailsFacts({ team }: TeamDetailsFactsProps) {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Club details</CardTitle>
+        <CardTitle>{detailsTitle}</CardTitle>
       </CardHeader>
       <CardContent>
         <dl className="grid gap-3 sm:grid-cols-2">

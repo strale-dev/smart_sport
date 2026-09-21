@@ -3,6 +3,10 @@ import { TrophyIcon } from "lucide-react";
 import { EmptyState } from "@/components/common/EmptyState";
 import { MatchEmptyStateFromFixture } from "@/components/match/MatchEmptyState";
 import { buildFixturesHref } from "@/lib/fixtures/url";
+import {
+  resolveMatchFixtureContext,
+  standingsUnavailableCopy,
+} from "@/lib/match/fixture-context";
 import type { FixtureStatus } from "@/types/domain";
 import {
   MatchAnalyticsCard,
@@ -27,6 +31,8 @@ type MatchStandingsTableProps = {
   fixtureStatus?: FixtureStatus;
   homeTeamName?: string;
   awayTeamName?: string;
+  homeTeamIsNational?: boolean;
+  awayTeamIsNational?: boolean;
 };
 
 function isHighlightedRow(
@@ -70,10 +76,12 @@ export function MatchStandingsTable(props: MatchStandingsTableProps) {
             homeTeam: {
               externalId: props.homeTeamExternalId,
               name: props.homeTeamName,
+              isNational: props.homeTeamIsNational ?? false,
             },
             awayTeam: {
               externalId: props.awayTeamExternalId,
               name: props.awayTeamName,
+              isNational: props.awayTeamIsNational ?? false,
             },
             league: {
               externalId: props.leagueExternalId,
@@ -81,6 +89,26 @@ export function MatchStandingsTable(props: MatchStandingsTableProps) {
             },
           }
         : null;
+
+    const matchCtx =
+      props.leagueExternalId != null
+        ? resolveMatchFixtureContext({
+            leagueExternalId: props.leagueExternalId,
+            homeTeam: {
+              isNational: props.homeTeamIsNational ?? false,
+            },
+            awayTeam: {
+              isNational: props.awayTeamIsNational ?? false,
+            },
+          })
+        : null;
+    const fallbackCopy =
+      matchCtx != null
+        ? standingsUnavailableCopy(leagueName, matchCtx)
+        : {
+            title: "Standings not available yet",
+            description: `We do not have a standings table for ${leagueName} right now.`,
+          };
 
     return (
       <MatchAnalyticsCard>
@@ -97,8 +125,8 @@ export function MatchStandingsTable(props: MatchStandingsTableProps) {
           ) : (
             <EmptyState
               icon={TrophyIcon}
-              title="League table not available yet"
-              description={`We do not have a standings table for ${leagueName} right now.`}
+              title={fallbackCopy.title}
+              description={fallbackCopy.description}
               actions={
                 props.leagueExternalId != null
                   ? [

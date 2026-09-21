@@ -2,6 +2,10 @@ import { buildFixturesHref } from "@/lib/fixtures/url";
 import { buildMatchHref } from "@/lib/fixtures/match-url";
 import { getMatchOverviewRenderMode } from "@/lib/fixtures/overview-layout";
 import { buildLeagueHref } from "@/lib/leagues/url";
+import {
+  resolveMatchFixtureContext,
+  standingsUnavailableCopy,
+} from "@/lib/match/fixture-context";
 import { buildTeamHref } from "@/lib/teams/url";
 import type { FixtureStatus } from "@/types/domain";
 
@@ -27,6 +31,7 @@ export type MatchEmptyStateId =
 export type MatchEmptyTeamRef = {
   externalId: number;
   name: string;
+  isNational?: boolean;
 };
 
 export type MatchEmptyContext = {
@@ -137,28 +142,49 @@ export function getMatchEmptyState(
 ): MatchEmptyStateResult {
   const phase = getFixtureEmptyPhase(context.status);
   const { fixtureId, homeTeam, awayTeam, league } = context;
+  const matchCtx = resolveMatchFixtureContext({
+    leagueExternalId: league.externalId,
+    homeTeam: { isNational: homeTeam.isNational ?? false },
+    awayTeam: { isNational: awayTeam.isNational ?? false },
+  });
 
   switch (id) {
     case "lineups":
     case "lineupTeaser":
       return lineupsEmpty(phase, context);
 
-    case "standings":
+    case "standings": {
+      const copy = standingsUnavailableCopy(league.name, matchCtx);
+      const actions: MatchEmptyAction[] = matchCtx.supportsStandings
+        ? [
+            {
+              label: `Open ${league.name}`,
+              href: buildLeagueHref(league.externalId, { tab: "standings" }),
+            },
+            {
+              label: "Browse fixtures",
+              href: buildFixturesHref({}, { league: league.externalId }),
+              variant: "outline",
+            },
+          ]
+        : [
+            {
+              label: "Form & head-to-head",
+              href: buildMatchHref(fixtureId, "matches"),
+            },
+            {
+              label: "Browse fixtures",
+              href: buildFixturesHref({}, { league: league.externalId }),
+              variant: "outline",
+            },
+          ];
+
       return {
-        title: "League table not available yet",
-        description: `We do not have a standings table for ${league.name} right now. Check the league page or try again later.`,
-        actions: [
-          {
-            label: `Open ${league.name}`,
-            href: buildLeagueHref(league.externalId, { tab: "standings" }),
-          },
-          {
-            label: "Browse fixtures",
-            href: buildFixturesHref({}, { league: league.externalId }),
-            variant: "outline",
-          },
-        ],
+        title: copy.title,
+        description: copy.description,
+        actions,
       };
+    }
 
     case "timeline":
       if (phase === "pre") {
@@ -326,7 +352,7 @@ export function getMatchEmptyState(
 
     case "relatedFixtures":
       return {
-        title: "No other fixtures for these clubs",
+        title: `No other fixtures for these ${matchCtx.teamNounPlural}`,
         description:
           "We do not have additional matches for these teams in the current window.",
         actions: [

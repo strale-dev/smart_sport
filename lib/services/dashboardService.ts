@@ -1,4 +1,5 @@
 import {
+  createEmptyDashboardFollowPoolSets,
   filterDashboardRankingCandidates,
   type DashboardPoolContext,
 } from "@/lib/competitions/dashboard-pool";
@@ -21,6 +22,7 @@ import {
 } from "@/lib/fixtures/display";
 import { filterAllowlistedFixtures } from "@/lib/fixtures/navigable";
 import {
+  readDashboardFollowPoolIdsForUser,
   readH2hInterestForFixtures,
   readLeaguePrestigeMap,
   readRecentPredictionChanges,
@@ -94,12 +96,20 @@ async function buildImportanceContext(
 }
 
 function toDashboardPoolContext(
-  context: ImportanceContext
+  context: ImportanceContext,
+  followPoolIds: {
+    followedTeamProviderIds: ReadonlySet<number>;
+    followedLeagueProviderIds: ReadonlySet<number>;
+    favoriteFixtureProviderIds: ReadonlySet<number>;
+  }
 ): DashboardPoolContext {
   return {
     preferredLeagueExternalId: context.preferredLeagueExternalId,
     prestigeByLeagueId: context.prestigeByLeagueId,
     standingsByFixtureId: context.standingsByFixtureId,
+    followedTeamProviderIds: followPoolIds.followedTeamProviderIds,
+    followedLeagueProviderIds: followPoolIds.followedLeagueProviderIds,
+    favoriteFixtureProviderIds: followPoolIds.favoriteFixtureProviderIds,
   };
 }
 
@@ -119,10 +129,12 @@ export async function getDashboardData(
   options: {
     now?: Date;
     preferredLeagueExternalId?: number | null;
+    userId?: string | null;
   } = {}
 ): Promise<DashboardData> {
   const now = options.now ?? new Date();
   const preferredLeagueExternalId = options.preferredLeagueExternalId ?? null;
+  const userId = options.userId ?? null;
   const today = utcDateString(now);
   const yesterday = addUtcDays(today, -1);
   const tomorrow = addUtcDays(today, 1);
@@ -131,11 +143,22 @@ export async function getDashboardData(
   const rangeFrom = yesterday;
   const rangeToExclusive = addUtcDays(today, UPCOMING_DAYS + 1);
 
-  const [rangeResult, liveResult, aiInsights] = await Promise.all([
-    getMatchesInRange(rangeFrom, rangeToExclusive),
-    listLiveFixtures(),
-    readRecentPredictionChanges(5).catch(() => [] as PredictionChangeSummary[]),
-  ]);
+  const followPoolPromise = userId
+    ? readDashboardFollowPoolIdsForUser(userId).catch((error) => {
+        console.warn("[dashboard] follow pool lookup failed:", error);
+        return createEmptyDashboardFollowPoolSets();
+      })
+    : Promise.resolve(createEmptyDashboardFollowPoolSets());
+
+  const [rangeResult, liveResult, aiInsights, followPoolIds] =
+    await Promise.all([
+      getMatchesInRange(rangeFrom, rangeToExclusive),
+      listLiveFixtures(),
+      readRecentPredictionChanges(5).catch(
+        () => [] as PredictionChangeSummary[]
+      ),
+      followPoolPromise,
+    ]);
 
   const rangeFixtures = dedupeFixtures(rangeResult.data);
   const todayFixtures = fixturesOnUtcDate(rangeFixtures, today);
@@ -183,7 +206,7 @@ export async function getDashboardData(
     now,
     preferredLeagueExternalId
   );
-  const poolContext = toDashboardPoolContext(context);
+  const poolContext = toDashboardPoolContext(context, followPoolIds);
   const usedIds = new Set<number>();
 
   const featured =

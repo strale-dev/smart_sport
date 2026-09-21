@@ -3,6 +3,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { buildCompetitionRegistry } from "@/lib/competitions/build-registry";
+import {
+  mergeProbedCapabilitiesIntoRegistry,
+  type CompetitionCapabilitiesProbeFile,
+} from "@/lib/competitions/merge-probed-capabilities";
 import type { RawRegistryLeagueEntry } from "@/lib/competitions/types";
 import { hasApiFootballConfig } from "@/lib/env";
 
@@ -13,6 +17,10 @@ const rootDir = path.resolve(
 const outputPath = path.join(
   rootDir,
   "lib/competitions/registry.generated.json"
+);
+const probeSidecarPath = path.join(
+  rootDir,
+  "lib/competitions/registry.capabilities-probed.json"
 );
 
 async function fetchLeaguesFromApi(): Promise<RawRegistryLeagueEntry[]> {
@@ -31,7 +39,14 @@ async function main() {
 
   console.log("Fetching competitions from API-Football...");
   const apiEntries = await fetchLeaguesFromApi();
-  const registry = buildCompetitionRegistry(apiEntries);
+  let registry = buildCompetitionRegistry(apiEntries);
+
+  if (fs.existsSync(probeSidecarPath)) {
+    const probeFile = JSON.parse(
+      fs.readFileSync(probeSidecarPath, "utf8")
+    ) as CompetitionCapabilitiesProbeFile;
+    registry = mergeProbedCapabilitiesIntoRegistry(registry, probeFile);
+  }
 
   fs.writeFileSync(
     outputPath,

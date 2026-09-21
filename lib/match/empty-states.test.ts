@@ -36,6 +36,22 @@ describe("getMatchEmptyState", () => {
     expect(state.actions?.[1]?.href).toBe("/fixtures?league=39");
   });
 
+  it("standings for unsupported international competitions links matches tab", () => {
+    const state = getMatchEmptyState(
+      "standings",
+      buildMatchEmptyContext({
+        externalId: 9001,
+        status: "NS",
+        homeTeam: { externalId: 1, name: "Serbia", isNational: true },
+        awayTeam: { externalId: 2, name: "England", isNational: true },
+        league: { externalId: 10, name: "Friendlies" },
+      })
+    );
+    expect(state.title).toContain("not available");
+    expect(state.actions?.[0]?.href).toContain("tab=matches");
+    expect(state.actions?.[0]?.href).not.toContain("standings");
+  });
+
   it("timeline varies by phase", () => {
     const pre = getMatchEmptyState("timeline", baseContext);
     expect(pre.title).toBe("Kickoff has not started");

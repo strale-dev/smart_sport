@@ -27,7 +27,10 @@ export default async function DashboardPage() {
     : null;
 
   const [data, followedData] = await Promise.all([
-    getDashboardData({ preferredLeagueExternalId: preferredLeagueProviderId }),
+    getDashboardData({
+      preferredLeagueExternalId: preferredLeagueProviderId,
+      userId: user?.id ?? null,
+    }),
     user
       ? listUserFollows(user.id).catch(() => ({
           teams: [],

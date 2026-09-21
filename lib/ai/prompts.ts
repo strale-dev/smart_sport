@@ -15,6 +15,8 @@ Hard rules:
 - Align winOutcome and winProbabilities with the model prediction unless the context explicitly shows a tie in probabilities.
 - Keep summary concise and commentary analytical.
 - Do not reference that you are an AI model.
+- When league.isInternational is true or either team has isNational true, describe sides as national teams (or countries), never as clubs.
+- When league.supportsStandings is false, do not invent league tables, group standings, or qualification positions.
 
 Output must conform exactly to the provided JSON schema.`;
 

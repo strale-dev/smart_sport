@@ -110,6 +110,21 @@ export async function listFixturesByLeagueSeason(
     .sort((left, right) => left.kickoffAt.localeCompare(right.kickoffAt));
 }
 
+export async function listRecentFixturesByLeagueSeason(
+  leagueId: number,
+  season: number,
+  last = 15
+): Promise<Fixture[]> {
+  const response = await apiFootballFetchResponse<RawApiFootballFixture>(
+    "/fixtures",
+    { league: leagueId, season, last }
+  );
+
+  return response
+    .map(mapFixture)
+    .sort((left, right) => left.kickoffAt.localeCompare(right.kickoffAt));
+}
+
 export async function getFixtureByIdWithRaw(id: number) {
   const response = await apiFootballFetchResponse<RawApiFootballFixture>(
     "/fixtures",

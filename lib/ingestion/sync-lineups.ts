@@ -1,5 +1,8 @@
+import { competitionSupportsLineups } from "@/lib/competitions/capabilities";
+import { findCompetition } from "@/lib/competitions/index";
 import { getIngestionConfig } from "@/lib/ingestion/config";
 import { ingestLineupsFromProvider } from "@/lib/ingestion/ingest-lineups";
+import { shouldRunNonCriticalIngestion } from "@/lib/ingestion/schedule";
 import { fixtureNeedsLineupSync } from "@/lib/ingestion/match-details-upsert";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -18,6 +21,10 @@ export type SyncLineupsResult = {
     skippedComplete: number;
     errors: number;
     apiRequests: number;
+    leaguesRequested: number;
+    leaguesWithLineups: number;
+    leaguesSkippedNoLineups: number;
+    nonCriticalSkipped?: boolean;
   };
 };
 
@@ -34,16 +41,42 @@ export async function syncLineups(): Promise<SyncLineupsResult> {
     };
   }
 
+  if (!(await shouldRunNonCriticalIngestion())) {
+    return {
+      ok: true,
+      job: "sync-lineups",
+      skipped: true,
+      reason: "API quota below non-critical ingestion threshold.",
+      stats: {
+        candidates: 0,
+        synced: 0,
+        skippedComplete: 0,
+        errors: 0,
+        apiRequests: 0,
+        leaguesRequested: config.leagueProviderIds.length,
+        leaguesWithLineups: 0,
+        leaguesSkippedNoLineups: 0,
+        nonCriticalSkipped: true,
+      },
+    };
+  }
+
   const client = createAdminClient();
   const batchSize = config.lineupsSyncBatch;
   const now = Date.now();
   const windowEnd = new Date(now + LINEUP_SYNC_WINDOW_MS).toISOString();
   const windowStart = new Date(now).toISOString();
 
+  const lineupLeagueProviderIds = config.leagueProviderIds.filter((id) =>
+    competitionSupportsLineups(findCompetition(id))
+  );
+  const leaguesSkippedNoLineups =
+    config.leagueProviderIds.length - lineupLeagueProviderIds.length;
+
   const { data: leagues, error: leaguesError } = await client
     .from("leagues")
     .select("id")
-    .in("provider_id", [...config.leagueProviderIds]);
+    .in("provider_id", [...lineupLeagueProviderIds]);
 
   if (leaguesError) {
     throw new Error(`Failed to load leagues: ${leaguesError.message}`);
@@ -61,6 +94,9 @@ export async function syncLineups(): Promise<SyncLineupsResult> {
         skippedComplete: 0,
         errors: 0,
         apiRequests: 0,
+        leaguesRequested: config.leagueProviderIds.length,
+        leaguesWithLineups: lineupLeagueProviderIds.length,
+        leaguesSkippedNoLineups,
       },
     };
   }
@@ -127,6 +163,9 @@ export async function syncLineups(): Promise<SyncLineupsResult> {
       skippedComplete,
       errors,
       apiRequests,
+      leaguesRequested: config.leagueProviderIds.length,
+      leaguesWithLineups: lineupLeagueProviderIds.length,
+      leaguesSkippedNoLineups,
     },
   };
 }

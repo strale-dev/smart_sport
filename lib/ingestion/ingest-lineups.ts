@@ -1,6 +1,9 @@
+import { competitionSupportsLineups } from "@/lib/competitions/capabilities";
+import { findCompetition } from "@/lib/competitions/index";
 import { getFixtureLineups as getFixtureLineupsEndpoint } from "@/lib/api-football/endpoints/fixtures";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import {
+  getFixtureLeagueProviderId,
   getFixtureUuidByProviderId,
   upsertLineups,
 } from "@/lib/ingestion/match-details-upsert";
@@ -32,6 +35,22 @@ export async function ingestLineupsFromProvider(
       fixtureProviderId,
       stats: { lineups: 0, apiRequests: 0 },
       reason: "Fixture not found in Postgres",
+    };
+  }
+
+  const leagueProviderId = await getFixtureLeagueProviderId(
+    client,
+    fixtureProviderId
+  );
+  if (
+    leagueProviderId != null &&
+    !competitionSupportsLineups(findCompetition(leagueProviderId))
+  ) {
+    return {
+      ok: true,
+      fixtureProviderId,
+      stats: { lineups: 0, apiRequests: 0 },
+      reason: "Lineups not supported for competition",
     };
   }
 

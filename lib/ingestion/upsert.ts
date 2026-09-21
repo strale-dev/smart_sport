@@ -560,6 +560,92 @@ export async function countAllowlistFixturesForUtcDate(
   };
 }
 
+export type StandingsScheduleFixtureCounts = {
+  upcomingFixtureCount: number;
+  liveOrTodayFixtureCount: number;
+};
+
+const STANDINGS_SCHEDULE_UPCOMING_STATUSES = new Set(["NS", "TBD"]);
+const STANDINGS_SCHEDULE_LIVE_STATUSES = new Set([
+  "1H",
+  "HT",
+  "2H",
+  "ET",
+  "BT",
+  "P",
+  "LIVE",
+  "SUSP",
+  "INT",
+]);
+
+function utcDayStartIso(anchor = new Date()): string {
+  return `${anchor.toISOString().slice(0, 10)}T00:00:00.000Z`;
+}
+
+function utcDayEndIso(anchor = new Date()): string {
+  const end = new Date(utcDayStartIso(anchor));
+  end.setUTCDate(end.getUTCDate() + 1);
+  return end.toISOString();
+}
+
+export async function readStandingsScheduleFixtureCountsByLeagueIds(
+  client: AdminClient,
+  leagueIds: string[],
+  anchor = new Date()
+): Promise<Map<string, StandingsScheduleFixtureCounts>> {
+  const countsByLeague = new Map<string, StandingsScheduleFixtureCounts>();
+  if (leagueIds.length === 0) {
+    return countsByLeague;
+  }
+
+  for (const leagueId of leagueIds) {
+    countsByLeague.set(leagueId, {
+      upcomingFixtureCount: 0,
+      liveOrTodayFixtureCount: 0,
+    });
+  }
+
+  const todayStart = utcDayStartIso(anchor);
+  const todayEnd = utcDayEndIso(anchor);
+  const nowIso = anchor.toISOString();
+
+  const { data, error } = await client
+    .from("fixtures")
+    .select("league_id, status, kickoff_at, is_live")
+    .in("league_id", leagueIds)
+    .or(`is_live.eq.true,kickoff_at.gte.${todayStart}`);
+
+  if (error) {
+    throw new Error(
+      `Failed to read standings schedule fixture counts: ${error.message}`
+    );
+  }
+
+  for (const row of data ?? []) {
+    const bucket = countsByLeague.get(row.league_id);
+    if (!bucket) {
+      continue;
+    }
+
+    const isUpcoming =
+      STANDINGS_SCHEDULE_UPCOMING_STATUSES.has(row.status) &&
+      row.kickoff_at >= nowIso;
+    if (isUpcoming) {
+      bucket.upcomingFixtureCount += 1;
+    }
+
+    const isLiveOrToday =
+      row.is_live === true ||
+      STANDINGS_SCHEDULE_LIVE_STATUSES.has(row.status) ||
+      (row.kickoff_at >= todayStart && row.kickoff_at < todayEnd);
+    if (isLiveOrToday) {
+      bucket.liveOrTodayFixtureCount += 1;
+    }
+  }
+
+  return countsByLeague;
+}
+
 export async function isStandingsFreshForLeague(
   client: AdminClient,
   leagueId: string,

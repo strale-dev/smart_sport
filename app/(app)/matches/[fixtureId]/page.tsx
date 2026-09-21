@@ -17,6 +17,7 @@ import { MatchOverviewPanel } from "@/components/match/panels/MatchOverviewPanel
 import { MatchStandingsPanel } from "@/components/match/panels/MatchStandingsPanel";
 import { MatchTabPanelFallback } from "@/components/match/panels/MatchTabPanelFallback";
 import { parseFixtureId } from "@/lib/fixtures/ids";
+import { resolveMatchFixtureContext } from "@/lib/match/fixture-context";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import {
   getFixtureById,
@@ -70,6 +71,11 @@ export default async function MatchPage({ params }: MatchPageProps) {
   }
 
   const returnTo = `/matches/${id}`;
+  const matchContext = resolveMatchFixtureContext({
+    leagueExternalId: fixture.league.externalId,
+    homeTeam: fixture.homeTeam,
+    awayTeam: fixture.awayTeam,
+  });
   const isGuest = !user;
   const initialFavorited = user
     ? await isFixtureFavorited(user.id, id).catch(() => false)
@@ -121,6 +127,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
           fixtureId={fixture.externalId}
           homeTeam={fixture.homeTeam}
           awayTeam={fixture.awayTeam}
+          showStandingsTab={matchContext.supportsStandings}
           overview={
             <Suspense fallback={<MatchTabPanelFallback />}>
               <MatchOverviewPanel

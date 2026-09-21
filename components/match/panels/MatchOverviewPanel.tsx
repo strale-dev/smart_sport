@@ -11,6 +11,7 @@ import {
   readStandingsFromDb,
 } from "@/lib/ingestion/db-read";
 import { hydrateMatchOverviewFromProvider } from "@/lib/ingestion/ensure-match-overview";
+import { resolveMatchFixtureContext } from "@/lib/match/fixture-context";
 import { getUnavailableOverviewCards } from "@/lib/match/overview-block-status";
 import { pickPlayerOfTheMatch } from "@/lib/match/pick-player-of-the-match";
 import { computeMatchMomentum } from "@/lib/momentum/computeMatchMomentum";
@@ -37,7 +38,6 @@ function emptyH2hSummary(fixture: Fixture): H2HSummary {
 
 export async function MatchOverviewPanel({
   fixture,
-  liveSnapshot: _liveSnapshot,
   returnTo,
 }: MatchOverviewPanelProps) {
   const fixtureId = fixture.externalId;
@@ -47,6 +47,11 @@ export async function MatchOverviewPanel({
   const unavailableCards = getUnavailableOverviewCards(hydrateReport);
 
   const needsPreExtras = renderMode === "pre";
+  const matchCtx = resolveMatchFixtureContext({
+    leagueExternalId: fixture.league.externalId,
+    homeTeam: fixture.homeTeam,
+    awayTeam: fixture.awayTeam,
+  });
   const needsFinishedPlayers = renderMode === "finished";
   const needsLineupPerformances =
     renderMode === "finished" || renderMode === "live";
@@ -83,7 +88,7 @@ export async function MatchOverviewPanel({
     getPlayersToWatch(fixture),
     readLineupsFromDb(fixtureId),
     readFixtureSidelinedFromDb(fixtureId),
-    needsPreExtras && fixture.seasonYear
+    needsPreExtras && fixture.seasonYear && matchCtx.supportsStandings
       ? readStandingsFromDb(fixture.league.externalId, fixture.seasonYear)
       : Promise.resolve([] as StandingsGroup[]),
     needsFinishedPlayers

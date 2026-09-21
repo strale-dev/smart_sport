@@ -1,8 +1,11 @@
-import { getCompetitionTier } from "@/lib/competitions/index";
+import { competitionSupportsStandings } from "@/lib/competitions/capabilities";
+import { findCompetition, getCompetitionTier } from "@/lib/competitions/index";
 import { getStandings } from "@/lib/api-football/endpoints/leagues";
 import { getIngestionConfig } from "@/lib/ingestion/config";
 import {
   pickStandingsLeagueIds,
+  rankStandingsCandidates,
+  resolveStandingsMaxApiRequests,
   shouldRunNonCriticalIngestion,
   type StandingsScheduleInput,
 } from "@/lib/ingestion/schedule";
@@ -11,6 +14,7 @@ import {
   getCurrentSeasonForLeague,
   getLeagueUuidByProviderId,
   isStandingsFreshForLeague,
+  readStandingsScheduleFixtureCountsByLeagueIds,
   upsertStandingRow,
   upsertTeamRef,
 } from "@/lib/ingestion/upsert";
@@ -23,6 +27,10 @@ export async function ingestStandingsForLeagueSeason(
   leagueProviderId: number,
   seasonYear: number
 ): Promise<void> {
+  if (!competitionSupportsStandings(findCompetition(leagueProviderId))) {
+    return;
+  }
+
   const client = createAdminClient();
   const leagueId = await getLeagueUuidByProviderId(client, leagueProviderId);
   if (!leagueId) {
@@ -97,6 +105,15 @@ export type SyncStandingsResult = {
     leaguesSkipped: number;
     apiRequests: number;
     rowsUpserted: number;
+    nonCriticalSkipped?: boolean;
+    schedule?: {
+      maxApiRequests: number;
+      staleCandidates: number;
+      rankedEligible: number;
+      selected: number;
+      cappedByQuota: number;
+      topScores: Array<{ providerId: number; score: number }>;
+    };
   };
 };
 
@@ -118,11 +135,14 @@ export async function syncStandings(): Promise<SyncStandingsResult> {
         leaguesSkipped: config.leagueProviderIds.length,
         apiRequests: 0,
         rowsUpserted: 0,
+        nonCriticalSkipped: true,
       },
     };
   }
 
   const scheduleCandidates: StandingsScheduleInput[] = [];
+  const staleLeagueIds: string[] = [];
+  const leagueUuidByProviderId = new Map<number, string>();
 
   for (const leagueProviderId of config.leagueProviderIds) {
     const leagueId = await getLeagueUuidByProviderId(client, leagueProviderId);
@@ -148,6 +168,8 @@ export async function syncStandings(): Promise<SyncStandingsResult> {
       continue;
     }
 
+    staleLeagueIds.push(leagueId);
+    leagueUuidByProviderId.set(leagueProviderId, leagueId);
     scheduleCandidates.push({
       leagueProviderId,
       tier: getCompetitionTier(leagueProviderId),
@@ -157,8 +179,35 @@ export async function syncStandings(): Promise<SyncStandingsResult> {
     });
   }
 
-  const selectedLeagueIds = pickStandingsLeagueIds(scheduleCandidates);
+  const fixtureCountsByLeague =
+    await readStandingsScheduleFixtureCountsByLeagueIds(client, staleLeagueIds);
+
+  for (const candidate of scheduleCandidates) {
+    const leagueId = leagueUuidByProviderId.get(candidate.leagueProviderId);
+    if (!leagueId) {
+      continue;
+    }
+
+    const counts = fixtureCountsByLeague.get(leagueId);
+    candidate.upcomingFixtureCount = counts?.upcomingFixtureCount ?? 0;
+    candidate.liveOrTodayFixtureCount = counts?.liveOrTodayFixtureCount ?? 0;
+  }
+
+  const maxApiRequests = resolveStandingsMaxApiRequests();
+  const ranked = rankStandingsCandidates(scheduleCandidates);
+  const selectedLeagueIds = pickStandingsLeagueIds(scheduleCandidates, {
+    maxApiRequests,
+  });
   leaguesSkipped += scheduleCandidates.length - selectedLeagueIds.length;
+
+  const scheduleStats = {
+    maxApiRequests,
+    staleCandidates: scheduleCandidates.length,
+    rankedEligible: ranked.length,
+    selected: selectedLeagueIds.length,
+    cappedByQuota: Math.max(0, ranked.length - selectedLeagueIds.length),
+    topScores: ranked.slice(0, 5),
+  };
 
   for (const leagueProviderId of selectedLeagueIds) {
     const leagueId = await getLeagueUuidByProviderId(client, leagueProviderId);
@@ -219,6 +268,7 @@ export async function syncStandings(): Promise<SyncStandingsResult> {
       leaguesSkipped,
       apiRequests,
       rowsUpserted,
+      schedule: scheduleStats,
     },
   };
 }

@@ -9,11 +9,6 @@ export function defaultCapabilitiesFor(
   category: CompetitionCategory
 ): CompetitionCapabilities {
   const isLeague = providerType === "League";
-  const nationalOrCup =
-    category === "national_team" ||
-    category === "continental_club" ||
-    category === "international_other" ||
-    providerType === "Cup";
 
   return {
     fixtures: true,
@@ -43,4 +38,22 @@ export function competitionSupportsLineups(
   competition: Pick<CompetitionDefinition, "capabilities"> | null | undefined
 ): boolean {
   return competition?.capabilities.lineups ?? true;
+}
+
+export function competitionSupportsFixtureEvents(
+  competition: Pick<CompetitionDefinition, "capabilities"> | null | undefined
+): boolean {
+  return competition?.capabilities.fixtureEvents ?? true;
+}
+
+export function competitionSupportsFixtureStatistics(
+  competition: Pick<CompetitionDefinition, "capabilities"> | null | undefined
+): boolean {
+  return competition?.capabilities.fixtureStatistics ?? true;
+}
+
+export function competitionSupportsPlayerPerformances(
+  competition: Pick<CompetitionDefinition, "capabilities"> | null | undefined
+): boolean {
+  return competition?.capabilities.fixtureStatistics ?? true;
 }

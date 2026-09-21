@@ -47,6 +47,25 @@ export async function getFixtureUuidByProviderId(
   return data?.id ?? null;
 }
 
+export async function getFixtureLeagueProviderId(
+  client: AdminClient,
+  fixtureProviderId: number
+): Promise<number | null> {
+  const { data, error } = await client
+    .from("fixtures")
+    .select("leagues ( provider_id )")
+    .eq("provider_id", fixtureProviderId)
+    .maybeSingle();
+
+  throwIfError(
+    error,
+    `Failed to resolve league for fixture ${fixtureProviderId}`
+  );
+
+  const league = data?.leagues as { provider_id: number } | null | undefined;
+  return league?.provider_id ?? null;
+}
+
 export async function getTeamUuidByProviderId(
   client: AdminClient,
   providerId: number

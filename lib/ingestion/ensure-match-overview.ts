@@ -1,4 +1,9 @@
 import {
+  competitionSupportsLineups,
+  competitionSupportsStandings,
+} from "@/lib/competitions/capabilities";
+import { findCompetition } from "@/lib/competitions/index";
+import {
   listHeadToHeadFixturesRaw,
   listTeamLastFixturesRaw,
 } from "@/lib/api-football/endpoints/fixtures";
@@ -293,7 +298,10 @@ async function hydrateUnlocked(
 
   // Independent of match details: finished and live fixtures need lineups too,
   // and the details call above deliberately skips them.
-  if (shouldIngestLineups({ hasLineups, kickoffAt: fixture.kickoffAt })) {
+  if (
+    shouldIngestLineups({ hasLineups, kickoffAt: fixture.kickoffAt }) &&
+    competitionSupportsLineups(findCompetition(fixture.league.externalId))
+  ) {
     try {
       await ingestLineupsFromProvider(fixture.externalId);
     } catch (error) {
@@ -317,7 +325,10 @@ async function hydrateUnlocked(
   }
 
   if (renderMode === "pre") {
-    if (fixture.seasonYear) {
+    if (
+      fixture.seasonYear &&
+      competitionSupportsStandings(findCompetition(fixture.league.externalId))
+    ) {
       try {
         await ingestStandingsForLeagueSeason(
           fixture.league.externalId,

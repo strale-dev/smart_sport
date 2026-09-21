@@ -5,6 +5,7 @@ import {
   readFixtureByProviderIdFromDb,
   readLineupsFromDb,
 } from "@/lib/ingestion/db-read";
+import { resolveMatchFixtureContext } from "@/lib/match/fixture-context";
 import { getH2H, getRecentForm } from "@/lib/services/analyticsService";
 import type {
   LiveAiContext,
@@ -79,6 +80,11 @@ export async function buildPrematchContext(
 
   const lineupsState = resolveLineupsState(lineups);
   const promptVersion = getAiPromptVersion();
+  const matchCtx = resolveMatchFixtureContext({
+    leagueExternalId: fixture.league.externalId,
+    homeTeam: fixture.homeTeam,
+    awayTeam: fixture.awayTeam,
+  });
 
   const context: PrematchAiContext = {
     fixtureExternalId,
@@ -88,14 +94,20 @@ export async function buildPrematchContext(
     league: {
       externalId: fixture.league.externalId,
       name: sanitizeProviderText(fixture.league.name) ?? "Unknown league",
+      category: matchCtx.category,
+      tier: matchCtx.tier,
+      isInternational: matchCtx.isInternational,
+      supportsStandings: matchCtx.supportsStandings,
     },
     homeTeam: {
       externalId: fixture.homeTeam.externalId,
       name: sanitizeProviderText(fixture.homeTeam.name) ?? "Home team",
+      isNational: fixture.homeTeam.isNational,
     },
     awayTeam: {
       externalId: fixture.awayTeam.externalId,
       name: sanitizeProviderText(fixture.awayTeam.name) ?? "Away team",
+      isNational: fixture.awayTeam.isNational,
     },
     lineupsState,
     modelVersion: prediction.modelVersion,
@@ -164,6 +176,15 @@ export async function buildPrematchContext(
     lineupsState: context.lineupsState,
     kickoffAt: context.kickoffAt,
     status: context.status,
+    league: context.league,
+    homeTeam: {
+      externalId: context.homeTeam.externalId,
+      isNational: context.homeTeam.isNational,
+    },
+    awayTeam: {
+      externalId: context.awayTeam.externalId,
+      isNational: context.awayTeam.isNational,
+    },
     prediction: context.prediction,
     form: context.form,
     h2h: context.h2h,
@@ -197,6 +218,11 @@ export async function buildLiveContext(input: {
   }
 
   const promptVersion = getAiPromptVersion();
+  const matchCtx = resolveMatchFixtureContext({
+    leagueExternalId: fixture.league.externalId,
+    homeTeam: fixture.homeTeam,
+    awayTeam: fixture.awayTeam,
+  });
   const context: LiveAiContext = {
     fixtureExternalId: input.fixtureExternalId,
     kickoffAt: fixture.kickoffAt,
@@ -207,14 +233,20 @@ export async function buildLiveContext(input: {
     league: {
       externalId: fixture.league.externalId,
       name: sanitizeProviderText(fixture.league.name) ?? "Unknown league",
+      category: matchCtx.category,
+      tier: matchCtx.tier,
+      isInternational: matchCtx.isInternational,
+      supportsStandings: matchCtx.supportsStandings,
     },
     homeTeam: {
       externalId: fixture.homeTeam.externalId,
       name: sanitizeProviderText(fixture.homeTeam.name) ?? "Home team",
+      isNational: fixture.homeTeam.isNational,
     },
     awayTeam: {
       externalId: fixture.awayTeam.externalId,
       name: sanitizeProviderText(fixture.awayTeam.name) ?? "Away team",
+      isNational: fixture.awayTeam.isNational,
     },
     modelVersion: input.prediction.modelVersion,
     promptVersion,
@@ -245,6 +277,15 @@ export async function buildLiveContext(input: {
     promptVersion: context.promptVersion,
     minute: context.minute,
     score: context.score,
+    league: context.league,
+    homeTeam: {
+      externalId: context.homeTeam.externalId,
+      isNational: context.homeTeam.isNational,
+    },
+    awayTeam: {
+      externalId: context.awayTeam.externalId,
+      isNational: context.awayTeam.isNational,
+    },
     meaningfulTriggers: context.meaningfulTriggers,
     prediction: context.prediction,
     liveStats: context.liveStats,

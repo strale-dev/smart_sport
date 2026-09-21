@@ -1,3 +1,4 @@
+import { getEnabledProviderIds } from "@/lib/competitions/index";
 import { getIngestionConfig } from "@/lib/ingestion/config";
 import { isAuthoritativeLivePresentation } from "@/lib/live/live-presentation";
 import { buildPlayerContributionBadges } from "@/lib/players/badges";
@@ -328,6 +329,83 @@ export async function readFollowedTeamIdsForUser(
 ): Promise<string[]> {
   const teams = await readFollowedTeamsForUser(userId);
   return teams.map((team) => team.id);
+}
+
+export type DashboardFollowPoolIds = {
+  followedTeamProviderIds: ReadonlySet<number>;
+  followedLeagueProviderIds: ReadonlySet<number>;
+  favoriteFixtureProviderIds: ReadonlySet<number>;
+};
+
+export async function readDashboardFollowPoolIdsForUser(
+  userId: string
+): Promise<DashboardFollowPoolIds> {
+  const client = createAdminClient();
+
+  const [teamsResult, leaguesResult, favoritesResult] = await Promise.all([
+    client
+      .from("follows")
+      .select("team:teams!follows_team_id_fkey(provider_id)")
+      .eq("user_id", userId)
+      .eq("object_type", "TEAM")
+      .not("team_id", "is", null),
+    client
+      .from("follows")
+      .select("league:leagues!follows_league_id_fkey(provider_id)")
+      .eq("user_id", userId)
+      .eq("object_type", "LEAGUE")
+      .not("league_id", "is", null),
+    client
+      .from("favorites")
+      .select("fixture:fixtures!favorites_fixture_id_fkey(provider_id)")
+      .eq("user_id", userId),
+  ]);
+
+  if (teamsResult.error) {
+    throw new Error(
+      `Failed to read followed teams for dashboard pool: ${teamsResult.error.message}`
+    );
+  }
+  if (leaguesResult.error) {
+    throw new Error(
+      `Failed to read followed leagues for dashboard pool: ${leaguesResult.error.message}`
+    );
+  }
+  if (favoritesResult.error) {
+    throw new Error(
+      `Failed to read favorited fixtures for dashboard pool: ${favoritesResult.error.message}`
+    );
+  }
+
+  const followedTeamProviderIds = new Set<number>();
+  for (const row of teamsResult.data ?? []) {
+    const team = Array.isArray(row.team) ? row.team[0] : row.team;
+    if (team?.provider_id != null) {
+      followedTeamProviderIds.add(team.provider_id);
+    }
+  }
+
+  const followedLeagueProviderIds = new Set<number>();
+  for (const row of leaguesResult.data ?? []) {
+    const league = Array.isArray(row.league) ? row.league[0] : row.league;
+    if (league?.provider_id != null) {
+      followedLeagueProviderIds.add(league.provider_id);
+    }
+  }
+
+  const favoriteFixtureProviderIds = new Set<number>();
+  for (const row of favoritesResult.data ?? []) {
+    const fixture = Array.isArray(row.fixture) ? row.fixture[0] : row.fixture;
+    if (fixture?.provider_id != null) {
+      favoriteFixtureProviderIds.add(fixture.provider_id);
+    }
+  }
+
+  return {
+    followedTeamProviderIds,
+    followedLeagueProviderIds,
+    favoriteFixtureProviderIds,
+  };
 }
 
 export async function readFixturesForTeamsInRangeFromDb(
@@ -1359,12 +1437,10 @@ export type FixtureStandingsInfo = {
 
 export async function readLeaguePrestigeMap(): Promise<Map<number, number>> {
   const client = createAdminClient();
-  const config = getIngestionConfig();
-
   const { data, error } = await client
     .from("leagues")
     .select("provider_id, prestige_score")
-    .in("provider_id", [...config.leagueProviderIds]);
+    .in("provider_id", getEnabledProviderIds());
 
   if (error) {
     throw new Error(`Failed to read league prestige scores: ${error.message}`);

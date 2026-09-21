@@ -41,23 +41,40 @@ export function scoreStandingsCandidate(input: StandingsScheduleInput): number {
   return score;
 }
 
-export function pickStandingsLeagueIds(
-  candidates: StandingsScheduleInput[],
-  options: StandingsScheduleOptions = {}
-): number[] {
-  const maxRequests =
-    options.maxApiRequests ??
-    Math.min(120, Math.floor(getApiFootballDailyLimit() * 0.02));
+export type StandingsScheduleRank = {
+  providerId: number;
+  score: number;
+};
 
-  const ranked = candidates
+export function rankStandingsCandidates(
+  candidates: StandingsScheduleInput[]
+): StandingsScheduleRank[] {
+  return candidates
     .map((candidate) => ({
       providerId: candidate.leagueProviderId,
       score: scoreStandingsCandidate(candidate),
     }))
     .filter((item) => item.score >= 0)
     .sort((left, right) => right.score - left.score);
+}
 
-  return ranked.slice(0, maxRequests).map((item) => item.providerId);
+export function resolveStandingsMaxApiRequests(
+  options: StandingsScheduleOptions = {}
+): number {
+  return (
+    options.maxApiRequests ??
+    Math.min(120, Math.floor(getApiFootballDailyLimit() * 0.02))
+  );
+}
+
+export function pickStandingsLeagueIds(
+  candidates: StandingsScheduleInput[],
+  options: StandingsScheduleOptions = {}
+): number[] {
+  const maxRequests = resolveStandingsMaxApiRequests(options);
+  return rankStandingsCandidates(candidates)
+    .slice(0, maxRequests)
+    .map((item) => item.providerId);
 }
 
 export async function shouldRunNonCriticalIngestion(

@@ -1,0 +1,601 @@
+{
+  "probedAt": "2026-09-21T11:59:41.505Z",
+  "source": "api-football/capability-probe",
+  "selectionNote": "Tier 1 + all national_team + deterministic Tier 2/3 sample",
+  "results": [
+    {
+      "providerId": 1,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1591866,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 2,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1635697,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 3,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1636316,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 4,
+      "seasonYear": 2024,
+      "sampleFixtureId": 1232551,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 5,
+      "seasonYear": 2026,
+      "sampleFixtureId": null,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": false,
+        "fixtureStatistics": false,
+        "lineups": false
+      }
+    },
+    {
+      "providerId": 6,
+      "seasonYear": 2025,
+      "sampleFixtureId": 1508002,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 7,
+      "seasonYear": 2027,
+      "sampleFixtureId": null,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": false,
+        "fixtureStatistics": false,
+        "lineups": false
+      }
+    },
+    {
+      "providerId": 9,
+      "seasonYear": 2024,
+      "sampleFixtureId": 1234030,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 10,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1640500,
+      "capabilities": {
+        "standings": false,
+        "fixtureEvents": true,
+        "fixtureStatistics": false,
+        "lineups": false
+      }
+    },
+    {
+      "providerId": 11,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1631512,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 12,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1619094,
+      "capabilities": {
+        "standings": false,
+        "fixtureEvents": false,
+        "fixtureStatistics": false,
+        "lineups": false
+      }
+    },
+    {
+      "providerId": 13,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1635387,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 15,
+      "seasonYear": 2025,
+      "sampleFixtureId": 1399365,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 16,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1544369,
+      "capabilities": {
+        "standings": false,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 17,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1629926,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 22,
+      "seasonYear": 2025,
+      "sampleFixtureId": 1391246,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 29,
+      "seasonYear": 2023,
+      "sampleFixtureId": 1486230,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 30,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1481800,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 31,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1397468,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 32,
+      "seasonYear": 2024,
+      "sampleFixtureId": 1537578,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 33,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1364980,
+      "capabilities": {
+        "standings": false,
+        "fixtureEvents": true,
+        "fixtureStatistics": false,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 34,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1100319,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 39,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1557411,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 61,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1552773,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 71,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1492380,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 78,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1575175,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 88,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1552178,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 94,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1575503,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 128,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1493151,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": false,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 135,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1550127,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 140,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1570401,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 253,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1490495,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 262,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1550974,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 536,
+      "seasonYear": 2025,
+      "sampleFixtureId": null,
+      "capabilities": {
+        "standings": false,
+        "fixtureEvents": false,
+        "fixtureStatistics": false,
+        "lineups": false
+      }
+    },
+    {
+      "providerId": 848,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1623416,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 960,
+      "seasonYear": 2023,
+      "sampleFixtureId": 1187431,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 18,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1630358,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": false,
+        "lineups": false
+      }
+    },
+    {
+      "providerId": 20,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1620150,
+      "capabilities": {
+        "standings": false,
+        "fixtureEvents": false,
+        "fixtureStatistics": false,
+        "lineups": false
+      }
+    },
+    {
+      "providerId": 35,
+      "seasonYear": 2024,
+      "sampleFixtureId": 1321353,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": false,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 36,
+      "seasonYear": 2027,
+      "sampleFixtureId": 1537364,
+      "capabilities": {
+        "standings": false,
+        "fixtureEvents": true,
+        "fixtureStatistics": false,
+        "lineups": false
+      }
+    },
+    {
+      "providerId": 72,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1520885,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 73,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1623074,
+      "capabilities": {
+        "standings": false,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 89,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1551806,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 95,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1576492,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 98,
+      "seasonYear": 2027,
+      "sampleFixtureId": 1556073,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 103,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1494764,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 106,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1553176,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 113,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1494286,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 119,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1549027,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 129,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1498816,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": false,
+        "lineups": false
+      }
+    },
+    {
+      "providerId": 806,
+      "seasonYear": 2024,
+      "sampleFixtureId": 1215762,
+      "capabilities": {
+        "standings": false,
+        "fixtureEvents": true,
+        "fixtureStatistics": false,
+        "lineups": true
+      }
+    },
+    {
+      "providerId": 90,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1622737,
+      "capabilities": {
+        "standings": false,
+        "fixtureEvents": false,
+        "fixtureStatistics": false,
+        "lineups": false
+      }
+    },
+    {
+      "providerId": 96,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1637499,
+      "capabilities": {
+        "standings": false,
+        "fixtureEvents": true,
+        "fixtureStatistics": false,
+        "lineups": false
+      }
+    },
+    {
+      "providerId": 204,
+      "seasonYear": 2026,
+      "sampleFixtureId": 1585765,
+      "capabilities": {
+        "standings": true,
+        "fixtureEvents": true,
+        "fixtureStatistics": true,
+        "lineups": true
+      }
+    }
+  ]
+}

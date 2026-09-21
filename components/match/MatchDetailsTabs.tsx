@@ -22,6 +22,7 @@ type MatchDetailsTabsProps = {
   fixtureId: number;
   homeTeam: Pick<TeamRef, "name" | "code">;
   awayTeam: Pick<TeamRef, "name" | "code">;
+  showStandingsTab?: boolean;
   overview: ReactNode;
   lineups: ReactNode;
   statistics: ReactNode;
@@ -32,28 +33,48 @@ type MatchDetailsTabsProps = {
 /** Matches TopNav `h-14` — tab bar pins directly beneath it. */
 const MATCH_TAB_NAV_TOP_PX = 56;
 
-function MatchTabNavList() {
+const matchTabsListClassName =
+  "flex h-auto min-h-11 w-full max-w-full flex-nowrap gap-2 border-b-0 pb-1 max-md:snap-x max-md:snap-mandatory max-md:scroll-px-1 max-md:overflow-x-auto max-md:overscroll-x-contain max-md:[scrollbar-width:none] md:gap-1 md:overflow-x-visible md:pb-0 max-md:[&::-webkit-scrollbar]:hidden";
+
+const matchTabTriggerClassName =
+  "max-md:snap-start shrink-0 px-4 py-2.5 md:min-w-0 md:flex-1 md:px-3 md:py-2";
+
+function MatchTabNavList({ showStandingsTab }: { showStandingsTab: boolean }) {
   return (
     <>
-      <TabsTrigger value="overview" className="min-w-0 flex-1">
+      <TabsTrigger value="overview" className={matchTabTriggerClassName}>
         Overview
       </TabsTrigger>
-      <TabsTrigger value="ai" className="min-w-0 flex-1">
+      <TabsTrigger value="ai" className={matchTabTriggerClassName}>
         AI Engine
       </TabsTrigger>
-      <TabsTrigger value="lineups" className="min-w-0 flex-1">
+      <TabsTrigger value="lineups" className={matchTabTriggerClassName}>
         Lineups
       </TabsTrigger>
-      <TabsTrigger value="statistics" className="min-w-0 flex-1">
+      <TabsTrigger value="statistics" className={matchTabTriggerClassName}>
         Statistics
       </TabsTrigger>
-      <TabsTrigger value="standings" className="min-w-0 flex-1">
-        Standings
-      </TabsTrigger>
-      <TabsTrigger value="matches" className="min-w-0 flex-1">
+      {showStandingsTab ? (
+        <TabsTrigger value="standings" className={matchTabTriggerClassName}>
+          Standings
+        </TabsTrigger>
+      ) : null}
+      <TabsTrigger value="matches" className={matchTabTriggerClassName}>
         Matches
       </TabsTrigger>
     </>
+  );
+}
+
+function MatchTabNavListBar({
+  showStandingsTab,
+}: {
+  showStandingsTab: boolean;
+}) {
+  return (
+    <TabsList variant="line" className={matchTabsListClassName}>
+      <MatchTabNavList showStandingsTab={showStandingsTab} />
+    </TabsList>
   );
 }
 
@@ -61,6 +82,7 @@ export function MatchDetailsTabs({
   fixtureId,
   homeTeam,
   awayTeam,
+  showStandingsTab = true,
   overview,
   lineups,
   statistics,
@@ -70,7 +92,11 @@ export function MatchDetailsTabs({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const activeTab = parseMatchTab(searchParams.get("tab") ?? undefined);
+  const requestedTab = parseMatchTab(searchParams.get("tab") ?? undefined);
+  const activeTab =
+    !showStandingsTab && requestedTab === "standings"
+      ? "overview"
+      : requestedTab;
   const sentinelRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLDivElement>(null);
   const [isNavPinned, setIsNavPinned] = useState(false);
@@ -94,6 +120,17 @@ export function MatchDetailsTabs({
       resizeObserver.disconnect();
     };
   }, [isNavPinned]);
+
+  useEffect(() => {
+    if (!showStandingsTab && requestedTab === "standings") {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete("tab");
+      const query = next.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      });
+    }
+  }, [showStandingsTab, requestedTab, pathname, router, searchParams]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -166,21 +203,11 @@ export function MatchDetailsTabs({
         {isNavPinned ? (
           <div className="mx-auto w-full max-w-6xl px-4">
             <div className="mx-auto w-full max-w-3xl">
-              <TabsList
-                variant="line"
-                className="flex h-auto w-full max-w-full flex-nowrap border-b-0 pb-0"
-              >
-                <MatchTabNavList />
-              </TabsList>
+              <MatchTabNavListBar showStandingsTab={showStandingsTab} />
             </div>
           </div>
         ) : (
-          <TabsList
-            variant="line"
-            className="flex h-auto w-full max-w-full flex-nowrap border-b-0 pb-0"
-          >
-            <MatchTabNavList />
-          </TabsList>
+          <MatchTabNavListBar showStandingsTab={showStandingsTab} />
         )}
       </div>
 
@@ -206,9 +233,11 @@ export function MatchDetailsTabs({
         {statistics}
       </TabsContent>
 
-      <TabsContent value="standings" className="space-y-4">
-        {standings}
-      </TabsContent>
+      {showStandingsTab ? (
+        <TabsContent value="standings" className="space-y-4">
+          {standings}
+        </TabsContent>
+      ) : null}
 
       <TabsContent value="matches" className="space-y-4">
         {matches}

@@ -3,11 +3,19 @@ import {
   getFixturePlayers as getFixturePlayersEndpoint,
   getFixtureStatistics as getFixtureStatisticsEndpoint,
 } from "@/lib/api-football/endpoints/fixtures";
+import {
+  competitionSupportsFixtureEvents,
+  competitionSupportsFixtureStatistics,
+  competitionSupportsLineups,
+  competitionSupportsPlayerPerformances,
+} from "@/lib/competitions/capabilities";
+import { findCompetition } from "@/lib/competitions/index";
 import { optionalProviderFetch } from "@/lib/api-football/safe-call";
 import { ingestLineupsFromProvider } from "@/lib/ingestion/ingest-lineups";
 import { ingestFixtureSidelinedFromProvider } from "@/lib/ingestion/ingest-sidelined";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import {
+  getFixtureLeagueProviderId,
   getFixtureUuidByProviderId,
   upsertFixtureEvents,
   upsertFixtureStatistics,
@@ -68,12 +76,25 @@ export async function ingestMatchDetailsFromProvider(
   let playerPerformancesCount = 0;
   let lineupsCount = 0;
 
-  await throttleProviderRequest();
-  const eventsResult = await optionalProviderFetch(
-    `fixture ${fixtureProviderId} events`,
-    () => getFixtureEventsEndpoint(fixtureProviderId)
+  const leagueProviderId = await getFixtureLeagueProviderId(
+    client,
+    fixtureProviderId
   );
-  apiRequests += 1;
+  const competition =
+    leagueProviderId != null ? findCompetition(leagueProviderId) : undefined;
+
+  const eventsResult = competitionSupportsFixtureEvents(competition)
+    ? await (async () => {
+        await throttleProviderRequest();
+        return optionalProviderFetch(
+          `fixture ${fixtureProviderId} events`,
+          () => getFixtureEventsEndpoint(fixtureProviderId)
+        );
+      })()
+    : { ok: false as const, reason: "Events not supported for competition" };
+  if (competitionSupportsFixtureEvents(competition)) {
+    apiRequests += 1;
+  }
 
   if (eventsResult.ok) {
     eventsCount = await upsertFixtureEvents(
@@ -88,12 +109,21 @@ export async function ingestMatchDetailsFromProvider(
     );
   }
 
-  await throttleProviderRequest();
-  const statisticsResult = await optionalProviderFetch(
-    `fixture ${fixtureProviderId} statistics`,
-    () => getFixtureStatisticsEndpoint(fixtureProviderId)
-  );
-  apiRequests += 1;
+  const statisticsResult = competitionSupportsFixtureStatistics(competition)
+    ? await (async () => {
+        await throttleProviderRequest();
+        return optionalProviderFetch(
+          `fixture ${fixtureProviderId} statistics`,
+          () => getFixtureStatisticsEndpoint(fixtureProviderId)
+        );
+      })()
+    : {
+        ok: false as const,
+        reason: "Statistics not supported for competition",
+      };
+  if (competitionSupportsFixtureStatistics(competition)) {
+    apiRequests += 1;
+  }
 
   if (statisticsResult.ok) {
     statisticsCount = await upsertFixtureStatistics(
@@ -108,7 +138,7 @@ export async function ingestMatchDetailsFromProvider(
     );
   }
 
-  if (!options.skipLineups) {
+  if (!options.skipLineups && competitionSupportsLineups(competition)) {
     try {
       const lineupsResult = await ingestLineupsFromProvider(fixtureProviderId);
       apiRequests += lineupsResult.stats.apiRequests;
@@ -121,12 +151,21 @@ export async function ingestMatchDetailsFromProvider(
     }
   }
 
-  await throttleProviderRequest();
-  const playersResult = await optionalProviderFetch(
-    `fixture ${fixtureProviderId} players`,
-    () => getFixturePlayersEndpoint(fixtureProviderId)
-  );
-  apiRequests += 1;
+  const playersResult = competitionSupportsPlayerPerformances(competition)
+    ? await (async () => {
+        await throttleProviderRequest();
+        return optionalProviderFetch(
+          `fixture ${fixtureProviderId} players`,
+          () => getFixturePlayersEndpoint(fixtureProviderId)
+        );
+      })()
+    : {
+        ok: false as const,
+        reason: "Player performances not supported for competition",
+      };
+  if (competitionSupportsPlayerPerformances(competition)) {
+    apiRequests += 1;
+  }
 
   if (playersResult.ok) {
     playerPerformancesCount = await upsertPlayerMatchPerformances(
@@ -141,8 +180,14 @@ export async function ingestMatchDetailsFromProvider(
     );
   }
 
+  const skippedOnly =
+    !competitionSupportsFixtureEvents(competition) &&
+    !competitionSupportsFixtureStatistics(competition) &&
+    !competitionSupportsPlayerPerformances(competition) &&
+    (options.skipLineups || !competitionSupportsLineups(competition));
+
   const anyProviderOk =
-    eventsResult.ok || statisticsResult.ok || playersResult.ok;
+    eventsResult.ok || statisticsResult.ok || playersResult.ok || skippedOnly;
 
   return {
     ok: anyProviderOk,
@@ -177,6 +222,20 @@ export async function ingestFixturePlayerPerformancesFromProvider(
       ok: false,
       playerPerformances: 0,
       reason: "Fixture not found in Postgres",
+    };
+  }
+
+  const leagueProviderId = await getFixtureLeagueProviderId(
+    client,
+    fixtureProviderId
+  );
+  const competition =
+    leagueProviderId != null ? findCompetition(leagueProviderId) : undefined;
+  if (!competitionSupportsPlayerPerformances(competition)) {
+    return {
+      ok: true,
+      playerPerformances: 0,
+      reason: "Player performances not supported for competition",
     };
   }
 

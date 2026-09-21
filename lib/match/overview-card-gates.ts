@@ -1,3 +1,4 @@
+import { resolveMatchFixtureContext } from "@/lib/match/fixture-context";
 import { selectRelevantStandingsGroup } from "@/lib/standings/select-relevant-group";
 import type { MomentumBucket } from "@/lib/momentum/computeMatchMomentum";
 import type { PlayersToWatchResult } from "@/lib/services/playersToWatchService";
@@ -26,9 +27,19 @@ export function hasH2HContent(h2h: H2HSummary | undefined): boolean {
 }
 
 export function hasStandingsSnippetContent(
-  fixture: Pick<Fixture, "homeTeam" | "awayTeam">,
+  fixture: Pick<Fixture, "homeTeam" | "awayTeam" | "league">,
   standings: StandingsGroup[]
 ): boolean {
+  const matchCtx = resolveMatchFixtureContext({
+    leagueExternalId: fixture.league.externalId,
+    homeTeam: fixture.homeTeam,
+    awayTeam: fixture.awayTeam,
+  });
+
+  if (!matchCtx.supportsStandings) {
+    return false;
+  }
+
   const group = selectRelevantStandingsGroup(
     standings,
     fixture.homeTeam.externalId,

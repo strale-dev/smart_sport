@@ -4,6 +4,8 @@ Operational guide for API-Football → Postgres sync and bootstrap. Use **Window
 
 **Phase 8 shortcut:** [MATCH-DATA-OPS.md](../MATCH-DATA-OPS.md) — `match:qa-sync` + `match:verify`.
 
+**Competition expansion (Phase I):** [COMPETITION-EXPANSION-QA.md](../COMPETITION-EXPANSION-QA.md) — legacy 11 + BR/AR/MLS/NT smoke matrix, `INGESTION_USE_FULL_REGISTRY`, and registry rebuild commands.
+
 ## Quick start (fresh dev DB)
 
 1. Copy `.env.example` → `.env.local` with at least:
