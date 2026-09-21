@@ -77,22 +77,25 @@ export default async function MatchPage({ params }: MatchPageProps) {
     awayTeam: fixture.awayTeam,
   });
   const isGuest = !user;
-  const initialFavorited = user
-    ? await isFixtureFavorited(user.id, id).catch(() => false)
-    : false;
 
-  let initialLiveSnapshot: MatchLiveSnapshot | undefined;
-  if (isLiveFixtureStatus(fixture.status)) {
-    const [{ data: events }, { data: statistics }] = await Promise.all([
-      getFixtureEvents(fixture.externalId),
-      getFixtureStatistics(fixture.externalId),
-    ]);
-    initialLiveSnapshot = {
-      fixture,
-      events,
-      statistics,
-    };
-  }
+  const [initialFavorited, initialLiveSnapshot] = await Promise.all([
+    user
+      ? isFixtureFavorited(user.id, id).catch(() => false)
+      : Promise.resolve(false),
+    isLiveFixtureStatus(fixture.status)
+      ? Promise.all([
+          getFixtureEvents(fixture.externalId),
+          getFixtureStatistics(fixture.externalId),
+        ]).then(
+          ([{ data: events }, { data: statistics }]) =>
+            ({
+              fixture,
+              events,
+              statistics,
+            }) satisfies MatchLiveSnapshot
+        )
+      : Promise.resolve(undefined),
+  ]);
 
   return (
     <MatchLiveSession fixture={fixture} initialSnapshot={initialLiveSnapshot}>

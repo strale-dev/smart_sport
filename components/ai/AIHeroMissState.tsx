@@ -31,14 +31,15 @@ export function AIHeroMissState({
           </CardTitle>
         </div>
         <CardDescription className="max-w-lg">
-          Pre-match analysis is not ready yet for this fixture. Generate it now
-          to see win probabilities, key factors, and analyst-style commentary.
+          {isGenerating
+            ? "Building the shared pre-match analysis for this fixture. The same insight is shown to every signed-in user once it is ready."
+            : "Pre-match analysis is not ready yet. You can retry loading the shared analysis."}
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
-        <Button onClick={onGenerate} disabled={isGenerating}>
-          {isGenerating ? "Generating analysis…" : "Generate analysis"}
-        </Button>
+        {!isGenerating ? (
+          <Button onClick={onGenerate}>Retry analysis</Button>
+        ) : null}
       </CardContent>
     </AIHeroShell>
   );

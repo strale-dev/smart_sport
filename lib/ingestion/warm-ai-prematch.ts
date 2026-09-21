@@ -1,31 +1,39 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generatePrematchInsight } from "@/lib/services/aiService";
 
-type WarmWindow = "24h" | "60m";
+export type WarmAiPrematchScope = "daily" | "imminent";
 
-function windowBounds(
-  window: WarmWindow,
+const RUN_BUDGET_MS = 45_000;
+const DAILY_MAX_FIXTURES = 30;
+const IMMINENT_MAX_FIXTURES = 20;
+
+export function warmWindowBoundsForScope(
+  scope: WarmAiPrematchScope,
   now = Date.now()
 ): {
   from: string;
   to: string;
 } {
-  if (window === "24h") {
+  if (scope === "imminent") {
     return {
-      from: new Date(now + 23 * 3_600_000).toISOString(),
-      to: new Date(now + 25 * 3_600_000).toISOString(),
+      from: new Date(now).toISOString(),
+      to: new Date(now + 90 * 60_000).toISOString(),
     };
   }
 
   return {
-    from: new Date(now + 55 * 60_000).toISOString(),
-    to: new Date(now + 65 * 60_000).toISOString(),
+    from: new Date(now).toISOString(),
+    to: new Date(now + 36 * 3_600_000).toISOString(),
   };
 }
 
-async function loadFixturesInWindow(window: WarmWindow): Promise<number[]> {
+async function loadFixturesInScope(
+  scope: WarmAiPrematchScope
+): Promise<number[]> {
   const client = createAdminClient();
-  const { from, to } = windowBounds(window);
+  const { from, to } = warmWindowBoundsForScope(scope);
+  const limit =
+    scope === "imminent" ? IMMINENT_MAX_FIXTURES : DAILY_MAX_FIXTURES;
 
   const { data, error } = await client
     .from("fixtures")
@@ -34,42 +42,50 @@ async function loadFixturesInWindow(window: WarmWindow): Promise<number[]> {
     .gte("kickoff_at", from)
     .lte("kickoff_at", to)
     .order("kickoff_at", { ascending: true })
-    .limit(40);
+    .limit(limit);
 
   if (error) {
     throw new Error(
-      `Failed to load warm-up fixtures (${window}): ${error.message}`
+      `Failed to load warm-up fixtures (${scope}): ${error.message}`
     );
   }
 
   return (data ?? []).map((row) => row.provider_id);
 }
 
-export async function warmAiPrematchInsights(): Promise<{
+export async function warmAiPrematchInsights(
+  scope: WarmAiPrematchScope = "daily"
+): Promise<{
   ok: boolean;
   job: string;
   stats: {
-    candidates24h: number;
-    candidates60m: number;
+    scope: WarmAiPrematchScope;
+    candidates: number;
+    processed: number;
+    stoppedEarly: boolean;
     generated: number;
     cached: number;
     fallback: number;
     errors: number;
   };
 }> {
-  const [window24h, window60m] = await Promise.all([
-    loadFixturesInWindow("24h"),
-    loadFixturesInWindow("60m"),
-  ]);
-
-  const fixtureIds = [...new Set([...window24h, ...window60m])];
+  const fixtureIds = await loadFixturesInScope(scope);
 
   let generated = 0;
   let cached = 0;
   let fallback = 0;
   let errors = 0;
+  let processed = 0;
+  const startedAt = Date.now();
+  let stoppedEarly = false;
 
   for (const fixtureId of fixtureIds) {
+    if (Date.now() - startedAt >= RUN_BUDGET_MS) {
+      stoppedEarly = true;
+      break;
+    }
+
+    processed += 1;
     try {
       const result = await generatePrematchInsight(fixtureId, {
         trigger: "cron",
@@ -92,8 +108,10 @@ export async function warmAiPrematchInsights(): Promise<{
     ok: true,
     job: "warm-ai-prematch",
     stats: {
-      candidates24h: window24h.length,
-      candidates60m: window60m.length,
+      scope,
+      candidates: fixtureIds.length,
+      processed,
+      stoppedEarly,
       generated,
       cached,
       fallback,

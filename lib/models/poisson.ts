@@ -29,13 +29,23 @@ function diffOrZero(left: number | null, right: number | null): number {
   return left - right;
 }
 
+export type GoalMarketProbs = {
+  over2Prob: number;
+  over3Prob: number;
+  under2Prob: number;
+};
+
 export type PoissonOutput = {
   expectedGoalsHome: number;
   expectedGoalsAway: number;
+  expectedGoalsTotal: number;
   expectedGoalsTotalMin: number;
   expectedGoalsTotalMax: number;
   bttsProb: number;
   weakerTeamScoringProb: number;
+  over2Prob: number;
+  over3Prob: number;
+  under2Prob: number;
 };
 
 export function computePoissonOutput(
@@ -47,17 +57,38 @@ export function computePoissonOutput(
     coefficients.formScale *
     diffOrZero(features.form5HomePpg, features.form5AwayPpg);
 
-  const expectedGoalsHome = Math.max(
+  let expectedGoalsHome = Math.max(
     0.2,
     coefficients.baseHomeGoals +
       eloContribution +
       formContribution +
       coefficients.homeAdvantageGoals
   );
-  const expectedGoalsAway = Math.max(
+  let expectedGoalsAway = Math.max(
     0.2,
     coefficients.baseAwayGoals - eloContribution - formContribution
   );
+
+  const injuryHome = features.homeInjuryImpact ?? 0;
+  const injuryAway = features.awayInjuryImpact ?? 0;
+  expectedGoalsHome = Math.max(0.2, expectedGoalsHome - injuryHome * 0.15);
+  expectedGoalsAway = Math.max(0.2, expectedGoalsAway - injuryAway * 0.15);
+
+  const formVenueDiff = diffOrZero(
+    features.form5HomeVenuePpg ?? features.form5HomePpg,
+    features.form5AwayVenuePpg ?? features.form5AwayPpg
+  );
+  if (formVenueDiff !== 0) {
+    const venueFormContribution = coefficients.formScale * 0.5 * formVenueDiff;
+    expectedGoalsHome = Math.max(
+      0.2,
+      expectedGoalsHome + venueFormContribution
+    );
+    expectedGoalsAway = Math.max(
+      0.2,
+      expectedGoalsAway - venueFormContribution
+    );
+  }
 
   const totalGoalsDistribution = buildTotalGoalsDistribution(
     expectedGoalsHome,
@@ -65,13 +96,21 @@ export function computePoissonOutput(
     8
   );
 
+  const goalMarkets = computeGoalMarketProbs(totalGoalsDistribution);
+  const expectedGoalsTotal = round2(expectedGoalsHome + expectedGoalsAway);
+
   const expectedGoalsTotalMin = percentileFromDistribution(
     totalGoalsDistribution,
     0.25
   );
-  const expectedGoalsTotalMax = percentileFromDistribution(
+  let expectedGoalsTotalMax = percentileFromDistribution(
     totalGoalsDistribution,
     0.75
+  );
+  expectedGoalsTotalMax = Math.max(
+    expectedGoalsTotalMin + 0.5,
+    expectedGoalsTotalMax,
+    Math.ceil(expectedGoalsTotal)
   );
 
   const homeScoresProb = 1 - Math.exp(-expectedGoalsHome);
@@ -84,16 +123,45 @@ export function computePoissonOutput(
   return {
     expectedGoalsHome: round2(expectedGoalsHome),
     expectedGoalsAway: round2(expectedGoalsAway),
+    expectedGoalsTotal,
     expectedGoalsTotalMin: round2(expectedGoalsTotalMin),
-    expectedGoalsTotalMax: round2(
-      Math.max(expectedGoalsTotalMin + 0.5, expectedGoalsTotalMax)
-    ),
+    expectedGoalsTotalMax: round2(expectedGoalsTotalMax),
     bttsProb: clamp01(bttsProb),
     weakerTeamScoringProb: clamp01(weakerTeamScoringProb),
+    over2Prob: goalMarkets.over2Prob,
+    over3Prob: goalMarkets.over3Prob,
+    under2Prob: goalMarkets.under2Prob,
   };
 }
 
-function buildTotalGoalsDistribution(
+/** P(total goals > 2) and P(total goals > 3) from a normalized total-goals PMF. */
+export function computeGoalMarketProbs(
+  distribution: number[]
+): GoalMarketProbs {
+  let over2Prob = 0;
+  let over3Prob = 0;
+
+  for (let goals = 0; goals < distribution.length; goals += 1) {
+    const mass = distribution[goals] ?? 0;
+    if (goals > 2) {
+      over2Prob += mass;
+    }
+    if (goals > 3) {
+      over3Prob += mass;
+    }
+  }
+
+  over2Prob = clamp01(over2Prob);
+  over3Prob = clamp01(Math.min(over3Prob, over2Prob));
+
+  return {
+    over2Prob,
+    over3Prob,
+    under2Prob: clamp01(1 - over2Prob),
+  };
+}
+
+export function buildTotalGoalsDistribution(
   lambdaHome: number,
   lambdaAway: number,
   maxGoals: number

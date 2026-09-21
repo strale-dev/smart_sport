@@ -8,7 +8,7 @@ import {
 } from "@/lib/redis/keys";
 import { peekCachedValue, writeCachedValue } from "@/lib/redis/cache";
 import { LockNotAcquiredError, withRenewableLock } from "@/lib/redis/lock";
-import type { StoredAIInsight } from "@/lib/ai/schemas";
+import { prematchAnalysisSchema, type StoredAIInsight } from "@/lib/ai/schemas";
 
 const LOCK_TTL_SECONDS = 45;
 const LOCK_RENEW_INTERVAL_MS = 10_000;
@@ -55,9 +55,96 @@ export function mapAiInsightRowToStored(
     keyFactors,
     scenarios,
     commentary: row.commentary ?? "",
+    dataUsed: parseDataUsedFromRawOutput(row.raw_output),
     dataTimestamp: row.data_timestamp,
     dataQuality: row.data_quality,
+    dataCoverage: parseDataCoverageFromRawOutput(row.raw_output),
+    analysis: parseAnalysisFromRawOutput(row.raw_output),
   };
+}
+
+function parseAnalysisFromRawOutput(raw: unknown): StoredAIInsight["analysis"] {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const direct = record.analysis;
+  if (direct) {
+    const parsed = prematchAnalysisSchema.safeParse(direct);
+    if (parsed.success) {
+      return parsed.data;
+    }
+  }
+
+  const narrative = record.narrative;
+  if (narrative && typeof narrative === "object") {
+    const nested = (narrative as Record<string, unknown>).analysis;
+    if (nested) {
+      const parsed = prematchAnalysisSchema.safeParse(nested);
+      if (parsed.success) {
+        return parsed.data;
+      }
+    }
+  }
+
+  return null;
+}
+
+function parseDataCoverageFromRawOutput(
+  raw: unknown
+): StoredAIInsight["dataCoverage"] {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const coverage = record.dataCoverage;
+  if (!coverage || typeof coverage !== "object") {
+    return null;
+  }
+
+  const payload = coverage as Record<string, unknown>;
+  const dataAvailable = payload.dataAvailable;
+  const dataMissing = payload.dataMissing;
+
+  if (!Array.isArray(dataAvailable) || !Array.isArray(dataMissing)) {
+    return null;
+  }
+
+  return {
+    dataAvailable: dataAvailable.filter(
+      (entry): entry is string => typeof entry === "string"
+    ),
+    dataMissing: dataMissing.filter(
+      (entry): entry is string => typeof entry === "string"
+    ),
+  };
+}
+
+function parseDataUsedFromRawOutput(raw: unknown): string[] {
+  if (!raw || typeof raw !== "object") {
+    return [];
+  }
+
+  const record = raw as Record<string, unknown>;
+  if (Array.isArray(record.dataUsed)) {
+    return record.dataUsed.filter(
+      (entry): entry is string => typeof entry === "string"
+    );
+  }
+
+  const narrative = record.narrative;
+  if (narrative && typeof narrative === "object") {
+    const dataUsed = (narrative as Record<string, unknown>).dataUsed;
+    if (Array.isArray(dataUsed)) {
+      return dataUsed.filter(
+        (entry): entry is string => typeof entry === "string"
+      );
+    }
+  }
+
+  return [];
 }
 
 function parseExpectedGoalsRange(value: unknown): [number, number] {

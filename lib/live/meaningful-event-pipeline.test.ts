@@ -9,6 +9,10 @@ const mocks = vi.hoisted(() => ({
   readLatestLivePrediction: vi.fn(),
   readLatestPrematchPrediction: vi.fn(),
   getActiveModelVersion: vi.fn(),
+  readLatestLiveInsight: vi.fn(),
+  isLiveInsightGenerationInBackoff: vi.fn(),
+  readStoredLiveInsightContext: vi.fn(),
+  shouldRunPeriodicLiveInsight: vi.fn(),
 }));
 
 vi.mock("@/lib/services/predictionService", () => ({
@@ -17,6 +21,19 @@ vi.mock("@/lib/services/predictionService", () => ({
 
 vi.mock("@/lib/services/aiService", () => ({
   generateLiveInsight: mocks.generateLiveInsight,
+}));
+
+vi.mock("@/lib/ai/db", () => ({
+  readLatestLiveInsight: mocks.readLatestLiveInsight,
+}));
+
+vi.mock("@/lib/live/live-insight-schedule", () => ({
+  isLiveInsightGenerationInBackoff: mocks.isLiveInsightGenerationInBackoff,
+  markLiveInsightGenerationBackoff: vi.fn(),
+  readStoredLiveInsightContext: mocks.readStoredLiveInsightContext,
+  shouldRunPeriodicLiveInsight: mocks.shouldRunPeriodicLiveInsight,
+  snapshotLiveContext: vi.fn(),
+  writeStoredLiveInsightContext: vi.fn(),
 }));
 
 vi.mock("@/lib/predictions/db", async (importOriginal) => {
@@ -39,6 +56,10 @@ const {
   readLatestLivePrediction,
   readLatestPrematchPrediction,
   getActiveModelVersion,
+  readLatestLiveInsight,
+  isLiveInsightGenerationInBackoff,
+  readStoredLiveInsightContext,
+  shouldRunPeriodicLiveInsight,
 } = mocks;
 
 function snapshot(
@@ -93,6 +114,13 @@ describe("runMeaningfulEventPipeline", () => {
       input_snapshot: { fixtureExternalId: 1, dataQuality: "PARTIAL" },
       created_at: new Date().toISOString(),
     });
+    readLatestLiveInsight.mockResolvedValue({
+      id: "insight-1",
+      created_at: new Date().toISOString(),
+    });
+    isLiveInsightGenerationInBackoff.mockResolvedValue(false);
+    readStoredLiveInsightContext.mockResolvedValue(null);
+    shouldRunPeriodicLiveInsight.mockReturnValue(false);
     updateLiveProbability.mockResolvedValue({
       predictionId: "live-1",
       modelVersion: "1.0.0",
@@ -141,6 +169,32 @@ describe("runMeaningfulEventPipeline", () => {
     expect(updateLiveProbability).not.toHaveBeenCalled();
   });
 
+  it("generates LIVE_BASELINE on first tick when no live insight exists", async () => {
+    readLatestLiveInsight.mockResolvedValue(null);
+
+    const result = await runMeaningfulEventPipeline({
+      fixtureProviderId: 1,
+      prevSnapshot: null,
+      nextSnapshot: snapshot({
+        fixtureProviderId: 1,
+        status: "1H",
+        score: { home: 0, away: 0 },
+        minute: 1,
+      }),
+    });
+
+    expect(result.livePredictionUpdated).toBe(true);
+    expect(generateLiveInsight).toHaveBeenCalledTimes(1);
+    expect(generateLiveInsight).toHaveBeenCalledWith(
+      expect.objectContaining({
+        meaningfulTriggers: ["LIVE_BASELINE"],
+      })
+    );
+    expect(result.broadcastEvents.some((e) => e.kind === "LIVE_BASELINE")).toBe(
+      true
+    );
+  });
+
   it("runs live prediction and AI when discrete meaningful events exist", async () => {
     const prev = snapshot({
       fixtureProviderId: 1,
@@ -173,5 +227,24 @@ describe("runMeaningfulEventPipeline", () => {
     expect(result.livePredictionUpdated).toBe(true);
     expect(updateLiveProbability).toHaveBeenCalledTimes(1);
     expect(generateLiveInsight).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns NO_LIVE_BASELINE when live prediction cannot be computed", async () => {
+    readLatestLiveInsight.mockResolvedValue(null);
+    updateLiveProbability.mockResolvedValue(null);
+
+    const result = await runMeaningfulEventPipeline({
+      fixtureProviderId: 1,
+      prevSnapshot: null,
+      nextSnapshot: snapshot({
+        fixtureProviderId: 1,
+        status: "1H",
+        score: { home: 0, away: 0 },
+        minute: 3,
+      }),
+    });
+
+    expect(result.liveInsightGenerated).toBe(false);
+    expect(result.liveInsightSkipReason).toBe("NO_LIVE_BASELINE");
   });
 });

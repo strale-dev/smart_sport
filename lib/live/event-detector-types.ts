@@ -9,7 +9,10 @@ export type MeaningfulEventKind =
   | "PENALTY"
   | "XG_DELTA"
   | "SIGNIFICANT_SUBSTITUTION"
-  | "PROBABILITY_SHIFT";
+  | "PROBABILITY_SHIFT"
+  | "LIVE_BASELINE"
+  | "HT"
+  | "PERIODIC";
 
 /** Stable public contract for Realtime broadcast + future AI engine. */
 export type MeaningfulEventBroadcastPayload = {
@@ -36,6 +39,9 @@ export type SnapshotTeamStats = {
   teamExternalId: number;
   expectedGoals: number | null;
   redCards: number | null;
+  shotsTotal?: number | null;
+  shotsOnTarget?: number | null;
+  ballPossession?: number | null;
 };
 
 export type LiveDetectorSnapshot = {

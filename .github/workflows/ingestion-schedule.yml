@@ -41,6 +41,7 @@ jobs:
 
           const rows = [
             { id: "lineups", path: "/api/cron/sync-lineups", schedule: "*/15 * * * *" },
+            { id: "warm-ai-prematch", path: "/api/cron/warm-ai-prematch?scope=imminent", schedule: "*/15 * * * *" },
             { id: "sync-live-center", path: "/api/cron/sync-live-center", schedule: "*/15 * * * *" },
             { id: "sync-fixtures-today", path: "/api/cron/sync-fixtures-today", schedule: "*/15 * * * *" },
             { id: "reap-stale-locks", path: "/api/cron/reap-stale-locks", schedule: "*/5 * * * *" },

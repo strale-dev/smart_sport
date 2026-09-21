@@ -8,6 +8,7 @@ import {
   mapLivePredictionRowToResult,
   mapPredictionRowToResult,
   readLatestLivePrediction,
+  readOfficialPrematchPrediction,
   readLatestPrematchPrediction,
   resolveFixtureUuidByExternalId,
 } from "@/lib/predictions/db";
@@ -49,8 +50,13 @@ export async function GET(
     }
 
     const modelVersion = await getActiveModelVersion();
+    const kickoffReached = Date.now() >= new Date(fixture.kickoff_at).getTime();
     const [prematchRow, liveRow] = await Promise.all([
-      readLatestPrematchPrediction(fixture.id),
+      kickoffReached
+        ? readOfficialPrematchPrediction(fixture.id, fixture.kickoff_at).then(
+            (official) => official ?? readLatestPrematchPrediction(fixture.id)
+          )
+        : readLatestPrematchPrediction(fixture.id),
       readLatestLivePrediction(fixture.id),
     ]);
 
@@ -79,12 +85,19 @@ export async function GET(
             winProbabilities: prematchResult.winProbabilities,
             expectedGoalsHome: prematchResult.expectedGoalsHome,
             expectedGoalsAway: prematchResult.expectedGoalsAway,
+            expectedGoalsTotal: prematchResult.expectedGoalsTotal,
             expectedGoalsTotalMin: prematchResult.expectedGoalsTotalMin,
             expectedGoalsTotalMax: prematchResult.expectedGoalsTotalMax,
+            over2Prob: prematchResult.over2Prob,
+            over3Prob: prematchResult.over3Prob,
+            under2Prob: prematchResult.under2Prob,
             bttsProb: prematchResult.bttsProb,
             weakerTeamScoringProb: prematchResult.weakerTeamScoringProb,
             confidence: prematchResult.confidence,
             predictedOutcome: prematchResult.predictedOutcome,
+            predictionId: prematchResult.predictionId,
+            modelVersion: prematchResult.modelVersion,
+            createdAt: prematchResult.createdAt,
           }
         : null,
     };

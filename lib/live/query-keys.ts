@@ -11,6 +11,10 @@ export const liveKeys = {
   dashboardLive: () => [...liveKeys.all, "dashboard-live"] as const,
   liveInsight: (providerId: number) =>
     [...liveKeys.all, "live-insight", providerId] as const,
+  prematchInsight: (providerId: number) =>
+    [...liveKeys.all, "prematch-insight", providerId] as const,
+  historicalPrematch: (providerId: number) =>
+    [...liveKeys.all, "historical-prematch", providerId] as const,
   probabilityDelta: (providerId: number) =>
     [...liveKeys.all, "probability-delta", providerId] as const,
 };

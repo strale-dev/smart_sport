@@ -49,8 +49,11 @@ const baseInsight = {
   },
   commentary:
     "The model gives the home team a modest edge driven by stronger recent form and home advantage.",
+  dataUsed: ["Model prediction", "Team form"],
   dataTimestamp: "2026-01-01T12:00:00.000Z",
   dataQuality: "PARTIAL" as const,
+  dataCoverage: null,
+  analysis: null,
 };
 
 describe("usePrematchInsight support modules", () => {

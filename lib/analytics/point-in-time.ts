@@ -221,6 +221,8 @@ export async function computeLeagueRanksBefore(input: {
 }): Promise<{
   homeRank: number | null;
   awayRank: number | null;
+  homePoints: number | null;
+  awayPoints: number | null;
   teamCount: number | null;
 }> {
   const client = createAdminClient();
@@ -277,9 +279,14 @@ export async function computeLeagueRanksBefore(input: {
     rankByTeam.set(teamId, index + 1);
   });
 
+  const homeStats = points.get(input.homeTeamUuid);
+  const awayStats = points.get(input.awayTeamUuid);
+
   return {
     homeRank: rankByTeam.get(input.homeTeamUuid) ?? null,
     awayRank: rankByTeam.get(input.awayTeamUuid) ?? null,
+    homePoints: homeStats?.played ? homeStats.points : null,
+    awayPoints: awayStats?.played ? awayStats.points : null,
     teamCount: table.length > 0 ? table.length : null,
   };
 }

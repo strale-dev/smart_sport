@@ -3,11 +3,17 @@ import type {
   WinProbabilities,
 } from "@/types/prediction";
 
+export type PrematchPredictionDeltaSnapshot = PrematchPredictionSnapshot & {
+  predictionId: string;
+  modelVersion: string;
+  createdAt: string;
+};
+
 export type LiveProbabilityDeltaResponse = {
   prematch: WinProbabilities | null;
   live: WinProbabilities | null;
   liveMinute: number | null;
-  prematchPrediction: PrematchPredictionSnapshot | null;
+  prematchPrediction: PrematchPredictionDeltaSnapshot | null;
 };
 
 export async function fetchLiveProbabilityDelta(

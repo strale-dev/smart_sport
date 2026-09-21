@@ -7,6 +7,9 @@ const LABELS: Record<MeaningfulEventKind, string> = {
   XG_DELTA: "xG shift",
   SIGNIFICANT_SUBSTITUTION: "Key substitution",
   PROBABILITY_SHIFT: "Model shift",
+  LIVE_BASELINE: "Live analysis started",
+  HT: "Half-time update",
+  PERIODIC: "Live refresh",
 };
 
 export function labelMeaningfulEvent(kind: MeaningfulEventKind): string {

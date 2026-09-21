@@ -22,6 +22,15 @@ export const LIVE_DETECTOR_TICK_LOCK_SEC = 8;
 /** Redis TTL for last detector snapshot per fixture. */
 export const LIVE_DETECTOR_SNAPSHOT_TTL_SEC = 86_400;
 
+/** Min interval between shared periodic live AI refreshes (same fixture). */
+export const LIVE_INSIGHT_PERIODIC_REFRESH_MS = 25 * 60 * 1000;
+
+/** Back off live LLM attempts after OpenAI failure (avoid hammering every poll tick). */
+export const LIVE_INSIGHT_GENERATION_BACKOFF_MS = 120 * 1000;
+
+/** Redis TTL for live insight schedule keys (backoff + last context). */
+export const LIVE_INSIGHT_SCHEDULE_TTL_SEC = 86_400;
+
 /** Server provider poll cadence (ms). */
 export const LIVE_SERVER_POLL_MIN_MS = 30_000;
 export const LIVE_SERVER_POLL_MAX_MS = 40_000;

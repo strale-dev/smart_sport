@@ -1,12 +1,18 @@
 import OpenAI from "openai";
+import { ZodError } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
 import pRetry from "p-retry";
 
+import { repairPrematchNarrativeEvidence } from "@/lib/ai/sanitize-prematch-narrative";
 import { getOpenAiModelDefault, hasOpenAiConfig } from "@/lib/env";
 import { getServerEnv } from "@/lib/env.server";
 import {
-  AIInsightOpenAiSchema,
-  normalizeAndValidateAIInsight,
+  AIInsightLiveOpenAiResponseSchema,
+  AIInsightPrematchOpenAiResponseSchema,
+  validateAIInsightLiveNarrative,
+  validateAIInsightPrematchNarrative,
+  type AIInsightLiveNarrativePayload,
+  type AIInsightPrematchNarrativePayload,
 } from "@/lib/ai/schemas";
 
 export class OpenAiNotConfiguredError extends Error {
@@ -29,8 +35,8 @@ export class OpenAiGenerationError extends Error {
   }
 }
 
-export type StructuredInsightResult = {
-  parsed: import("@/lib/ai/schemas").AIInsightPayload;
+export type StructuredInsightResult<T> = {
+  parsed: T;
   tokensInput: number;
   tokensOutput: number;
   costUsd: number;
@@ -95,7 +101,15 @@ export async function generateStructuredInsight(input: {
   systemPrompt: string;
   userPrompt: string;
   model?: string;
-}): Promise<StructuredInsightResult> {
+}): Promise<StructuredInsightResult<AIInsightLiveNarrativePayload>> {
+  return generateLiveStructuredInsight(input);
+}
+
+export async function generateLiveStructuredInsight(input: {
+  systemPrompt: string;
+  userPrompt: string;
+  model?: string;
+}): Promise<StructuredInsightResult<AIInsightLiveNarrativePayload>> {
   const model = input.model ?? getOpenAiModelDefault();
 
   return pRetry(
@@ -107,7 +121,10 @@ export async function generateStructuredInsight(input: {
           { role: "system", content: input.systemPrompt },
           { role: "user", content: input.userPrompt },
         ],
-        response_format: zodResponseFormat(AIInsightOpenAiSchema, "ai_insight"),
+        response_format: zodResponseFormat(
+          AIInsightLiveOpenAiResponseSchema,
+          "ai_insight_live_narrative"
+        ),
       });
 
       const message = completion.choices[0]?.message;
@@ -118,7 +135,7 @@ export async function generateStructuredInsight(input: {
         );
       }
 
-      const parsed = normalizeAndValidateAIInsight(message.parsed);
+      const parsed = validateAIInsightLiveNarrative(message.parsed);
 
       const tokensInput = completion.usage?.prompt_tokens ?? 0;
       const tokensOutput = completion.usage?.completion_tokens ?? 0;
@@ -135,6 +152,61 @@ export async function generateStructuredInsight(input: {
     {
       retries: 1,
       shouldRetry: ({ error }) => isTransientOpenAiError(error),
+    }
+  );
+}
+
+export async function generatePrematchStructuredInsight(input: {
+  systemPrompt: string;
+  userPrompt: string;
+  model?: string;
+}): Promise<StructuredInsightResult<AIInsightPrematchNarrativePayload>> {
+  const model = input.model ?? getOpenAiModelDefault();
+
+  return pRetry(
+    async () => {
+      const client = getOpenAiClient();
+      const completion = await client.chat.completions.parse({
+        model,
+        messages: [
+          { role: "system", content: input.systemPrompt },
+          { role: "user", content: input.userPrompt },
+        ],
+        response_format: zodResponseFormat(
+          AIInsightPrematchOpenAiResponseSchema,
+          "ai_insight_prematch_narrative"
+        ),
+      });
+
+      const message = completion.choices[0]?.message;
+      if (!message?.parsed) {
+        const refusal = message?.refusal ?? "unknown";
+        throw new OpenAiGenerationError(
+          `OpenAI returned no parsed prematch insight (${refusal})`
+        );
+      }
+
+      const raw = AIInsightPrematchOpenAiResponseSchema.parse(message.parsed);
+      const parsed = validateAIInsightPrematchNarrative(
+        repairPrematchNarrativeEvidence(raw, input.userPrompt)
+      );
+
+      const tokensInput = completion.usage?.prompt_tokens ?? 0;
+      const tokensOutput = completion.usage?.completion_tokens ?? 0;
+
+      return {
+        parsed,
+        tokensInput,
+        tokensOutput,
+        costUsd: estimateCostUsd(model, tokensInput, tokensOutput),
+        model,
+        rawOutput: parsed as unknown as Record<string, unknown>,
+      };
+    },
+    {
+      retries: 1,
+      shouldRetry: ({ error }) =>
+        isTransientOpenAiError(error) || error instanceof ZodError,
     }
   );
 }

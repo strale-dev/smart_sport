@@ -8,6 +8,15 @@ export { isAiLimitReachedResponse } from "@/lib/ai/schemas";
 
 export type LineupsContextState = "CONFIRMED" | "PREDICTED" | "MISSING";
 
+export type PrematchFormSlice = {
+  wins: number;
+  draws: number;
+  losses: number;
+  ppg: number;
+  goalsFor: number;
+  goalsAgainst: number;
+} | null;
+
 export type PrematchAiContext = {
   fixtureExternalId: number;
   kickoffAt: string;
@@ -32,6 +41,8 @@ export type PrematchAiContext = {
     isNational: boolean;
   };
   lineupsState: LineupsContextState;
+  round: string | null;
+  referee: string | null;
   modelVersion: string;
   promptVersion: string;
   prediction: {
@@ -51,23 +62,25 @@ export type PrematchAiContext = {
     dataQuality: "COMPLETE" | "PARTIAL";
   };
   form: {
-    homeLast5: {
-      wins: number;
-      draws: number;
-      losses: number;
-      ppg: number;
-      goalsFor: number;
-      goalsAgainst: number;
-    } | null;
-    awayLast5: {
-      wins: number;
-      draws: number;
-      losses: number;
-      ppg: number;
-      goalsFor: number;
-      goalsAgainst: number;
-    } | null;
+    homeLast5: PrematchFormSlice;
+    awayLast5: PrematchFormSlice;
+    homeLast5Home: PrematchFormSlice;
+    awayLast5Away: PrematchFormSlice;
   };
+  standings: {
+    home: import("@/lib/ai/context-helpers").TeamStandingContext | null;
+    away: import("@/lib/ai/context-helpers").TeamStandingContext | null;
+  } | null;
+  lineups: import("@/lib/ai/context-helpers").LineupTeamContext[] | null;
+  sidelined: Array<{
+    teamExternalId: number;
+    playerExternalId: number;
+    name: string;
+    kind: string;
+    reason: string | null;
+  }> | null;
+  dataAvailable: string[];
+  dataMissing: string[];
   h2h: {
     meetings: number;
     homeWins: number;
@@ -111,12 +124,37 @@ export type LiveAiContext = {
   promptVersion: string;
   meaningfulTriggers: string[];
   prediction: PrematchAiContext["prediction"];
+  lineupsState: LineupsContextState;
+  round: string | null;
+  referee: string | null;
+  form: PrematchAiContext["form"];
+  standings: PrematchAiContext["standings"];
+  lineups: PrematchAiContext["lineups"];
+  sidelined: PrematchAiContext["sidelined"];
+  dataAvailable: string[];
+  dataMissing: string[];
+  h2h: PrematchAiContext["h2h"];
   liveStats: {
     xgHome: number | null;
     xgAway: number | null;
     redCardsHome: number;
     redCardsAway: number;
+    shotsTotalHome: number | null;
+    shotsTotalAway: number | null;
+    shotsOnTargetHome: number | null;
+    shotsOnTargetAway: number | null;
+    ballPossessionHome: number | null;
+    ballPossessionAway: number | null;
   };
+  prematchReference: {
+    winProbabilities: {
+      home: number;
+      draw: number;
+      away: number;
+    };
+    predictedOutcome: "1" | "X" | "2";
+    summary: string | null;
+  } | null;
   dataQuality: "COMPLETE" | "PARTIAL" | "STALE";
   dataTimestamp: string;
 };

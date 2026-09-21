@@ -48,6 +48,8 @@ export type ModelCoefficients = {
   elo: EloCoefficients;
 };
 
+export type LineupsFeatureState = "MISSING" | "PREDICTED" | "CONFIRMED";
+
 export type PrematchFeatureVector = {
   fixtureExternalId: number;
   asOf: string;
@@ -59,6 +61,8 @@ export type PrematchFeatureVector = {
   eloDiff: number;
   form5HomePpg: number | null;
   form5AwayPpg: number | null;
+  form5HomeVenuePpg: number | null;
+  form5AwayVenuePpg: number | null;
   form10HomePpg: number | null;
   form10AwayPpg: number | null;
   h2hHomeWinRate: number | null;
@@ -66,6 +70,9 @@ export type PrematchFeatureVector = {
   homeLeagueRank: number | null;
   awayLeagueRank: number | null;
   leaguePositionDiff: number | null;
+  homeStandingPoints: number | null;
+  awayStandingPoints: number | null;
+  standingPointsDiff: number | null;
   homeRestDays: number | null;
   awayRestDays: number | null;
   homeGoalsForAvg: number | null;
@@ -76,6 +83,11 @@ export type PrematchFeatureVector = {
   awayXgForAvg: number | null;
   homeXgAgainstAvg: number | null;
   awayXgAgainstAvg: number | null;
+  homeInjuryImpact: number | null;
+  awayInjuryImpact: number | null;
+  homeTopScorersSidelined: number;
+  awayTopScorersSidelined: number;
+  lineupsState: LineupsFeatureState;
   hasXg: boolean;
   dataQuality: PredictionDataQuality;
 };
@@ -84,10 +96,14 @@ export type PrematchModelOutput = {
   winProbabilities: WinProbabilities;
   expectedGoalsHome: number;
   expectedGoalsAway: number;
+  expectedGoalsTotal: number;
   expectedGoalsTotalMin: number;
   expectedGoalsTotalMax: number;
   bttsProb: number;
   weakerTeamScoringProb: number;
+  over2Prob: number;
+  over3Prob: number;
+  under2Prob: number;
   confidence: AiConfidence;
   predictedOutcome: "1" | "X" | "2";
 };
@@ -116,8 +132,11 @@ export type PrematchPredictionRow = {
   away_win_prob: number;
   expected_goals_home: number | null;
   expected_goals_away: number | null;
+  expected_goals_total: number | null;
   expected_goals_total_min: number | null;
   expected_goals_total_max: number | null;
+  over2_prob: number | null;
+  over3_prob: number | null;
   btts_prob: number | null;
   weaker_team_scoring_prob: number | null;
   confidence: AiConfidence;
@@ -168,8 +187,11 @@ export type LivePredictionRow = {
   away_win_prob: number;
   expected_goals_home: number | null;
   expected_goals_away: number | null;
+  expected_goals_total: number | null;
   expected_goals_total_min: number | null;
   expected_goals_total_max: number | null;
+  over2_prob: number | null;
+  over3_prob: number | null;
   btts_prob: number | null;
   weaker_team_scoring_prob: number | null;
   confidence: AiConfidence;

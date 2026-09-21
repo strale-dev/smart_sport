@@ -1,19 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { AIInsightSchema } from "@/lib/ai/schemas";
+import { mergeNarrativeWithPrediction } from "@/lib/ai/merge-insight";
+import {
+  AIInsightNarrativeOpenAiSchema,
+  AIInsightSchema,
+} from "@/lib/ai/schemas";
 
-const validInsight = {
+const narrative = {
   summary: "Home side enter with a narrow statistical edge in this fixture.",
   advantage: "HOME" as const,
-  winOutcome: "1" as const,
-  winProbabilities: {
-    home: 0.48,
-    draw: 0.27,
-    away: 0.25,
-  },
-  expectedGoalsRange: [2, 3] as [number, number],
-  weakerTeamScoringChance: 0.31,
-  confidence: "MEDIUM" as const,
   keyFactors: [
     {
       label: "Recent form",
@@ -33,35 +28,56 @@ const validInsight = {
   },
   commentary:
     "The model gives the home team a modest edge driven by stronger recent form and home advantage. Data quality is solid but not complete, so confidence stays medium rather than high.",
+  dataUsed: ["Model prediction", "Team form", "Head-to-head"],
   dataTimestamp: new Date().toISOString(),
   dataQuality: "PARTIAL" as const,
 };
 
+const predictionInput = {
+  winProbabilities: { home: 0.48, draw: 0.27, away: 0.25 },
+  expectedGoalsTotalMin: 2,
+  expectedGoalsTotalMax: 3,
+  weakerTeamScoringProb: 0.31,
+  confidence: "MEDIUM" as const,
+  predictedOutcome: "1" as const,
+};
+
 describe("AIInsightSchema", () => {
-  it("accepts a valid structured insight", () => {
-    const parsed = AIInsightSchema.parse(validInsight);
+  it("accepts a merged structured insight", () => {
+    const parsed = AIInsightSchema.parse(
+      mergeNarrativeWithPrediction(narrative, predictionInput)
+    );
     expect(parsed.winOutcome).toBe("1");
+  });
+
+  it("rejects probabilities below 1% floor", () => {
+    expect(() =>
+      AIInsightSchema.parse(
+        mergeNarrativeWithPrediction(narrative, {
+          ...predictionInput,
+          winProbabilities: { home: 0.98, draw: 0.01, away: 0.005 },
+        })
+      )
+    ).toThrow();
   });
 
   it("rejects probabilities that do not sum to 1", () => {
     expect(() =>
-      AIInsightSchema.parse({
-        ...validInsight,
-        winProbabilities: {
-          home: 0.2,
-          draw: 0.2,
-          away: 0.2,
-        },
-      })
+      AIInsightSchema.parse(
+        mergeNarrativeWithPrediction(narrative, {
+          ...predictionInput,
+          winProbabilities: { home: 0.2, draw: 0.2, away: 0.2 },
+        })
+      )
     ).toThrow();
   });
 
-  it("rejects winOutcome that disagrees with the highest probability", () => {
-    expect(() =>
-      AIInsightSchema.parse({
-        ...validInsight,
-        winOutcome: "2",
-      })
-    ).toThrow();
+  it("narrative OpenAI schema has no numeric forecast fields", () => {
+    expect(Object.keys(AIInsightNarrativeOpenAiSchema.shape)).not.toContain(
+      "winProbabilities"
+    );
+    expect(Object.keys(AIInsightNarrativeOpenAiSchema.shape)).toContain(
+      "analysis"
+    );
   });
 });

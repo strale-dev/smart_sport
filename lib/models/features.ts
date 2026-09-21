@@ -11,9 +11,14 @@ import {
 } from "@/lib/models/confidence";
 import { DEFAULT_MODEL_COEFFICIENTS } from "@/lib/models/coefficients";
 import { computeLogisticProbabilities } from "@/lib/models/logistic";
+import { normalizeWinProbabilitiesWithFloor } from "@/lib/models/normalize-probabilities";
 import { computePoissonOutput } from "@/lib/models/poisson";
+import { readLineupsFromDb } from "@/lib/ingestion/db-read";
+import { computeInjuryImpactFeatures } from "@/lib/models/injury-impact";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Lineup } from "@/types/domain";
 import type {
+  LineupsFeatureState,
   ModelCoefficients,
   PrematchFeatureVector,
   PrematchModelOutput,
@@ -83,6 +88,16 @@ function unwrapRelation<T>(value: T | T[] | null): T | null {
   return value;
 }
 
+function resolveLineupsFeatureState(lineups: Lineup[]): LineupsFeatureState {
+  if (lineups.length === 0) {
+    return "MISSING";
+  }
+  if (lineups.every((lineup) => lineup.isConfirmed)) {
+    return "CONFIRMED";
+  }
+  return "PREDICTED";
+}
+
 export async function buildPrematchFeatures(
   fixtureExternalId: number,
   options: BuildPrematchFeaturesInput = { fixtureExternalId }
@@ -109,6 +124,8 @@ export async function buildPrematchFeatures(
   const [
     form5Home,
     form5Away,
+    form5HomeVenue,
+    form5AwayVenue,
     form10Home,
     form10Away,
     h2h,
@@ -117,6 +134,8 @@ export async function buildPrematchFeatures(
     homeXg,
     awayXg,
     ranks,
+    lineups,
+    injuryImpact,
   ] = await Promise.all([
     computeFormBefore(
       homeTeam.provider_id,
@@ -131,6 +150,20 @@ export async function buildPrematchFeatures(
       asOf,
       5,
       "ALL"
+    ),
+    computeFormBefore(
+      homeTeam.provider_id,
+      context.home_team_id,
+      asOf,
+      5,
+      "HOME"
+    ),
+    computeFormBefore(
+      awayTeam.provider_id,
+      context.away_team_id,
+      asOf,
+      5,
+      "AWAY"
     ),
     computeFormBefore(
       homeTeam.provider_id,
@@ -165,6 +198,15 @@ export async function buildPrematchFeatures(
       awayTeamUuid: context.away_team_id,
       beforeAt: asOf,
     }),
+    readLineupsFromDb(fixtureExternalId),
+    computeInjuryImpactFeatures({
+      fixtureExternalId,
+      seasonUuid: context.season_id,
+      homeTeamUuid: context.home_team_id,
+      awayTeamUuid: context.away_team_id,
+      homeTeamProviderId: homeTeam.provider_id,
+      awayTeamProviderId: awayTeam.provider_id,
+    }),
   ]);
 
   const homeMeetings = h2h.meetings.length;
@@ -189,6 +231,13 @@ export async function buildPrematchFeatures(
       ? ranks.awayRank - ranks.homeRank
       : null;
 
+  const standingPointsDiff =
+    ranks.homePoints != null && ranks.awayPoints != null
+      ? ranks.homePoints - ranks.awayPoints
+      : null;
+
+  const lineupsState = resolveLineupsFeatureState(lineups);
+
   return {
     fixtureExternalId,
     asOf,
@@ -200,6 +249,8 @@ export async function buildPrematchFeatures(
     eloDiff: eloHome - eloAway,
     form5HomePpg: form5Home.ppg,
     form5AwayPpg: form5Away.ppg,
+    form5HomeVenuePpg: form5HomeVenue.matches > 0 ? form5HomeVenue.ppg : null,
+    form5AwayVenuePpg: form5AwayVenue.matches > 0 ? form5AwayVenue.ppg : null,
     form10HomePpg: form10Home.ppg,
     form10AwayPpg: form10Away.ppg,
     h2hHomeWinRate,
@@ -207,6 +258,9 @@ export async function buildPrematchFeatures(
     homeLeagueRank: ranks.homeRank,
     awayLeagueRank: ranks.awayRank,
     leaguePositionDiff,
+    homeStandingPoints: ranks.homePoints,
+    awayStandingPoints: ranks.awayPoints,
+    standingPointsDiff,
     homeRestDays,
     awayRestDays,
     homeGoalsForAvg:
@@ -229,6 +283,11 @@ export async function buildPrematchFeatures(
     awayXgForAvg: awayXg.xgForAvg,
     homeXgAgainstAvg: homeXg.xgAgainstAvg,
     awayXgAgainstAvg: awayXg.xgAgainstAvg,
+    homeInjuryImpact: injuryImpact.homeInjuryImpact,
+    awayInjuryImpact: injuryImpact.awayInjuryImpact,
+    homeTopScorersSidelined: injuryImpact.homeTopScorersSidelined,
+    awayTopScorersSidelined: injuryImpact.awayTopScorersSidelined,
+    lineupsState,
     hasXg,
     dataQuality,
   };
@@ -238,9 +297,8 @@ export function scorePrematchFromFeatures(
   features: PrematchFeatureVector,
   coefficients: ModelCoefficients = DEFAULT_MODEL_COEFFICIENTS
 ): PrematchModelOutput {
-  const winProbabilities = computeLogisticProbabilities(
-    features,
-    coefficients.logistic
+  const winProbabilities = normalizeWinProbabilitiesWithFloor(
+    computeLogisticProbabilities(features, coefficients.logistic)
   );
   const poisson = computePoissonOutput(features, coefficients.poisson);
   const confidence = bucketConfidence(winProbabilities);
@@ -249,10 +307,14 @@ export function scorePrematchFromFeatures(
     winProbabilities,
     expectedGoalsHome: poisson.expectedGoalsHome,
     expectedGoalsAway: poisson.expectedGoalsAway,
+    expectedGoalsTotal: poisson.expectedGoalsTotal,
     expectedGoalsTotalMin: poisson.expectedGoalsTotalMin,
     expectedGoalsTotalMax: poisson.expectedGoalsTotalMax,
     bttsProb: poisson.bttsProb,
     weakerTeamScoringProb: poisson.weakerTeamScoringProb,
+    over2Prob: poisson.over2Prob,
+    over3Prob: poisson.over3Prob,
+    under2Prob: poisson.under2Prob,
     confidence,
     predictedOutcome: predictedOutcomeFromProbabilities(winProbabilities),
   };

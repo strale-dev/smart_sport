@@ -2,6 +2,11 @@ import {
   bucketConfidence,
   predictedOutcomeFromProbabilities,
 } from "@/lib/models/confidence";
+import { normalizeWinProbabilitiesWithFloor } from "@/lib/models/normalize-probabilities";
+import {
+  buildTotalGoalsDistribution,
+  computeGoalMarketProbs,
+} from "@/lib/models/poisson";
 import type {
   LiveFeatureVector,
   PrematchModelOutput,
@@ -76,7 +81,9 @@ export function scoreLiveFromFeatures(
   logits.home += xgDiff * 0.1;
   logits.away -= xgDiff * 0.1;
 
-  const winProbabilities = softmax3(logits.home, logits.draw, logits.away);
+  const winProbabilities = normalizeWinProbabilitiesWithFloor(
+    softmax3(logits.home, logits.draw, logits.away)
+  );
 
   const remainingFraction = Math.max(0.05, (90 - Math.min(minute, 90)) / 90);
   const expectedGoalsHome =
@@ -88,13 +95,23 @@ export function scoreLiveFromFeatures(
   const totalExpected = expectedGoalsHome + expectedGoalsAway;
 
   const confidence = bucketConfidence(winProbabilities);
+  const expectedGoalsTotal = Number(totalExpected.toFixed(2));
+  const goalMarkets = computeGoalMarketProbs(
+    buildTotalGoalsDistribution(expectedGoalsHome, expectedGoalsAway, 8)
+  );
 
   return {
     winProbabilities,
     expectedGoalsHome: Number(expectedGoalsHome.toFixed(2)),
     expectedGoalsAway: Number(expectedGoalsAway.toFixed(2)),
+    expectedGoalsTotal,
     expectedGoalsTotalMin: Number(Math.max(totalExpected - 0.75, 0).toFixed(2)),
-    expectedGoalsTotalMax: Number((totalExpected + 0.75).toFixed(2)),
+    expectedGoalsTotalMax: Number(
+      Math.max(totalExpected + 0.75, Math.ceil(expectedGoalsTotal)).toFixed(2)
+    ),
+    over2Prob: goalMarkets.over2Prob,
+    over3Prob: goalMarkets.over3Prob,
+    under2Prob: goalMarkets.under2Prob,
     bttsProb: Number(
       Math.min(
         0.95,

@@ -14,45 +14,119 @@ const keyFactorSchema = z.object({
 
 const expectedGoalsRangeSchema = z.tuple([z.number(), z.number()]);
 
-/** OpenAI strict schema — no tuples, no optional fields. */
-export const AIInsightOpenAiSchema = z.object({
-  summary: z.string().min(10).max(200),
+const scenariosSchema = z.object({
+  likely: z.string(),
+  best: z.string(),
+  upset: z.string(),
+});
+
+function keyFactorsWithNumericEvidence(
+  factors: z.infer<typeof keyFactorSchema>[],
+  ctx: z.RefinementCtx
+) {
+  factors.forEach((factor, index) => {
+    if (!/\d/.test(factor.evidence)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Evidence must include at least one number from the context",
+        path: ["keyFactors", index, "evidence"],
+      });
+    }
+  });
+}
+
+export const prematchAnalysisSchema = z.object({
+  matchSummary: z.string().min(40).max(700),
+  homeTeamAnalysis: z.string().min(40).max(1_000),
+  awayTeamAnalysis: z.string().min(40).max(1_000),
+  headToHeadAnalysis: z.string().min(20).max(600).nullable(),
+  lineupsAndAbsences: z.string().min(20).max(700).nullable(),
+  goalsOutlook: z.string().min(40).max(700),
+  predictionRationale: z.string().min(60).max(800),
+  risks: z.array(z.string().min(20).max(320)).min(2).max(4),
+  watchFor: z.array(z.string().min(15).max(240)).min(1).max(3),
+});
+
+export type PrematchAnalysisSections = z.infer<typeof prematchAnalysisSchema>;
+
+const liveNarrativeFields = {
+  summary: z.string().min(20).max(320),
   advantage: z.enum(["HOME", "DRAW", "AWAY", "EVEN"]),
-  winOutcome: z.enum(["1", "X", "2"]),
-  winProbabilities: winProbabilitiesSchema,
-  expectedGoalsMin: z.number(),
-  expectedGoalsMax: z.number(),
-  weakerTeamScoringChance: z.number().min(0).max(1).nullable(),
-  confidence: z.enum(["LOW", "MEDIUM", "HIGH"]),
-  keyFactors: z.array(keyFactorSchema).min(2).max(5),
-  scenarios: z.object({
-    likely: z.string(),
-    best: z.string(),
-    upset: z.string(),
-  }),
-  commentary: z.string().min(50).max(1200),
+  keyFactors: z.array(keyFactorSchema).min(4).max(6),
+  scenarios: scenariosSchema,
+  dataUsed: z.array(z.string()).min(1).max(20),
+  dataTimestamp: z.string(),
+  analysis: prematchAnalysisSchema,
+};
+
+const prematchNarrativeFields = {
+  summary: z.string().min(20).max(320),
+  advantage: z.enum(["HOME", "DRAW", "AWAY", "EVEN"]),
+  keyFactors: z.array(keyFactorSchema).min(4).max(6),
+  scenarios: scenariosSchema,
+  dataUsed: z.array(z.string()).min(1).max(20),
+  dataTimestamp: z.string(),
+  analysis: prematchAnalysisSchema,
+};
+
+/** Live LLM output — structured sections; probabilities come from the prediction engine. */
+export const AIInsightLiveNarrativeOpenAiSchema = z
+  .object(liveNarrativeFields)
+  .superRefine((value, ctx) => {
+    keyFactorsWithNumericEvidence(value.keyFactors, ctx);
+  });
+
+/** OpenAI structured output schema for live (no superRefine — validated server-side). */
+export const AIInsightLiveOpenAiResponseSchema = z.object(liveNarrativeFields);
+
+/** Pre-match LLM output — structured sections; no model probabilities in the schema. */
+export const AIInsightPrematchNarrativeOpenAiSchema = z
+  .object(prematchNarrativeFields)
+  .superRefine((value, ctx) => {
+    keyFactorsWithNumericEvidence(value.keyFactors, ctx);
+  });
+
+/** OpenAI structured output schema (no superRefine — repaired server-side before strict validate). */
+export const AIInsightPrematchOpenAiResponseSchema = z.object(
+  prematchNarrativeFields
+);
+
+export type AIInsightLiveNarrativePayload = z.infer<
+  typeof AIInsightLiveNarrativeOpenAiSchema
+>;
+
+export type AIInsightPrematchNarrativePayload = z.infer<
+  typeof AIInsightPrematchNarrativeOpenAiSchema
+>;
+
+/** @deprecated Use AIInsightLiveNarrativeOpenAiSchema for live insights. */
+export const AIInsightNarrativeOpenAiSchema =
+  AIInsightLiveNarrativeOpenAiSchema;
+
+export type AIInsightNarrativePayload = AIInsightLiveNarrativePayload & {
+  commentary: string;
+  dataQuality: "COMPLETE" | "PARTIAL" | "STALE";
+};
+
+const mergedInsightFields = {
+  summary: z.string().min(10).max(320),
+  advantage: z.enum(["HOME", "DRAW", "AWAY", "EVEN"]),
+  keyFactors: z.array(keyFactorSchema).min(2).max(6),
+  scenarios: scenariosSchema,
+  commentary: z.string().min(50).max(12_000),
+  dataUsed: z.array(z.string()).min(1).max(20),
   dataTimestamp: z.string(),
   dataQuality: z.enum(["COMPLETE", "PARTIAL", "STALE"]),
-});
+};
 
 export const AIInsightSchema = z
   .object({
-    summary: z.string().min(10).max(200),
-    advantage: z.enum(["HOME", "DRAW", "AWAY", "EVEN"]),
+    ...mergedInsightFields,
     winOutcome: z.enum(["1", "X", "2"]),
     winProbabilities: winProbabilitiesSchema,
     expectedGoalsRange: expectedGoalsRangeSchema,
     weakerTeamScoringChance: z.number().min(0).max(1).nullable(),
     confidence: z.enum(["LOW", "MEDIUM", "HIGH"]),
-    keyFactors: z.array(keyFactorSchema).min(2).max(5),
-    scenarios: z.object({
-      likely: z.string(),
-      best: z.string(),
-      upset: z.string(),
-    }),
-    commentary: z.string().min(50).max(1200),
-    dataTimestamp: z.string(),
-    dataQuality: z.enum(["COMPLETE", "PARTIAL", "STALE"]),
   })
   .superRefine((value, ctx) => {
     const sum =
@@ -64,6 +138,19 @@ export const AIInsightSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Win probabilities must sum to 1 within tolerance",
+        path: ["winProbabilities"],
+      });
+    }
+
+    const minProb = 0.01;
+    if (
+      value.winProbabilities.home < minProb ||
+      value.winProbabilities.draw < minProb ||
+      value.winProbabilities.away < minProb
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Each win probability must be at least 1%",
         path: ["winProbabilities"],
       });
     }
@@ -100,65 +187,38 @@ export const AIInsightSchema = z
 
 export type AIInsightPayload = z.infer<typeof AIInsightSchema>;
 
-function normalizeWinOutcome(
-  winProbabilities: AIInsightPayload["winProbabilities"]
-): AIInsightPayload["winOutcome"] {
-  const maxProb = Math.max(
-    winProbabilities.home,
-    winProbabilities.draw,
-    winProbabilities.away
-  );
+/** @deprecated OpenAI schema name kept for imports migrating off LLM-generated numbers. */
+export const AIInsightOpenAiSchema = AIInsightNarrativeOpenAiSchema;
 
-  if (winProbabilities.home === maxProb) {
-    return "1";
-  }
-  if (winProbabilities.draw === maxProb) {
-    return "X";
-  }
-  return "2";
+export function validateAIInsightLiveNarrative(
+  payload: AIInsightLiveNarrativePayload
+): AIInsightLiveNarrativePayload {
+  return AIInsightLiveNarrativeOpenAiSchema.parse(payload);
 }
 
-function normalizeWinProbabilities(
-  winProbabilities: AIInsightPayload["winProbabilities"]
-): AIInsightPayload["winProbabilities"] {
-  const sum =
-    winProbabilities.home + winProbabilities.draw + winProbabilities.away;
-
-  if (sum <= 0) {
-    return { home: 0.34, draw: 0.33, away: 0.33 };
-  }
-
-  return {
-    home: Number((winProbabilities.home / sum).toFixed(4)),
-    draw: Number((winProbabilities.draw / sum).toFixed(4)),
-    away: Number((winProbabilities.away / sum).toFixed(4)),
-  };
+export function validateAIInsightPrematchNarrative(
+  payload: AIInsightPrematchNarrativePayload
+): AIInsightPrematchNarrativePayload {
+  return AIInsightPrematchNarrativeOpenAiSchema.parse(payload);
 }
 
-export function normalizeAndValidateAIInsight(
-  payload: z.infer<typeof AIInsightOpenAiSchema>
+/** @deprecated Use validateAIInsightLiveNarrative for live generation. */
+export function validateAIInsightNarrative(
+  payload: AIInsightLiveNarrativePayload
+): AIInsightLiveNarrativePayload {
+  return validateAIInsightLiveNarrative(payload);
+}
+
+export function validateAIInsightPayload(
+  payload: AIInsightPayload
 ): AIInsightPayload {
-  const normalizedProbabilities = normalizeWinProbabilities(
-    payload.winProbabilities
-  );
-  const minGoals = Math.min(payload.expectedGoalsMin, payload.expectedGoalsMax);
-  const maxGoals = Math.max(payload.expectedGoalsMin, payload.expectedGoalsMax);
-
-  return AIInsightSchema.parse({
-    summary: payload.summary,
-    advantage: payload.advantage,
-    winOutcome: normalizeWinOutcome(normalizedProbabilities),
-    winProbabilities: normalizedProbabilities,
-    expectedGoalsRange: [minGoals, maxGoals],
-    weakerTeamScoringChance: payload.weakerTeamScoringChance,
-    confidence: payload.confidence,
-    keyFactors: payload.keyFactors,
-    scenarios: payload.scenarios,
-    commentary: payload.commentary,
-    dataTimestamp: payload.dataTimestamp,
-    dataQuality: payload.dataQuality,
-  });
+  return AIInsightSchema.parse(payload);
 }
+
+export type InsightDataCoverage = {
+  dataAvailable: string[];
+  dataMissing: string[];
+};
 
 export type StoredAIInsight = AIInsightPayload & {
   id: string;
@@ -170,6 +230,8 @@ export type StoredAIInsight = AIInsightPayload & {
   promptVersion: string;
   createdAt: string;
   cached: boolean;
+  dataCoverage: InsightDataCoverage | null;
+  analysis: PrematchAnalysisSections | null;
 };
 
 export type PrematchInsightMode = "prematch" | "historical" | "live";
@@ -178,6 +240,7 @@ export type LiveInsightResponse =
   | {
       status: "OK";
       insight: StoredAIInsight;
+      prediction: import("@/types/prediction").LivePredictionResult | null;
       cached: boolean;
       insightMode: "live";
     }
@@ -195,12 +258,14 @@ export type PrematchInsightResponse =
   | {
       status: "OK";
       insight: StoredAIInsight;
+      prediction: import("@/types/prediction").PrematchPredictionResult;
       cached: boolean;
       insightMode: PrematchInsightMode;
     }
   | {
       status: "MISS";
       fixtureExternalId: number;
+      prediction?: import("@/types/prediction").PrematchPredictionResult;
     }
   | {
       status: "UNAVAILABLE";

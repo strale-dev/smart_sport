@@ -364,6 +364,14 @@ export function liveDetectorLockKey(fixtureProviderId: number): string {
   return `live:detector:lock:${fixtureProviderId}`;
 }
 
+export function liveInsightGenBackoffKey(fixtureProviderId: number): string {
+  return `live:insight:gen-backoff:${fixtureProviderId}`;
+}
+
+export function liveInsightLastContextKey(fixtureProviderId: number): string {
+  return `live:insight:last-context:${fixtureProviderId}`;
+}
+
 export function predictionsTopPicksKey(utcDate: string): string {
   return `predictions:top-picks:${utcDate}`;
 }

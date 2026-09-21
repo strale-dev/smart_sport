@@ -722,8 +722,11 @@ create table public.predictions (
   away_win_prob     numeric(5,4) not null,
   expected_goals_home numeric(5,2),
   expected_goals_away numeric(5,2),
+  expected_goals_total numeric(5,2),
   expected_goals_total_min numeric(5,2),
   expected_goals_total_max numeric(5,2),
+  over2_prob        numeric(5,4),
+  over3_prob        numeric(5,4),
   btts_prob         numeric(5,4),
   weaker_team_scoring_prob numeric(5,4),
   confidence        ai_confidence not null,
@@ -739,6 +742,31 @@ create index predictions_prematch_latest_idx
   on public.predictions (fixture_id, created_at desc)
   where type = 'PREMATCH';
 ```
+
+### 8.3 `prediction_evaluations`
+
+Post-match audit of the **official pre-kickoff** prediction (does not mutate `predictions` rows).
+
+```sql
+create table public.prediction_evaluations (
+  id                uuid primary key default gen_random_uuid(),
+  fixture_id        uuid not null references public.fixtures(id) on delete cascade,
+  prediction_id     uuid not null references public.predictions(id) on delete cascade,
+  evaluated_at      timestamptz not null default now(),
+  hit_1x2           boolean,
+  hit_btts          boolean,
+  hit_total_goals_range boolean,
+  hit_weaker_scores boolean,
+  hit_over2         boolean,
+  hit_over3         boolean,
+  actual_home_goals integer not null,
+  actual_away_goals integer not null,
+  details           jsonb,
+  unique (fixture_id)
+);
+```
+
+Populated when a fixture reaches a terminal status during ingestion sync (`maybeRecordPredictionEvaluation`).
 
 ---
 

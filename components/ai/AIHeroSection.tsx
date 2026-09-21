@@ -8,8 +8,12 @@ import { AIHeroLockedCard } from "@/components/ai/AIHeroLockedCard";
 import { AIHeroMissState } from "@/components/ai/AIHeroMissState";
 import { AIHeroSkeleton } from "@/components/ai/AIHeroSkeleton";
 import { AIHeroUnavailableState } from "@/components/ai/AIHeroUnavailableState";
+import { WinProbabilitiesBar } from "@/components/ai/WinProbabilitiesBar";
 import { ErrorState } from "@/components/common/ErrorState";
+import { predictedOutcomeFromProbabilities } from "@/lib/models/confidence";
+import { Badge } from "@/components/ui/badge";
 import type { TeamRef } from "@/types/domain";
+import type { PrematchPredictionResult } from "@/types/prediction";
 
 type AIHeroSectionProps = {
   homeTeam: Pick<TeamRef, "name" | "code">;
@@ -32,12 +36,45 @@ export function AIHeroSection({
     used,
     errorMessage,
     fallbackMessage,
+    liveWinProbabilities,
     generate,
     refetch,
     isGenerating,
   } = usePrematchInsight();
 
   if (state === "guest") {
+    if (
+      fixturePhase === "LIVE" &&
+      prediction &&
+      prediction.type === "PREMATCH"
+    ) {
+      return (
+        <div className="space-y-4">
+          <AIHeroFallbackCard
+            prediction={prediction as PrematchPredictionResult}
+            mode="generating"
+            message="Live model numbers are available below. Sign up free for full live analyst commentary."
+            homeTeam={homeTeam}
+            awayTeam={awayTeam}
+          />
+          {liveWinProbabilities ? (
+            <div className="space-y-2 rounded-xl border p-4">
+              <Badge variant="live">Live model</Badge>
+              <WinProbabilitiesBar
+                probabilities={liveWinProbabilities}
+                winOutcome={predictedOutcomeFromProbabilities(
+                  liveWinProbabilities
+                )}
+                homeTeam={homeTeam}
+                awayTeam={awayTeam}
+              />
+            </div>
+          ) : null}
+          <AIHeroLockedCard returnTo={returnTo} />
+        </div>
+      );
+    }
+
     return <AIHeroLockedCard returnTo={returnTo} />;
   }
 
@@ -54,14 +91,21 @@ export function AIHeroSection({
     return <AIHeroSkeleton />;
   }
 
+  if (state === "generating" && prediction) {
+    return (
+      <AIHeroFallbackCard
+        prediction={prediction}
+        mode="generating"
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        isRetrying={isGenerating}
+      />
+    );
+  }
+
   if (state === "miss") {
-    if (fixturePhase === "LIVE") {
-      return (
-        <AIHeroUnavailableState
-          title="Live AI warming up"
-          description="Analysis refreshes automatically after goals, cards, and other meaningful match events."
-        />
-      );
+    if (isGenerating) {
+      return <AIHeroSkeleton />;
     }
 
     return (
@@ -80,16 +124,33 @@ export function AIHeroSection({
     return <AIHeroLimitState limit={limit} used={used} />;
   }
 
-  if (state === "fallback" && prediction) {
+  if (state === "fallback" && prediction && prediction.type === "PREMATCH") {
     return (
-      <AIHeroFallbackCard
-        prediction={prediction}
-        message={fallbackMessage}
-        homeTeam={homeTeam}
-        awayTeam={awayTeam}
-        onRetry={() => void generate()}
-        isRetrying={isGenerating}
-      />
+      <div className="space-y-4">
+        <AIHeroFallbackCard
+          prediction={prediction as PrematchPredictionResult}
+          mode={fixturePhase === "LIVE" ? "generating" : "error"}
+          message={fallbackMessage}
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
+          onRetry={fixturePhase === "LIVE" ? undefined : () => void generate()}
+          isRetrying={isGenerating}
+        />
+        {fixturePhase === "LIVE" && liveWinProbabilities ? (
+          <AIHeroFallbackCard
+            prediction={{
+              ...(prediction as PrematchPredictionResult),
+              winProbabilities: liveWinProbabilities,
+              predictedOutcome:
+                predictedOutcomeFromProbabilities(liveWinProbabilities),
+            }}
+            mode="generating"
+            message="Current live win probabilities from the in-match model."
+            homeTeam={homeTeam}
+            awayTeam={awayTeam}
+          />
+        ) : null}
+      </div>
     );
   }
 
@@ -110,9 +171,12 @@ export function AIHeroSection({
   return (
     <AIHeroCard
       insight={insight}
+      prediction={prediction}
       insightMode={insightMode}
       homeTeam={homeTeam}
       awayTeam={awayTeam}
+      liveWinProbabilities={liveWinProbabilities}
+      supplementalMessage={fallbackMessage}
     />
   );
 }

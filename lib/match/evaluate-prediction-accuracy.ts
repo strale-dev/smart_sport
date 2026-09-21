@@ -12,6 +12,7 @@ export type PredictionAccuracyRow = {
 
 const BTTS_THRESHOLD = 0.5;
 const WEAKER_SCORE_THRESHOLD = 0.5;
+const OVER_GOALS_THRESHOLD = 0.5;
 
 function resolveFinalGoals(
   score: ScoreSnapshot
@@ -81,6 +82,11 @@ export function evaluatePrematchPredictionAccuracy(
   const predictedWeakerScores =
     prediction.weakerTeamScoringProb >= WEAKER_SCORE_THRESHOLD;
 
+  const actualOver2 = totalGoals > 2;
+  const actualOver3 = totalGoals > 3;
+  const predictedOver2 = (prediction.over2Prob ?? 0) >= OVER_GOALS_THRESHOLD;
+  const predictedOver3 = (prediction.over3Prob ?? 0) >= OVER_GOALS_THRESHOLD;
+
   return [
     {
       id: "1x2",
@@ -109,6 +115,20 @@ export function evaluatePrematchPredictionAccuracy(
       predicted: predictedWeakerScores ? "Yes" : "No",
       actual: weakerScored ? "Yes" : "No",
       hit: predictedWeakerScores === weakerScored,
+    },
+    {
+      id: "over2",
+      label: "Over 2.5 goals",
+      predicted: predictedOver2 ? "Yes" : "No",
+      actual: actualOver2 ? "Yes" : "No",
+      hit: predictedOver2 === actualOver2,
+    },
+    {
+      id: "over3",
+      label: "Over 3.5 goals",
+      predicted: predictedOver3 ? "Yes" : "No",
+      actual: actualOver3 ? "Yes" : "No",
+      hit: predictedOver3 === actualOver3,
     },
   ];
 }

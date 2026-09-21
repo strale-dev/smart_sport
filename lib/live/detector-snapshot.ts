@@ -44,6 +44,9 @@ function mapStats(
     teamExternalId: stats.teamExternalId,
     expectedGoals: stats.expectedGoals,
     redCards: stats.redCards,
+    shotsTotal: stats.shotsTotal,
+    shotsOnTarget: stats.shotsOnTarget,
+    ballPossession: stats.ballPossession,
   };
 }
 

@@ -45,6 +45,18 @@ async function main() {
       process.exit(1);
     }
 
+    if (first.over3Prob > first.over2Prob + 0.001) {
+      console.error(
+        `over3 > over2 for fixture ${fixture.provider_id}: ${first.over3Prob} > ${first.over2Prob}`
+      );
+      process.exit(1);
+    }
+
+    if (first.expectedGoalsTotalMax < first.expectedGoalsTotalMin) {
+      console.error(`Invalid xG range for fixture ${fixture.provider_id}`);
+      process.exit(1);
+    }
+
     results.push({
       fixtureId: fixture.provider_id,
       outcome: first.predictedOutcome,

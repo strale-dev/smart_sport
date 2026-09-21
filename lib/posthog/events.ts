@@ -16,6 +16,7 @@ export const POSTHOG_EVENTS = {
   playerViewed: "player_viewed",
   leagueViewed: "league_viewed",
   aiLiveInsightViewed: "ai_live_insight_viewed",
+  aiLiveInsightUnavailable: "ai_live_insight_unavailable",
   matchScoreFlipped: "match_score_flipped",
   liveMeaningfulEventReceived: "live_meaningful_event_received",
   liveCenterAiUpdatedMarkerRendered: "live_center_ai_updated_marker_rendered",

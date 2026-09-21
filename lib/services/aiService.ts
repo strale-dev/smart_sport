@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/nextjs";
+
 import {
   mapAiInsightRowToStored,
   readLiveInsightFromStore,
@@ -14,18 +16,26 @@ import {
 } from "@/lib/ai/db";
 import type { Json } from "@/types/supabase";
 import {
-  generateStructuredInsight,
+  generateLiveStructuredInsight,
+  generatePrematchStructuredInsight,
   OpenAiGenerationError,
   OpenAiNotConfiguredError,
 } from "@/lib/ai/openai";
 import {
+  liveLlmToNarrativePayload,
+  prematchLlmToNarrativePayload,
+} from "@/lib/ai/compose-prematch-commentary";
+import { toUserFacingAiErrorMessage } from "@/lib/ai/user-facing-ai-error";
+import {
   buildPrematchSystemPrompt,
   buildLiveSystemPrompt,
 } from "@/lib/ai/prompts";
+import { mergeNarrativeWithPrediction } from "@/lib/ai/merge-insight";
 import type {
   LiveInsightResponse,
   PrematchInsightResponse,
 } from "@/lib/ai/schemas";
+import { validateAIInsightPayload } from "@/lib/ai/schemas";
 import {
   canGeneratePrematchInsight,
   resolveFixturePhase,
@@ -37,7 +47,13 @@ import {
   getAiUsageStatus,
   recordAiGeneration,
 } from "@/lib/ai/usage-gate";
-import { resolveFixtureUuidByExternalId } from "@/lib/predictions/db";
+import {
+  getActiveModelVersion,
+  mapLivePredictionRowToResult,
+  readLatestLivePrediction,
+  readLivePredictionById,
+  resolveFixtureUuidByExternalId,
+} from "@/lib/predictions/db";
 import type { MeaningfulEventKind } from "@/lib/live/event-detector-types";
 import type { LivePredictionResult } from "@/types/prediction";
 import {
@@ -46,7 +62,10 @@ import {
   buildPrematchContext,
   buildPrematchUserPrompt,
 } from "@/lib/services/aiContextService";
-import { getOrComputePrematch } from "@/lib/services/predictionService";
+import {
+  getLatestPrematch,
+  getOrComputePrematch,
+} from "@/lib/services/predictionService";
 
 export type GeneratePrematchInsightOptions = {
   userId?: string | null;
@@ -79,12 +98,54 @@ async function readHistoricalPrematchInsight(
     };
   }
 
+  const prediction = await getLatestPrematch(fixtureExternalId);
+  if (!prediction) {
+    return {
+      status: "UNAVAILABLE",
+      fixtureExternalId,
+      reason: "NO_STORED_INSIGHT",
+    };
+  }
+
   return {
     status: "OK",
     insight: mapAiInsightRowToStored(row, fixtureExternalId, true),
+    prediction,
     cached: true,
     insightMode: "historical",
   };
+}
+
+async function resolveLivePredictionForInsight(input: {
+  fixtureUuid: string;
+  fixtureExternalId: number;
+  predictionId: string | null;
+}): Promise<LivePredictionResult | null> {
+  const modelVersion = await getActiveModelVersion();
+
+  if (input.predictionId) {
+    const linked = await readLivePredictionById(input.predictionId);
+    if (linked) {
+      return mapLivePredictionRowToResult(
+        linked,
+        input.fixtureExternalId,
+        modelVersion.version,
+        true
+      );
+    }
+  }
+
+  const latest = await readLatestLivePrediction(input.fixtureUuid);
+  if (!latest) {
+    return null;
+  }
+
+  return mapLivePredictionRowToResult(
+    latest,
+    input.fixtureExternalId,
+    modelVersion.version,
+    true
+  );
 }
 
 export async function readLiveInsight(
@@ -112,9 +173,16 @@ export async function readLiveInsight(
   const stored = mapAiInsightRowToStored(row, fixtureExternalId, true);
   await writeLiveInsightCache(fixtureExternalId, row.context_hash, stored);
 
+  const prediction = await resolveLivePredictionForInsight({
+    fixtureUuid: fixture.id,
+    fixtureExternalId,
+    predictionId: row.prediction_id,
+  });
+
   return {
     status: "OK",
     insight: stored,
+    prediction,
     cached: true,
     insightMode: "live",
   };
@@ -158,17 +226,22 @@ export async function readPrematchInsight(
   );
 
   if (!stored) {
-    return { status: "MISS", fixtureExternalId };
+    return { status: "MISS", fixtureExternalId, prediction };
   }
 
   return {
     status: "OK",
     insight: stored,
+    prediction,
     cached: true,
     insightMode: "prematch",
   };
 }
 
+/**
+ * Pre-match insight: one row per (fixture_id, PREMATCH, context_hash), shared by all users.
+ * Personal daily quota does not gate creation or reads; cron and authenticated ensure fill gaps.
+ */
 export async function generatePrematchInsight(
   fixtureExternalId: number,
   options: GeneratePrematchInsightOptions
@@ -205,28 +278,14 @@ export async function generatePrematchInsight(
     return {
       status: "OK",
       insight: existing,
+      prediction,
       cached: true,
       insightMode: "prematch",
     };
   }
 
-  if (options.trigger === "user") {
-    if (!options.userId) {
-      return { status: "GUEST_FORBIDDEN" };
-    }
-
-    try {
-      await assertCanGenerateAi(options.userId, "prediction");
-    } catch (error) {
-      if (error instanceof AiLimitReachedError) {
-        return {
-          status: "AI_LIMIT_REACHED",
-          limit: error.limit,
-          used: error.used,
-        };
-      }
-      throw error;
-    }
+  if (options.trigger === "user" && !options.userId) {
+    return { status: "GUEST_FORBIDDEN" };
   }
 
   try {
@@ -242,10 +301,19 @@ export async function generatePrematchInsight(
           return cachedInsideLock;
         }
 
-        const llm = await generateStructuredInsight({
+        const llm = await generatePrematchStructuredInsight({
           systemPrompt: buildPrematchSystemPrompt(),
           userPrompt: buildPrematchUserPrompt(context),
         });
+
+        const narrative = prematchLlmToNarrativePayload(llm.parsed);
+
+        const payload = validateAIInsightPayload(
+          mergeNarrativeWithPrediction(narrative, prediction, {
+            dataAvailable: context.dataAvailable,
+            dataMissing: context.dataMissing,
+          })
+        );
 
         const row = await insertAiInsight({
           fixtureUuid: fixture.id,
@@ -253,8 +321,16 @@ export async function generatePrematchInsight(
           contextHash,
           openaiModel: llm.model,
           promptVersion: context.promptVersion,
-          payload: llm.parsed,
-          rawOutput: llm.rawOutput as Json,
+          payload,
+          rawOutput: {
+            narrative: llm.parsed,
+            analysis: llm.parsed.analysis,
+            dataUsed: llm.parsed.dataUsed,
+            dataCoverage: {
+              dataAvailable: context.dataAvailable,
+              dataMissing: context.dataMissing,
+            },
+          } as Json,
           tokensInput: llm.tokensInput,
           tokensOutput: llm.tokensOutput,
           costUsd: llm.costUsd,
@@ -266,48 +342,20 @@ export async function generatePrematchInsight(
       }
     );
 
-    if (options.trigger === "user" && options.userId) {
-      await recordAiGeneration(options.userId, "prediction");
-    }
-
     return {
       status: "OK",
       insight: generated,
+      prediction,
       cached: false,
       insightMode: "prematch",
     };
   } catch (error) {
-    if (error instanceof AiLimitReachedError) {
-      return {
-        status: "AI_LIMIT_REACHED",
-        limit: error.limit,
-        used: error.used,
-      };
-    }
-
-    if (
-      error instanceof OpenAiNotConfiguredError ||
-      error instanceof OpenAiGenerationError
-    ) {
-      const message =
-        error instanceof OpenAiNotConfiguredError
-          ? error.message
-          : error.message;
-
-      console.error("[aiService] prematch generation failed:", message);
-      return buildFallbackResponse(fixtureExternalId, prediction, message);
-    }
-
     console.error("[aiService] prematch generation failed:", error);
-    if (error instanceof Error) {
-      return buildFallbackResponse(
-        fixtureExternalId,
-        prediction,
-        error.message
-      );
-    }
-
-    throw error;
+    return buildFallbackResponse(
+      fixtureExternalId,
+      prediction,
+      toUserFacingAiErrorMessage(error)
+    );
   }
 }
 
@@ -327,12 +375,7 @@ export type GenerateLiveInsightInput = {
   meaningfulTriggers: MeaningfulEventKind[];
   minute: number | null;
   score: { home: number | null; away: number | null };
-  liveStats: {
-    xgHome: number | null;
-    xgAway: number | null;
-    redCardsHome: number;
-    redCardsAway: number;
-  };
+  liveStats: import("@/types/ai").LiveAiContext["liveStats"];
   /** When set, free-tier live quotas are enforced for this generation. */
   userId?: string | null;
 };
@@ -398,10 +441,19 @@ export async function generateLiveInsight(
         return cachedInsideLock;
       }
 
-      const llm = await generateStructuredInsight({
+      const llm = await generateLiveStructuredInsight({
         systemPrompt: buildLiveSystemPrompt(),
         userPrompt: buildLiveUserPrompt(context),
       });
+
+      const narrative = liveLlmToNarrativePayload(llm.parsed);
+
+      const payload = validateAIInsightPayload(
+        mergeNarrativeWithPrediction(narrative, input.prediction, {
+          dataAvailable: context.dataAvailable,
+          dataMissing: context.dataMissing,
+        })
+      );
 
       const row = await insertAiInsight({
         fixtureUuid: fixture.id,
@@ -409,8 +461,16 @@ export async function generateLiveInsight(
         contextHash,
         openaiModel: llm.model,
         promptVersion: context.promptVersion,
-        payload: llm.parsed,
-        rawOutput: llm.rawOutput as Json,
+        payload,
+        rawOutput: {
+          narrative: llm.parsed,
+          analysis: llm.parsed.analysis,
+          dataUsed: llm.parsed.dataUsed,
+          dataCoverage: {
+            dataAvailable: context.dataAvailable,
+            dataMissing: context.dataMissing,
+          },
+        } as Json,
         tokensInput: llm.tokensInput,
         tokensOutput: llm.tokensOutput,
         costUsd: llm.costUsd,
@@ -443,10 +503,12 @@ export async function generateLiveInsight(
           ? error.message
           : error.message;
       console.error("[aiService] live generation failed:", message);
+      Sentry.captureException(error);
       return { ok: false, reason: message };
     }
 
     console.error("[aiService] live generation failed:", error);
+    Sentry.captureException(error);
     return {
       ok: false,
       reason: error instanceof Error ? error.message : "UNKNOWN_ERROR",

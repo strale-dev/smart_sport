@@ -15,6 +15,8 @@ const baseFeature: PrematchFeatureVector = {
   eloDiff: 100,
   form5HomePpg: 2,
   form5AwayPpg: 1,
+  form5HomeVenuePpg: 2.2,
+  form5AwayVenuePpg: 0.8,
   form10HomePpg: 1.8,
   form10AwayPpg: 1.2,
   h2hHomeWinRate: 0.6,
@@ -22,6 +24,9 @@ const baseFeature: PrematchFeatureVector = {
   homeLeagueRank: 4,
   awayLeagueRank: 10,
   leaguePositionDiff: 6,
+  homeStandingPoints: 45,
+  awayStandingPoints: 30,
+  standingPointsDiff: 15,
   homeRestDays: 6,
   awayRestDays: 4,
   homeGoalsForAvg: 1.8,
@@ -32,6 +37,11 @@ const baseFeature: PrematchFeatureVector = {
   awayXgForAvg: 1.2,
   homeXgAgainstAvg: 1.1,
   awayXgAgainstAvg: 1.3,
+  homeInjuryImpact: 0.1,
+  awayInjuryImpact: null,
+  homeTopScorersSidelined: 1,
+  awayTopScorersSidelined: 0,
+  lineupsState: "CONFIRMED",
   hasXg: true,
   dataQuality: "COMPLETE",
 };
@@ -51,6 +61,11 @@ describe("poisson", () => {
     expect(output.weakerTeamScoringProb).toBeLessThanOrEqual(1);
     expect(output.expectedGoalsTotalMax).toBeGreaterThanOrEqual(
       output.expectedGoalsTotalMin
+    );
+    expect(output.expectedGoalsTotal).toBeGreaterThan(0);
+    expect(output.over3Prob).toBeLessThanOrEqual(output.over2Prob);
+    expect(output.expectedGoalsTotalMax).toBeGreaterThanOrEqual(
+      Math.floor(output.expectedGoalsTotal)
     );
   });
 });

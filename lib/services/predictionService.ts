@@ -14,6 +14,7 @@ import {
   mapPredictionRowToResult,
   readLatestLivePrediction,
   readLatestPrematchPrediction,
+  readOfficialPrematchPrediction,
   resolveFixtureUuidByExternalId,
 } from "@/lib/predictions/db";
 import { PREMATCH_FRESHNESS_MS } from "@/lib/models/version";
@@ -28,6 +29,31 @@ import {
 } from "@/lib/models/features";
 
 const PREMATCH_STATUSES = new Set(["NS", "TBD"]);
+
+function isKickoffReached(kickoffAt: string, now = Date.now()): boolean {
+  return now >= new Date(kickoffAt).getTime();
+}
+
+async function readPrematchRowForFixture(fixture: {
+  id: string;
+  kickoff_at: string;
+  status: string;
+}): Promise<Awaited<ReturnType<typeof readLatestPrematchPrediction>>> {
+  if (
+    isKickoffReached(fixture.kickoff_at) ||
+    !PREMATCH_STATUSES.has(fixture.status)
+  ) {
+    const official = await readOfficialPrematchPrediction(
+      fixture.id,
+      fixture.kickoff_at
+    );
+    if (official) {
+      return official;
+    }
+  }
+
+  return readLatestPrematchPrediction(fixture.id);
+}
 const LOCK_TTL_SECONDS = 45;
 const LOCK_RENEW_INTERVAL_MS = 10_000;
 const LOCK_WAIT_ATTEMPTS = 8;
@@ -47,6 +73,23 @@ async function computeAndPersistPrematch(
   fixtureExternalId: number,
   fixtureUuid: string
 ): Promise<PrematchPredictionResult> {
+  const fixtureMeta = await resolveFixtureUuidByExternalId(fixtureExternalId);
+  if (fixtureMeta && isKickoffReached(fixtureMeta.kickoff_at)) {
+    const frozen = await readOfficialPrematchPrediction(
+      fixtureUuid,
+      fixtureMeta.kickoff_at
+    );
+    if (frozen) {
+      const modelVersion = await getActiveModelVersion();
+      return mapPredictionRowToResult(
+        frozen,
+        fixtureExternalId,
+        modelVersion.version,
+        true
+      );
+    }
+  }
+
   const modelVersion = await getActiveModelVersion();
   const features = await buildPrematchFeatures(fixtureExternalId, {
     fixtureExternalId,
@@ -69,8 +112,11 @@ async function computeAndPersistPrematch(
     awayWinProb: output.winProbabilities.away,
     expectedGoalsHome: output.expectedGoalsHome,
     expectedGoalsAway: output.expectedGoalsAway,
+    expectedGoalsTotal: output.expectedGoalsTotal,
     expectedGoalsTotalMin: output.expectedGoalsTotalMin,
     expectedGoalsTotalMax: output.expectedGoalsTotalMax,
+    over2Prob: output.over2Prob,
+    over3Prob: output.over3Prob,
     bttsProb: output.bttsProb,
     weakerTeamScoringProb: output.weakerTeamScoringProb,
     confidence: output.confidence,
@@ -135,13 +181,16 @@ export async function getOrComputePrematch(
     return cached;
   }
 
-  if (!PREMATCH_STATUSES.has(fixture.status)) {
-    const latest = await readLatestPrematchPrediction(fixture.id);
-    if (!latest) {
+  if (
+    !PREMATCH_STATUSES.has(fixture.status) ||
+    isKickoffReached(fixture.kickoff_at)
+  ) {
+    const row = await readPrematchRowForFixture(fixture);
+    if (!row) {
       return null;
     }
     return mapPredictionRowToResult(
-      latest,
+      row,
       fixtureExternalId,
       modelVersion.version,
       true
@@ -196,13 +245,39 @@ export async function getLatestPrematch(
   }
 
   const modelVersion = await getActiveModelVersion();
-  const latest = await readLatestPrematchPrediction(fixture.id);
-  if (!latest) {
+  const row = await readPrematchRowForFixture(fixture);
+  if (!row) {
     return null;
   }
 
   return mapPredictionRowToResult(
-    latest,
+    row,
+    fixtureExternalId,
+    modelVersion.version,
+    true
+  );
+}
+
+/** Pre-kickoff audit snapshot (last PREMATCH row before kickoff_at). */
+export async function getOfficialPrematch(
+  fixtureExternalId: number
+): Promise<PrematchPredictionResult | null> {
+  const fixture = await resolveFixtureUuidByExternalId(fixtureExternalId);
+  if (!fixture) {
+    return null;
+  }
+
+  const modelVersion = await getActiveModelVersion();
+  const row = await readOfficialPrematchPrediction(
+    fixture.id,
+    fixture.kickoff_at
+  );
+  if (!row) {
+    return null;
+  }
+
+  return mapPredictionRowToResult(
+    row,
     fixtureExternalId,
     modelVersion.version,
     true
@@ -224,13 +299,18 @@ async function resolvePriorWinProbabilities(
     ).winProbabilities;
   }
 
-  const prematch = await readLatestPrematchPrediction(fixtureUuid);
-  if (!prematch) {
+  const fixture = await resolveFixtureUuidByExternalId(fixtureExternalId);
+  if (!fixture) {
+    return null;
+  }
+
+  const prematchRow = await readPrematchRowForFixture(fixture);
+  if (!prematchRow) {
     return null;
   }
 
   return mapPredictionRowToResult(
-    prematch,
+    prematchRow,
     fixtureExternalId,
     modelVersion.version,
     true
@@ -293,8 +373,11 @@ export async function updateLiveProbability(input: {
           awayWinProb: output.winProbabilities.away,
           expectedGoalsHome: output.expectedGoalsHome,
           expectedGoalsAway: output.expectedGoalsAway,
+          expectedGoalsTotal: output.expectedGoalsTotal,
           expectedGoalsTotalMin: output.expectedGoalsTotalMin,
           expectedGoalsTotalMax: output.expectedGoalsTotalMax,
+          over2Prob: output.over2Prob,
+          over3Prob: output.over3Prob,
           bttsProb: output.bttsProb,
           weakerTeamScoringProb: output.weakerTeamScoringProb,
           confidence: output.confidence,

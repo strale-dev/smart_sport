@@ -1,3 +1,7 @@
+import * as Sentry from "@sentry/nextjs";
+
+import { readLatestLiveInsight } from "@/lib/ai/db";
+import { LIVE_STATUSES } from "@/lib/ai/status-map";
 import type {
   DetectedMeaningfulEvent,
   DetectResult,
@@ -9,12 +13,20 @@ import {
   detectMeaningfulEvents,
   toMeaningfulEventBroadcastPayload,
 } from "@/lib/live/eventDetector";
-import { buildLiveFeaturesFromSnapshot } from "@/lib/models/live-features";
-import { scoreLiveFromFeatures } from "@/lib/models/liveProbability";
+import {
+  isLiveInsightGenerationInBackoff,
+  markLiveInsightGenerationBackoff,
+  readStoredLiveInsightContext,
+  shouldRunPeriodicLiveInsight,
+  snapshotLiveContext,
+  writeStoredLiveInsightContext,
+} from "@/lib/live/live-insight-schedule";
 import {
   isProbabilityShiftMeaningful,
   LIVE_PROBABILITY_SHIFT_THRESHOLD,
 } from "@/lib/live/probability-shift";
+import { buildLiveFeaturesFromSnapshot } from "@/lib/models/live-features";
+import { scoreLiveFromFeatures } from "@/lib/models/liveProbability";
 import { generateLiveInsight } from "@/lib/services/aiService";
 import { updateLiveProbability } from "@/lib/services/predictionService";
 import {
@@ -25,6 +37,7 @@ import {
   readLatestPrematchPrediction,
   resolveFixtureUuidByExternalId,
 } from "@/lib/predictions/db";
+import type { FixtureStatus } from "@/types/domain";
 import type { WinProbabilities } from "@/types/prediction";
 
 export type MeaningfulEventPipelineResult = {
@@ -32,12 +45,31 @@ export type MeaningfulEventPipelineResult = {
   broadcastEvents: MeaningfulEventBroadcastPayload[];
   livePredictionUpdated: boolean;
   liveInsightGenerated: boolean;
+  liveInsightSkipReason?: string | null;
 };
 
 function findTeamStat(snapshot: LiveDetectorSnapshot, teamExternalId: number) {
   return snapshot.stats.find(
     (entry) => entry.teamExternalId === teamExternalId
   );
+}
+
+export function buildLiveStatsFromSnapshot(snapshot: LiveDetectorSnapshot) {
+  const homeStats = findTeamStat(snapshot, snapshot.homeTeamExternalId);
+  const awayStats = findTeamStat(snapshot, snapshot.awayTeamExternalId);
+
+  return {
+    xgHome: homeStats?.expectedGoals ?? null,
+    xgAway: awayStats?.expectedGoals ?? null,
+    redCardsHome: homeStats?.redCards ?? 0,
+    redCardsAway: awayStats?.redCards ?? 0,
+    shotsTotalHome: homeStats?.shotsTotal ?? null,
+    shotsTotalAway: awayStats?.shotsTotal ?? null,
+    shotsOnTargetHome: homeStats?.shotsOnTarget ?? null,
+    shotsOnTargetAway: awayStats?.shotsOnTarget ?? null,
+    ballPossessionHome: homeStats?.ballPossession ?? null,
+    ballPossessionAway: awayStats?.ballPossession ?? null,
+  };
 }
 
 async function resolveBaselineProbabilities(
@@ -91,6 +123,88 @@ function appendProbabilityShiftEvent(
   ];
 }
 
+function appendSyntheticEvent(
+  events: DetectedMeaningfulEvent[],
+  kind: Extract<MeaningfulEventKind, "LIVE_BASELINE" | "HT" | "PERIODIC">,
+  snapshot: LiveDetectorSnapshot
+): DetectedMeaningfulEvent[] {
+  if (events.some((entry) => entry.kind === kind)) {
+    return events;
+  }
+
+  return [
+    ...events,
+    {
+      kind,
+      reason: kind.toLowerCase(),
+      minute: snapshot.minute,
+      teamExternalId: null,
+    },
+  ];
+}
+
+function isLiveSnapshotStatus(status: string): boolean {
+  return LIVE_STATUSES.has(status as FixtureStatus);
+}
+
+async function resolveScheduledTriggers(input: {
+  fixtureUuid: string;
+  fixtureProviderId: number;
+  prevSnapshot: LiveDetectorSnapshot | null;
+  nextSnapshot: LiveDetectorSnapshot;
+  events: DetectedMeaningfulEvent[];
+}): Promise<DetectedMeaningfulEvent[]> {
+  if (!isLiveSnapshotStatus(input.nextSnapshot.status)) {
+    return input.events;
+  }
+
+  if (await isLiveInsightGenerationInBackoff(input.fixtureProviderId)) {
+    return input.events;
+  }
+
+  const latestLiveInsight = await readLatestLiveInsight(input.fixtureUuid);
+  let events = input.events;
+
+  if (!latestLiveInsight) {
+    return appendSyntheticEvent(events, "LIVE_BASELINE", input.nextSnapshot);
+  }
+
+  if (
+    input.nextSnapshot.status === "HT" &&
+    input.prevSnapshot?.status !== "HT"
+  ) {
+    events = appendSyntheticEvent(events, "HT", input.nextSnapshot);
+  }
+
+  const baseline = await resolveBaselineProbabilities(
+    input.fixtureUuid,
+    input.fixtureProviderId
+  );
+  if (baseline) {
+    const features = buildLiveFeaturesFromSnapshot(
+      input.nextSnapshot,
+      baseline
+    );
+    const preview = scoreLiveFromFeatures(features);
+    const storedContext = await readStoredLiveInsightContext(
+      input.fixtureProviderId
+    );
+
+    if (
+      shouldRunPeriodicLiveInsight({
+        lastInsightCreatedAt: latestLiveInsight.created_at,
+        storedContext,
+        snapshot: input.nextSnapshot,
+        previewProbabilities: preview.winProbabilities,
+      })
+    ) {
+      events = appendSyntheticEvent(events, "PERIODIC", input.nextSnapshot);
+    }
+  }
+
+  return events;
+}
+
 export async function runMeaningfulEventPipeline(input: {
   fixtureProviderId: number;
   prevSnapshot: LiveDetectorSnapshot | null;
@@ -101,16 +215,25 @@ export async function runMeaningfulEventPipeline(input: {
     input.nextSnapshot
   );
 
-  let triggerKinds: MeaningfulEventKind[] = detectResult.events.map(
-    (entry) => entry.kind
-  );
-  let shouldPersist = detectResult.events.length > 0;
+  let events = [...detectResult.events];
+  let shouldPersist = events.length > 0;
 
-  if (input.prevSnapshot) {
-    const fixture = await resolveFixtureUuidByExternalId(
-      input.fixtureProviderId
-    );
-    if (fixture) {
+  const fixture = await resolveFixtureUuidByExternalId(input.fixtureProviderId);
+
+  if (fixture) {
+    events = await resolveScheduledTriggers({
+      fixtureUuid: fixture.id,
+      fixtureProviderId: input.fixtureProviderId,
+      prevSnapshot: input.prevSnapshot,
+      nextSnapshot: input.nextSnapshot,
+      events,
+    });
+
+    if (events.length > 0) {
+      shouldPersist = true;
+    }
+
+    if (input.prevSnapshot) {
       const baseline = await resolveBaselineProbabilities(
         fixture.id,
         input.fixtureProviderId
@@ -129,24 +252,23 @@ export async function runMeaningfulEventPipeline(input: {
 
         if (isProbabilityShiftMeaningful(baseline, preview.winProbabilities)) {
           shouldPersist = true;
-          detectResult.events = appendProbabilityShiftEvent(
-            detectResult.events,
-            shift
-          );
-          triggerKinds = detectResult.events.map((entry) => entry.kind);
+          events = appendProbabilityShiftEvent(events, shift);
         }
       }
     }
   }
 
+  detectResult.events = events;
+
+  const triggerKinds: MeaningfulEventKind[] = events.map((entry) => entry.kind);
+
   if (!shouldPersist) {
     return {
       detectResult,
-      broadcastEvents: detectResult.events.map(
-        toMeaningfulEventBroadcastPayload
-      ),
+      broadcastEvents: events.map(toMeaningfulEventBroadcastPayload),
       livePredictionUpdated: false,
       liveInsightGenerated: false,
+      liveInsightSkipReason: null,
     };
   }
 
@@ -156,24 +278,33 @@ export async function runMeaningfulEventPipeline(input: {
   });
 
   if (!livePrediction) {
+    const skipReason = "NO_LIVE_BASELINE";
+    console.error(
+      JSON.stringify({
+        scope: "live/meaningful-event-pipeline",
+        level: "error",
+        message: "live_prediction_unavailable",
+        fixtureProviderId: input.fixtureProviderId,
+        reason: skipReason,
+        triggers: triggerKinds,
+      })
+    );
+    Sentry.captureMessage("live_prediction_unavailable", {
+      level: "warning",
+      extra: {
+        fixtureProviderId: input.fixtureProviderId,
+        triggers: triggerKinds,
+      },
+    });
+
     return {
       detectResult,
-      broadcastEvents: detectResult.events.map(
-        toMeaningfulEventBroadcastPayload
-      ),
+      broadcastEvents: events.map(toMeaningfulEventBroadcastPayload),
       livePredictionUpdated: false,
       liveInsightGenerated: false,
+      liveInsightSkipReason: skipReason,
     };
   }
-
-  const homeStats = findTeamStat(
-    input.nextSnapshot,
-    input.nextSnapshot.homeTeamExternalId
-  );
-  const awayStats = findTeamStat(
-    input.nextSnapshot,
-    input.nextSnapshot.awayTeamExternalId
-  );
 
   const insightResult = await generateLiveInsight({
     fixtureExternalId: input.fixtureProviderId,
@@ -181,18 +312,33 @@ export async function runMeaningfulEventPipeline(input: {
     meaningfulTriggers: [...new Set(triggerKinds)],
     minute: input.nextSnapshot.minute,
     score: input.nextSnapshot.score,
-    liveStats: {
-      xgHome: homeStats?.expectedGoals ?? null,
-      xgAway: awayStats?.expectedGoals ?? null,
-      redCardsHome: homeStats?.redCards ?? 0,
-      redCardsAway: awayStats?.redCards ?? 0,
-    },
+    liveStats: buildLiveStatsFromSnapshot(input.nextSnapshot),
   });
+
+  if (!insightResult.ok) {
+    await markLiveInsightGenerationBackoff(input.fixtureProviderId);
+    console.error(
+      JSON.stringify({
+        scope: "live/meaningful-event-pipeline",
+        level: "error",
+        message: "live_insight_generation_failed",
+        fixtureProviderId: input.fixtureProviderId,
+        reason: insightResult.reason,
+        triggers: triggerKinds,
+      })
+    );
+  } else if (!insightResult.cached) {
+    await writeStoredLiveInsightContext(
+      input.fixtureProviderId,
+      snapshotLiveContext(input.nextSnapshot, livePrediction.winProbabilities)
+    );
+  }
 
   return {
     detectResult,
-    broadcastEvents: detectResult.events.map(toMeaningfulEventBroadcastPayload),
+    broadcastEvents: events.map(toMeaningfulEventBroadcastPayload),
     livePredictionUpdated: true,
     liveInsightGenerated: insightResult.ok,
+    liveInsightSkipReason: insightResult.ok ? null : insightResult.reason,
   };
 }

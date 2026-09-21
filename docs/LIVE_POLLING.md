@@ -119,16 +119,19 @@ Fallback while the tab is visible: refetch every **60s** (`LIVE_FALLBACK_REFETCH
 
 After each successful **match** poll tick, `lib/live/eventDetector.ts` compares the previous Redis snapshot to the current provider snapshot:
 
-- **Triggers:** goal (event feed + score-diff fallback), red card (including _Second Yellow card_), penalty (scored penalty goal or VAR penalty signal), team xG delta ≥ **0.5** (only when both snapshots already had xG), significant substitution (starter off before minute **70**), probability swing ≥ **10pp** vs last stored prediction (via live model preview in pipeline).
+- **Triggers:** goal (event feed + score-diff fallback), red card (including _Second Yellow card_), penalty (scored penalty goal or VAR penalty signal), team xG delta ≥ **0.5** (only when both snapshots already had xG), significant substitution (starter off before minute **70**), probability swing ≥ **10pp** vs last stored prediction (via live model preview in pipeline), **`LIVE_BASELINE`** (first shared live insight while the match is live and no `LIVE` `ai_insights` row exists yet), **`HT`** (status transition into half-time), **`PERIODIC`** (≥ **25** minutes since the last live insight and score, xG, or live probabilities moved materially).
+- **Unchanged ingest ticks:** if provider data did not change but the fixture is live and still has no `LIVE` insight, the pipeline may still run **`LIVE_BASELINE`** (recovery after deploy or missed first tick).
 - **On trigger:** inserts a `LIVE` row in `predictions`, then regenerates shared **`LIVE` `ai_insights`** (Redis cache key `ai:insight:live:{fixtureId}:{contextHash}`). Poller `generateLiveInsight` does **not** consume per-user daily AI quota.
 - **Per-user live quota (FREE):** charged when an authenticated user **opens** a live match watch (`POST /api/live/watch`, charge-on-view). Distinct fixtures/day and max 2 simultaneous live tabs are enforced server-side; shared poller LLM remains cache-shared.
 
 **Redis keys**
 
-| Key                                          | Purpose                                                            |
-| -------------------------------------------- | ------------------------------------------------------------------ |
-| `live:detector:snapshot:{fixtureProviderId}` | Last compared snapshot (TTL 24h)                                   |
-| `live:detector:lock:{fixtureProviderId}`     | Short NX lock (~8s) so overlapping poll ticks do not double-detect |
+| Key                                             | Purpose                                                            |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
+| `live:detector:snapshot:{fixtureProviderId}`    | Last compared snapshot (TTL 24h)                                   |
+| `live:detector:lock:{fixtureProviderId}`        | Short NX lock (~8s) so overlapping poll ticks do not double-detect |
+| `live:insight:gen-backoff:{fixtureProviderId}`  | Skip LLM retries for ~2 min after OpenAI failure                   |
+| `live:insight:last-context:{fixtureProviderId}` | Last score/xG/probabilities snapshot used for periodic refresh     |
 
 **Known limitation:** VAR overturn does not retract an earlier GOAL trigger; the detector only reacts on the first tick when state appears in the feed or statistics.
 
@@ -146,7 +149,10 @@ type MeaningfulEventBroadcastPayload = {
     | "PENALTY"
     | "XG_DELTA"
     | "SIGNIFICANT_SUBSTITUTION"
-    | "PROBABILITY_SHIFT";
+    | "PROBABILITY_SHIFT"
+    | "LIVE_BASELINE"
+    | "HT"
+    | "PERIODIC";
   minute: number | null;
   teamExternalId: number | null;
   reason: string;

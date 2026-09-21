@@ -1,7 +1,11 @@
 import type { PrematchInsightResponse } from "@/lib/ai/schemas";
 import type { FixturePhase } from "@/lib/ai/status-map";
 import { isFixtureAnalyzable, resolveFixturePhase } from "@/lib/ai/status-map";
-import type { PrematchPredictionResult } from "@/types/prediction";
+import type {
+  LivePredictionResult,
+  PrematchPredictionResult,
+  WinProbabilities,
+} from "@/types/prediction";
 import type { StoredAIInsight } from "@/lib/ai/schemas";
 import type { PrematchInsightMode } from "@/lib/ai/schemas";
 
@@ -9,6 +13,7 @@ export type PrematchInsightHookState =
   | "loading"
   | "ok"
   | "miss"
+  | "generating"
   | "unavailable"
   | "fallback"
   | "limit"
@@ -19,13 +24,15 @@ export type PrematchInsightHookState =
 export type PrematchInsightViewModel = {
   state: PrematchInsightHookState;
   insight: StoredAIInsight | null;
-  prediction: PrematchPredictionResult | null;
+  prediction: PrematchPredictionResult | LivePredictionResult | null;
   insightMode: PrematchInsightMode | null;
   fixturePhase: FixturePhase;
   limit: number | null;
   used: number | null;
   errorMessage: string | null;
   fallbackMessage: string | null;
+  /** Latest live model win probabilities when narrative is not ready yet. */
+  liveWinProbabilities: WinProbabilities | null;
 };
 
 export function resolveInitialPrematchInsightState(input: {
@@ -54,25 +61,27 @@ export function mapPrematchInsightResponseToViewModel(
       return {
         state: "ok",
         insight: response.insight,
-        prediction: null,
+        prediction: response.prediction,
         insightMode: response.insightMode,
         fixturePhase,
         limit: null,
         used: null,
         errorMessage: null,
         fallbackMessage: null,
+        liveWinProbabilities: null,
       };
     case "MISS":
       return {
-        state: "miss",
+        state: response.prediction ? "generating" : "miss",
         insight: null,
-        prediction: null,
+        prediction: response.prediction ?? null,
         insightMode: null,
         fixturePhase,
         limit: null,
         used: null,
         errorMessage: null,
         fallbackMessage: null,
+        liveWinProbabilities: null,
       };
     case "UNAVAILABLE":
       return {
@@ -85,6 +94,7 @@ export function mapPrematchInsightResponseToViewModel(
         used: null,
         errorMessage: null,
         fallbackMessage: null,
+        liveWinProbabilities: null,
       };
     case "FALLBACK":
       return {
@@ -97,6 +107,7 @@ export function mapPrematchInsightResponseToViewModel(
         used: null,
         errorMessage: null,
         fallbackMessage: response.message,
+        liveWinProbabilities: null,
       };
     case "AI_LIMIT_REACHED":
       return {
@@ -109,6 +120,7 @@ export function mapPrematchInsightResponseToViewModel(
         used: response.used,
         errorMessage: null,
         fallbackMessage: null,
+        liveWinProbabilities: null,
       };
     case "GUEST_FORBIDDEN":
       return {
@@ -121,6 +133,7 @@ export function mapPrematchInsightResponseToViewModel(
         used: null,
         errorMessage: null,
         fallbackMessage: null,
+        liveWinProbabilities: null,
       };
     default:
       return {
@@ -133,6 +146,7 @@ export function mapPrematchInsightResponseToViewModel(
         used: null,
         errorMessage: "Unexpected response",
         fallbackMessage: null,
+        liveWinProbabilities: null,
       };
   }
 }
@@ -150,5 +164,6 @@ export function createEmptyPrematchInsightViewModel(
     used: null,
     errorMessage: null,
     fallbackMessage: null,
+    liveWinProbabilities: null,
   };
 }

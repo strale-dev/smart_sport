@@ -30,6 +30,7 @@ type AIHeroFallbackCardProps = {
   awayTeam: Pick<TeamRef, "name" | "code">;
   onRetry?: () => void;
   isRetrying?: boolean;
+  mode?: "error" | "generating";
 };
 
 export function AIHeroFallbackCard({
@@ -39,6 +40,7 @@ export function AIHeroFallbackCard({
   awayTeam,
   onRetry,
   isRetrying = false,
+  mode = "error",
 }: AIHeroFallbackCardProps) {
   const confidence = prediction.confidence;
   const motionKey = prediction.predictionId;
@@ -54,14 +56,22 @@ export function AIHeroFallbackCard({
           <CardTitle className="font-heading text-lg">
             Model probabilities
           </CardTitle>
-          <Badge variant="outline">Analysis temporarily unavailable</Badge>
+          {mode === "error" ? (
+            <Badge variant="outline">Analysis temporarily unavailable</Badge>
+          ) : (
+            <Badge variant="outline">Preparing analysis</Badge>
+          )}
           <ConfidenceBadge confidence={confidence} />
-          <DataQualityChip quality={prediction.inputSnapshot.dataQuality} />
+          {mode === "error" ? (
+            <DataQualityChip quality={prediction.inputSnapshot.dataQuality} />
+          ) : null}
         </div>
         <AIHeroMotionSection motionKey={`${motionKey}-message`}>
           <CardDescription>
             {message ??
-              "The narrative analysis is temporarily unavailable. Model probabilities are shown below."}
+              (mode === "generating"
+                ? "Building the shared pre-match analysis. Model probabilities are already available below."
+                : "The narrative analysis is temporarily unavailable. Model probabilities are shown below.")}
           </CardDescription>
         </AIHeroMotionSection>
       </CardHeader>

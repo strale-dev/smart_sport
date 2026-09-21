@@ -6,7 +6,7 @@ import { SparklesIcon, TrendingUpIcon } from "lucide-react";
 
 import { usePrematchInsight } from "@/components/ai/AIInsightProvider";
 import { ConfidenceBadge } from "@/components/ai/ConfidenceBadge";
-import { DataQualityChip } from "@/components/ai/DataQualityChip";
+import { AnalysisDataCoverage } from "@/components/ai/AnalysisDataCoverage";
 import { WinProbabilitiesBar } from "@/components/ai/WinProbabilitiesBar";
 import { MatchEmptyStateFromFixture } from "@/components/match/MatchEmptyState";
 import {
@@ -19,14 +19,19 @@ import { useMatchLiveContext } from "@/components/match/MatchLiveSession";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatWinProbability, outcomeLabel } from "@/lib/ai/format";
+import {
+  formatExpectedGoalsRange,
+  formatRelativeTime,
+  formatWinProbability,
+  outcomeLabel,
+} from "@/lib/ai/format";
+import type { PrematchPredictionDeltaSnapshot } from "@/lib/live/live-probability-delta";
+import { resolveInsightDisplayMetrics } from "@/lib/ai/insight-display-metrics";
+import { buildMatchHref } from "@/lib/fixtures/match-url";
 import { isFinishedFixtureStatus } from "@/lib/fixtures/display";
 import type { MatchOverviewRenderMode } from "@/lib/fixtures/overview-layout";
 import { evaluatePrematchPredictionAccuracy } from "@/lib/match/evaluate-prediction-accuracy";
-import {
-  fetchLiveProbabilityDelta,
-  type LiveProbabilityDeltaResponse,
-} from "@/lib/live/live-probability-delta";
+import { fetchLiveProbabilityDelta } from "@/lib/live/live-probability-delta";
 import { liveKeys } from "@/lib/live/query-keys";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import type { Fixture } from "@/types/domain";
@@ -99,47 +104,87 @@ function renderProbabilityDelta(
   );
 }
 
-function AccuracySection({
+function FinishedPredictionReview({
   fixture,
-  deltaData,
+  snapshot,
+  insightSummary,
+  insightCreatedAt,
 }: {
   fixture: Fixture;
-  deltaData: LiveProbabilityDeltaResponse;
+  snapshot: PrematchPredictionDeltaSnapshot;
+  insightSummary: string | null;
+  insightCreatedAt: string | null;
 }) {
-  if (!deltaData.prematchPrediction) {
-    return null;
-  }
-
-  const rows = evaluatePrematchPredictionAccuracy(
-    fixture,
-    deltaData.prematchPrediction
-  );
+  const rows = evaluatePrematchPredictionAccuracy(fixture, snapshot);
+  const scoreHome = fixture.score.fulltimeHome ?? fixture.score.home ?? null;
+  const scoreAway = fixture.score.fulltimeAway ?? fixture.score.away ?? null;
 
   if (rows.length === 0) {
     return null;
   }
 
   return (
-    <div className="border-border/60 space-y-2 border-t pt-4">
-      <p className="text-sm font-medium">Pre-match prediction check</p>
-      <ul className="space-y-2">
-        {rows.map((row) => (
-          <li
-            key={row.id}
-            className="flex flex-wrap items-start justify-between gap-2 text-sm"
-          >
-            <div className="min-w-0">
-              <p className="font-medium">{row.label}</p>
-              <p className="text-muted-foreground text-xs">
-                Predicted {row.predicted} · Actual {row.actual}
-              </p>
-            </div>
-            <Badge variant={row.hit ? "default" : "destructive"}>
-              {row.hit ? "Hit" : "Miss"}
-            </Badge>
-          </li>
-        ))}
-      </ul>
+    <div className="border-border/60 space-y-4 border-t pt-4">
+      <div className="space-y-1">
+        <p className="text-sm font-medium">Prediction made before kickoff</p>
+        <p className="text-muted-foreground text-xs">
+          Model {snapshot.modelVersion} · saved{" "}
+          {formatRelativeTime(snapshot.createdAt)}
+        </p>
+        <p className="text-muted-foreground text-xs">
+          Expected total μ {snapshot.expectedGoalsTotal.toFixed(1)} · range{" "}
+          {formatExpectedGoalsRange([
+            snapshot.expectedGoalsTotalMin,
+            snapshot.expectedGoalsTotalMax,
+          ])}
+        </p>
+      </div>
+
+      {insightSummary ? (
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Original AI analysis</p>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {insightSummary}
+          </p>
+          {insightCreatedAt ? (
+            <p className="text-muted-foreground text-xs">
+              Generated {formatRelativeTime(insightCreatedAt)}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {scoreHome != null && scoreAway != null ? (
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Actual result</p>
+          <p className="font-mono text-sm tabular-nums">
+            {fixture.homeTeam.name} {scoreHome}–{scoreAway}{" "}
+            {fixture.awayTeam.name}
+          </p>
+        </div>
+      ) : null}
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Prediction review</p>
+        <ul className="space-y-2">
+          {rows.map((row) => (
+            <li
+              key={row.id}
+              className="flex flex-wrap items-start justify-between gap-2 text-sm"
+            >
+              <div className="min-w-0">
+                <p className="font-medium">{row.label}</p>
+                <p className="text-muted-foreground text-xs">
+                  Predicted {row.predicted} · Actual {row.actual}
+                </p>
+              </div>
+              <Badge variant={row.hit ? "default" : "destructive"}>
+                {row.hit ? "Hit" : "Miss"}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -207,6 +252,8 @@ function PreMatchAiEngineCard({ fixture }: { fixture: Fixture }) {
     );
   }
 
+  const metrics = resolveInsightDisplayMetrics(insight, prediction);
+
   return (
     <MatchAnalyticsCard>
       <MatchCardHeader>
@@ -217,19 +264,22 @@ function PreMatchAiEngineCard({ fixture }: { fixture: Fixture }) {
       </MatchCardHeader>
       <MatchCardContent className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <ConfidenceBadge confidence={insight.confidence} />
-          <DataQualityChip quality={insight.dataQuality} />
+          <ConfidenceBadge confidence={metrics.confidence} />
           {insightMode === "historical" ? (
             <Badge variant="outline">Pre-match</Badge>
           ) : null}
         </div>
         <p className="text-sm leading-relaxed">{insight.summary}</p>
+        <AnalysisDataCoverage
+          coverage={insight.dataCoverage}
+          dataUsedFallback={insight.dataUsed}
+        />
         <p className="text-muted-foreground text-xs">
-          {outcomeLabel(insight.winOutcome, homeTeam, awayTeam)}
+          {outcomeLabel(metrics.winOutcome, homeTeam, awayTeam)}
         </p>
         <WinProbabilitiesBar
-          probabilities={insight.winProbabilities}
-          winOutcome={insight.winOutcome}
+          probabilities={metrics.winProbabilities}
+          winOutcome={metrics.winOutcome}
           homeTeam={homeTeam}
           awayTeam={awayTeam}
         />
@@ -289,6 +339,18 @@ export function OverviewAiEngineCard({
 
   const prematch = deltaQuery.data?.prematch ?? null;
   const live = deltaQuery.data?.live ?? null;
+  const liveInsight = prematchInsight.insight;
+  const livePrediction = prematchInsight.prediction;
+
+  const liveMetrics =
+    liveInsight && livePrediction
+      ? resolveInsightDisplayMetrics(liveInsight, livePrediction)
+      : null;
+
+  const hasLiveNarrative =
+    renderMode === "live" &&
+    prematchInsight.insightMode === "live" &&
+    liveInsight != null;
 
   if (!prematch && !live && deltaQuery.isLoading) {
     return (
@@ -327,9 +389,14 @@ export function OverviewAiEngineCard({
           <SparklesIcon aria-hidden className="size-4" />
           AI engine
         </MatchCardTitle>
-        {renderMode === "live" && live == null ? (
+        {renderMode === "finished" ? (
           <p className="text-muted-foreground text-xs">
-            Waiting for the model to react to live events.
+            Historical pre-kickoff model vs any live updates during the match.
+          </p>
+        ) : renderMode === "live" && !hasLiveNarrative ? (
+          <p className="text-muted-foreground text-xs">
+            Pre-match analysis and live probabilities — full live commentary on
+            the AI Engine tab.
           </p>
         ) : deltaQuery.data?.liveMinute != null ? (
           <p className="text-muted-foreground text-xs">
@@ -338,9 +405,43 @@ export function OverviewAiEngineCard({
         ) : null}
       </MatchCardHeader>
       <MatchCardContent className="space-y-4">
+        {renderMode === "live" && liveInsight && liveMetrics ? (
+          <div className="border-border/60 space-y-3 border-b pb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <ConfidenceBadge confidence={liveMetrics.confidence} />
+              <Badge variant="outline">Live insight</Badge>
+            </div>
+            <p className="text-sm leading-relaxed">{liveInsight.summary}</p>
+            <AnalysisDataCoverage
+              coverage={liveInsight.dataCoverage}
+              dataUsedFallback={liveInsight.dataUsed}
+            />
+            <WinProbabilitiesBar
+              probabilities={liveMetrics.winProbabilities}
+              winOutcome={liveMetrics.winOutcome}
+              homeTeam={fixture.homeTeam}
+              awayTeam={fixture.awayTeam}
+            />
+          </div>
+        ) : null}
         {renderProbabilityDelta(prematch, live)}
-        {renderMode === "finished" && deltaQuery.data ? (
-          <AccuracySection fixture={fixture} deltaData={deltaQuery.data} />
+        {renderMode === "live" && !hasLiveNarrative && (prematch || live) ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            nativeButton={false}
+            render={<Link href={buildMatchHref(fixture.externalId, "ai")} />}
+          >
+            Open AI Engine
+          </Button>
+        ) : null}
+        {renderMode === "finished" && deltaQuery.data?.prematchPrediction ? (
+          <FinishedPredictionReview
+            fixture={fixture}
+            snapshot={deltaQuery.data.prematchPrediction}
+            insightSummary={prematchInsight.insight?.summary ?? null}
+            insightCreatedAt={prematchInsight.insight?.createdAt ?? null}
+          />
         ) : null}
       </MatchCardContent>
     </MatchAnalyticsCard>

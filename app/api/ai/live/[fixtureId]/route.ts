@@ -3,9 +3,7 @@ import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { userHasLiveMatchAccessToday } from "@/lib/entitlements/live-view-gate";
 import { readLiveInsight } from "@/lib/services/aiService";
-import { resolveFixtureUuidByExternalId } from "@/lib/predictions/db";
 import { createClient } from "@/lib/supabase/server";
 
 type RouteContext = {
@@ -49,21 +47,6 @@ export async function GET(
     const userId = await getAuthenticatedUserId();
     if (!userId) {
       return NextResponse.json({ error: "GUEST_FORBIDDEN" }, { status: 403 });
-    }
-
-    const fixture = await resolveFixtureUuidByExternalId(fixtureId);
-    if (fixture) {
-      const allowed = await userHasLiveMatchAccessToday(userId, fixture.id);
-      if (!allowed) {
-        return NextResponse.json(
-          {
-            status: "AI_LIMIT_REACHED",
-            reason: "LIVE_DAILY_LIMIT",
-            fixtureExternalId: fixtureId,
-          },
-          { status: 429 }
-        );
-      }
     }
 
     const result = await readLiveInsight(fixtureId);

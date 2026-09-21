@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetMemoryLocksForTests } from "@/lib/redis/lock";
 
 const readLatestPrematchPrediction = vi.fn();
+const readOfficialPrematchPrediction = vi.fn();
 const insertPrematchPrediction = vi.fn();
 const getActiveModelVersion = vi.fn();
 const resolveFixtureUuidByExternalId = vi.fn();
@@ -11,6 +12,7 @@ const scorePrematchFromFeatures = vi.fn();
 
 vi.mock("@/lib/predictions/db", () => ({
   readLatestPrematchPrediction,
+  readOfficialPrematchPrediction,
   insertPrematchPrediction,
   getActiveModelVersion,
   resolveFixtureUuidByExternalId,
@@ -84,6 +86,7 @@ describe("predictionService", () => {
     });
 
     readLatestPrematchPrediction.mockResolvedValue(null);
+    readOfficialPrematchPrediction.mockResolvedValue(null);
 
     buildPrematchFeatures.mockResolvedValue({
       fixtureExternalId: 123,
@@ -95,8 +98,12 @@ describe("predictionService", () => {
       winProbabilities: { home: 0.5, draw: 0.25, away: 0.25 },
       expectedGoalsHome: 1.5,
       expectedGoalsAway: 1.1,
+      expectedGoalsTotal: 2.6,
       expectedGoalsTotalMin: 2,
       expectedGoalsTotalMax: 3,
+      over2Prob: 0.55,
+      over3Prob: 0.3,
+      under2Prob: 0.45,
       bttsProb: 0.52,
       weakerTeamScoringProb: 0.48,
       confidence: "MEDIUM",
@@ -206,5 +213,44 @@ describe("predictionService", () => {
     expect(insertPrematchPrediction).toHaveBeenCalledTimes(1);
     expect(first?.predictionId).toBe("prediction-1");
     expect(second?.predictionId).toBe("prediction-1");
+  });
+
+  it("returns official prematch snapshot after kickoff without inserting", async () => {
+    const kickoffAt = new Date(Date.now() - 86_400_000).toISOString();
+    resolveFixtureUuidByExternalId.mockResolvedValue({
+      id: "fixture-uuid",
+      status: "FT",
+      kickoff_at: kickoffAt,
+    });
+
+    readOfficialPrematchPrediction.mockResolvedValue({
+      id: "official-1",
+      fixture_id: "fixture-uuid",
+      model_version_id: "model-1",
+      home_win_prob: 0.52,
+      draw_prob: 0.24,
+      away_win_prob: 0.24,
+      expected_goals_home: 1.5,
+      expected_goals_away: 1.1,
+      expected_goals_total: 2.6,
+      expected_goals_total_min: 2,
+      expected_goals_total_max: 3,
+      over2_prob: 0.55,
+      over3_prob: 0.3,
+      btts_prob: 0.52,
+      weaker_team_scoring_prob: 0.48,
+      confidence: "MEDIUM",
+      input_snapshot: { fixtureExternalId: 123 },
+      created_at: new Date(Date.now() - 172_800_000).toISOString(),
+    });
+
+    const { getOrComputePrematch } =
+      await import("@/lib/services/predictionService");
+
+    const result = await getOrComputePrematch(123);
+
+    expect(result?.predictionId).toBe("official-1");
+    expect(insertPrematchPrediction).not.toHaveBeenCalled();
+    expect(buildPrematchFeatures).not.toHaveBeenCalled();
   });
 });

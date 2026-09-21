@@ -21,6 +21,7 @@ const sampleLiveInsight: LiveInsightResponse = {
   status: "OK",
   cached: true,
   insightMode: "live",
+  prediction: null,
   insight: {
     id: "insight-live-1",
     fixtureExternalId: 123,

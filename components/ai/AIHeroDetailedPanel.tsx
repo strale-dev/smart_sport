@@ -6,7 +6,8 @@ import { SparklesIcon } from "lucide-react";
 import { usePrematchInsight } from "@/components/ai/AIInsightProvider";
 import { AIHeroMotionSection } from "@/components/ai/AIHeroMotionSection";
 import { ConfidenceBadge } from "@/components/ai/ConfidenceBadge";
-import { DataQualityChip } from "@/components/ai/DataQualityChip";
+import { AnalysisDataCoverage } from "@/components/ai/AnalysisDataCoverage";
+import { PrematchAnalysisSectionsView } from "@/components/ai/PrematchAnalysisSections";
 import { KeyFactorsList } from "@/components/ai/KeyFactorsList";
 import { WinProbabilitiesBar } from "@/components/ai/WinProbabilitiesBar";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -16,6 +17,7 @@ import {
   formatWinProbability,
   outcomeLabel,
 } from "@/lib/ai/format";
+import { resolveInsightDisplayMetrics } from "@/lib/ai/insight-display-metrics";
 import { AI_DISCLAIMER } from "@/lib/marketing/copy";
 import type { TeamRef } from "@/types/domain";
 
@@ -56,7 +58,7 @@ export function AIHeroDetailedPanel({
   homeTeam,
   awayTeam,
 }: AIHeroDetailedPanelProps) {
-  const { state, insight, insightMode } = usePrematchInsight();
+  const { state, insight, prediction, insightMode } = usePrematchInsight();
 
   if (state === "guest") {
     return (
@@ -91,6 +93,8 @@ export function AIHeroDetailedPanel({
     );
   }
 
+  const metrics = resolveInsightDisplayMetrics(insight, prediction);
+
   return (
     <Card className="w-full">
       <CardHeader className="gap-3">
@@ -98,8 +102,7 @@ export function AIHeroDetailedPanel({
           <CardTitle className="font-heading text-base">
             Full AI commentary
           </CardTitle>
-          <ConfidenceBadge confidence={insight.confidence} />
-          <DataQualityChip quality={insight.dataQuality} />
+          <ConfidenceBadge confidence={metrics.confidence} />
           {insightMode === "historical" ? (
             <Badge variant="outline">Pre-match analysis</Badge>
           ) : null}
@@ -108,20 +111,28 @@ export function AIHeroDetailedPanel({
           ) : null}
         </div>
         <CardDescription>
-          {outcomeLabel(insight.winOutcome, homeTeam, awayTeam)} ·{" "}
+          {outcomeLabel(metrics.winOutcome, homeTeam, awayTeam)} ·{" "}
           {formatRelativeTime(insight.createdAt)}
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
         <AIHeroMotionSection motionKey={insight.id}>
-          <p className="text-sm leading-relaxed">{insight.commentary}</p>
+          {insight.analysis ? (
+            <PrematchAnalysisSectionsView
+              analysis={insight.analysis}
+              insight={insight}
+              prediction={prediction}
+            />
+          ) : (
+            <p className="text-sm leading-relaxed">{insight.commentary}</p>
+          )}
         </AIHeroMotionSection>
 
         <AIHeroMotionSection motionKey={`${insight.id}-probs`}>
           <WinProbabilitiesBar
-            probabilities={insight.winProbabilities}
-            winOutcome={insight.winOutcome}
+            probabilities={metrics.winProbabilities}
+            winOutcome={metrics.winOutcome}
             homeTeam={homeTeam}
             awayTeam={awayTeam}
           />
@@ -130,15 +141,29 @@ export function AIHeroDetailedPanel({
         <div className="text-muted-foreground grid gap-2 text-sm sm:grid-cols-3">
           <p>
             Expected goals:{" "}
-            {formatExpectedGoalsRange(insight.expectedGoalsRange)}
+            {formatExpectedGoalsRange(metrics.expectedGoalsRange)}
+            {metrics.expectedGoalsTotal != null
+              ? ` (μ ${metrics.expectedGoalsTotal.toFixed(1)})`
+              : null}
           </p>
-          {insight.weakerTeamScoringChance != null ? (
+          {metrics.over2Prob != null ? (
+            <p>Over 2.5: {formatWinProbability(metrics.over2Prob)}</p>
+          ) : null}
+          {metrics.over3Prob != null ? (
+            <p>Over 3.5: {formatWinProbability(metrics.over3Prob)}</p>
+          ) : null}
+          {metrics.weakerTeamScoringChance != null ? (
             <p>
               Underdog threat:{" "}
-              {formatWinProbability(insight.weakerTeamScoringChance)}
+              {formatWinProbability(metrics.weakerTeamScoringChance)}
             </p>
           ) : null}
         </div>
+
+        <AnalysisDataCoverage
+          coverage={insight.dataCoverage}
+          dataUsedFallback={insight.dataUsed}
+        />
 
         <div>
           <h3 className="mb-3 text-sm font-medium">Key factors</h3>

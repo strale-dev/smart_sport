@@ -2,7 +2,16 @@ import { getAiPromptVersion } from "@/lib/env";
 import { computeContextHash } from "@/lib/ai/hash";
 import { sanitizeProviderText } from "@/lib/ai/sanitize";
 import {
+  buildDataAvailableManifest,
+  buildDataCoverage,
+  resolveDisplayDataQuality,
+  compactLineupsForLiveContext,
+  mapLineupsForContext,
+  readTeamStandingsForFixture,
+} from "@/lib/ai/context-helpers";
+import {
   readFixtureByProviderIdFromDb,
+  readFixtureSidelinedFromDb,
   readLineupsFromDb,
 } from "@/lib/ingestion/db-read";
 import { resolveMatchFixtureContext } from "@/lib/match/fixture-context";
@@ -16,7 +25,17 @@ import type {
   LivePredictionResult,
   PrematchPredictionResult,
 } from "@/types/prediction";
+import { readLatestPrematchInsight } from "@/lib/ai/db";
+import { validateAIInsightPayload } from "@/lib/ai/schemas";
 import type { MeaningfulEventKind } from "@/lib/live/event-detector-types";
+import {
+  getActiveModelVersion,
+  mapPredictionRowToResult,
+  readOfficialPrematchPrediction,
+  readLatestPrematchPrediction,
+  resolveFixtureUuidByExternalId,
+} from "@/lib/predictions/db";
+import { cached } from "@/lib/redis/cache";
 
 function resolveLineupsState(
   lineups: Awaited<ReturnType<typeof readLineupsFromDb>>
@@ -32,25 +51,19 @@ function resolveLineupsState(
   return "PREDICTED";
 }
 
-function resolveContextDataQuality(input: {
-  lineupsState: LineupsContextState;
-  hasForm: boolean;
-  hasH2h: boolean;
-  predictionDataQuality: "COMPLETE" | "PARTIAL";
-}): PrematchAiContext["dataQuality"] {
-  if (input.predictionDataQuality === "PARTIAL") {
-    return "PARTIAL";
-  }
-
-  if (input.lineupsState === "CONFIRMED" && input.hasForm && input.hasH2h) {
-    return "COMPLETE";
-  }
-
-  if (input.lineupsState === "MISSING" || !input.hasForm) {
-    return "PARTIAL";
-  }
-
-  return "PARTIAL";
+function formSliceFromSnapshot(
+  snapshot: Awaited<ReturnType<typeof getRecentForm>>
+): PrematchAiContext["form"]["homeLast5"] {
+  return snapshot.results.length > 0
+    ? {
+        wins: snapshot.wins,
+        draws: snapshot.draws,
+        losses: snapshot.losses,
+        ppg: snapshot.ppg ?? 0,
+        goalsFor: snapshot.goalsFor,
+        goalsAgainst: snapshot.goalsAgainst,
+      }
+    : null;
 }
 
 export type PrematchContextResult = {
@@ -62,28 +75,111 @@ export async function buildPrematchContext(
   fixtureExternalId: number,
   prediction: PrematchPredictionResult
 ): Promise<PrematchContextResult> {
+  const cacheKey = `cache:ai:prematch-ctx:${fixtureExternalId}:${prediction.predictionId}:${prediction.modelVersion}:${getAiPromptVersion()}`;
+  const cachedResult = await cached({
+    key: cacheKey,
+    freshTtlSeconds: 120,
+    staleTtlSeconds: 600,
+    fn: () => buildPrematchContextUncached(fixtureExternalId, prediction),
+  });
+  return cachedResult.value;
+}
+
+async function buildPrematchContextUncached(
+  fixtureExternalId: number,
+  prediction: PrematchPredictionResult
+): Promise<PrematchContextResult> {
   const fixture = await readFixtureByProviderIdFromDb(fixtureExternalId);
   if (!fixture) {
     throw new Error(`Fixture ${fixtureExternalId} not found for AI context`);
   }
 
-  const [homeForm, awayForm, h2h, lineups] = await Promise.all([
+  const matchCtx = resolveMatchFixtureContext({
+    leagueExternalId: fixture.league.externalId,
+    homeTeam: fixture.homeTeam,
+    awayTeam: fixture.awayTeam,
+  });
+
+  const [
+    homeForm,
+    awayForm,
+    homeFormHome,
+    awayFormAway,
+    h2h,
+    lineups,
+    sidelined,
+    standings,
+  ] = await Promise.all([
     getRecentForm(fixture.homeTeam.externalId, { matches: 5, scope: "ALL" }),
     getRecentForm(fixture.awayTeam.externalId, { matches: 5, scope: "ALL" }),
+    getRecentForm(fixture.homeTeam.externalId, { matches: 5, scope: "HOME" }),
+    getRecentForm(fixture.awayTeam.externalId, { matches: 5, scope: "AWAY" }),
     getH2H(fixture.homeTeam.externalId, fixture.awayTeam.externalId, {
       windowSize: 10,
       scope: "ALL",
       leagueProviderId: fixture.league.externalId,
     }),
     readLineupsFromDb(fixtureExternalId),
+    readFixtureSidelinedFromDb(fixtureExternalId),
+    matchCtx.supportsStandings
+      ? readTeamStandingsForFixture({
+          leagueExternalId: fixture.league.externalId,
+          seasonYear: fixture.seasonYear,
+          homeTeamExternalId: fixture.homeTeam.externalId,
+          awayTeamExternalId: fixture.awayTeam.externalId,
+        })
+      : Promise.resolve({ home: null, away: null }),
   ]);
 
   const lineupsState = resolveLineupsState(lineups);
   const promptVersion = getAiPromptVersion();
-  const matchCtx = resolveMatchFixtureContext({
-    leagueExternalId: fixture.league.externalId,
-    homeTeam: fixture.homeTeam,
-    awayTeam: fixture.awayTeam,
+  const lineupsContext = mapLineupsForContext(lineups, lineupsState);
+  const standingsContext =
+    standings.home || standings.away
+      ? { home: standings.home, away: standings.away }
+      : null;
+  const sidelinedContext =
+    sidelined.length > 0
+      ? sidelined.map((entry) => ({
+          teamExternalId: entry.teamExternalId,
+          playerExternalId: entry.playerExternalId,
+          name: entry.name,
+          kind: entry.kind,
+          reason: entry.reason,
+        }))
+      : null;
+
+  const formSlice = formSliceFromSnapshot;
+
+  const hasFormAll = homeForm.results.length > 0 && awayForm.results.length > 0;
+  const hasFormHomeAway =
+    homeFormHome.results.length > 0 && awayFormAway.results.length > 0;
+  const hasH2h = h2h.meetings.length > 0;
+  const hasStandings = standingsContext != null;
+  const hasSidelined = sidelinedContext != null;
+
+  const { dataMissing } = buildDataCoverage({
+    supportsStandings: matchCtx.supportsStandings,
+    hasStandings,
+    hasFormAll,
+    hasFormHomeAway,
+    hasH2h,
+    lineupsState,
+    hasSidelined,
+  });
+
+  const dataAvailableForContext = buildDataAvailableManifest({
+    supportsStandings: matchCtx.supportsStandings,
+    hasStandings,
+    hasFormAll,
+    hasFormHomeAway,
+    hasH2h,
+    lineupsState,
+    hasSidelined,
+    hasReferee: fixture.referee != null && fixture.referee.length > 0,
+    hasRound: fixture.round != null && fixture.round.length > 0,
+    hasVenue: fixture.venue?.name != null,
+    modelPrediction: true,
   });
 
   const context: PrematchAiContext = {
@@ -110,6 +206,8 @@ export async function buildPrematchContext(
       isNational: fixture.awayTeam.isNational,
     },
     lineupsState,
+    round: sanitizeProviderText(fixture.round),
+    referee: sanitizeProviderText(fixture.referee),
     modelVersion: prediction.modelVersion,
     promptVersion,
     prediction: {
@@ -125,23 +223,16 @@ export async function buildPrematchContext(
       dataQuality: prediction.inputSnapshot.dataQuality,
     },
     form: {
-      homeLast5: {
-        wins: homeForm.wins,
-        draws: homeForm.draws,
-        losses: homeForm.losses,
-        ppg: homeForm.ppg ?? 0,
-        goalsFor: homeForm.goalsFor,
-        goalsAgainst: homeForm.goalsAgainst,
-      },
-      awayLast5: {
-        wins: awayForm.wins,
-        draws: awayForm.draws,
-        losses: awayForm.losses,
-        ppg: awayForm.ppg ?? 0,
-        goalsFor: awayForm.goalsFor,
-        goalsAgainst: awayForm.goalsAgainst,
-      },
+      homeLast5: formSlice(homeForm),
+      awayLast5: formSlice(awayForm),
+      homeLast5Home: formSlice(homeFormHome),
+      awayLast5Away: formSlice(awayFormAway),
     },
+    standings: standingsContext,
+    lineups: lineupsContext,
+    sidelined: sidelinedContext,
+    dataAvailable: dataAvailableForContext,
+    dataMissing,
     h2h:
       h2h.meetings.length > 0
         ? {
@@ -160,10 +251,8 @@ export async function buildPrematchContext(
                 : null,
           }
         : null,
-    dataQuality: resolveContextDataQuality({
-      lineupsState,
-      hasForm: homeForm.results.length > 0 && awayForm.results.length > 0,
-      hasH2h: h2h.meetings.length > 0,
+    dataQuality: resolveDisplayDataQuality({
+      dataMissing,
       predictionDataQuality: prediction.inputSnapshot.dataQuality,
     }),
     dataTimestamp: new Date().toISOString(),
@@ -188,6 +277,13 @@ export async function buildPrematchContext(
     prediction: context.prediction,
     form: context.form,
     h2h: context.h2h,
+    standings: context.standings,
+    lineups: context.lineups,
+    sidelined: context.sidelined,
+    dataAvailable: context.dataAvailable,
+    dataMissing: context.dataMissing,
+    referee: context.referee,
+    round: context.round,
   });
 
   return { context, contextHash };
@@ -201,6 +297,50 @@ export type LiveContextResult = {
   context: LiveAiContext;
   contextHash: string;
 };
+
+async function resolvePrematchReferenceForLive(
+  fixtureExternalId: number,
+  kickoffAt: string
+): Promise<LiveAiContext["prematchReference"]> {
+  const fixtureRow = await resolveFixtureUuidByExternalId(fixtureExternalId);
+  if (!fixtureRow) {
+    return null;
+  }
+
+  const kickoffReached = Date.now() >= new Date(kickoffAt).getTime();
+  const prematchRow = kickoffReached
+    ? ((await readOfficialPrematchPrediction(fixtureRow.id, kickoffAt)) ??
+      (await readLatestPrematchPrediction(fixtureRow.id)))
+    : await readLatestPrematchPrediction(fixtureRow.id);
+
+  if (!prematchRow) {
+    return null;
+  }
+
+  const modelVersion = await getActiveModelVersion();
+  const prematchResult = mapPredictionRowToResult(
+    prematchRow,
+    fixtureExternalId,
+    modelVersion.version,
+    true
+  );
+
+  const prematchInsight = await readLatestPrematchInsight(fixtureRow.id);
+  let summary: string | null = null;
+  if (prematchInsight?.payload) {
+    try {
+      summary = validateAIInsightPayload(prematchInsight.payload).summary;
+    } catch {
+      summary = null;
+    }
+  }
+
+  return {
+    winProbabilities: prematchResult.winProbabilities,
+    predictedOutcome: prematchResult.predictedOutcome,
+    summary,
+  };
+}
 
 export async function buildLiveContext(input: {
   fixtureExternalId: number;
@@ -217,12 +357,104 @@ export async function buildLiveContext(input: {
     );
   }
 
-  const promptVersion = getAiPromptVersion();
   const matchCtx = resolveMatchFixtureContext({
     leagueExternalId: fixture.league.externalId,
     homeTeam: fixture.homeTeam,
     awayTeam: fixture.awayTeam,
   });
+
+  const [
+    homeForm,
+    awayForm,
+    h2h,
+    lineups,
+    sidelined,
+    standings,
+    prematchReference,
+  ] = await Promise.all([
+    getRecentForm(fixture.homeTeam.externalId, { matches: 5, scope: "ALL" }),
+    getRecentForm(fixture.awayTeam.externalId, { matches: 5, scope: "ALL" }),
+    getH2H(fixture.homeTeam.externalId, fixture.awayTeam.externalId, {
+      windowSize: 10,
+      scope: "ALL",
+      leagueProviderId: fixture.league.externalId,
+    }),
+    readLineupsFromDb(input.fixtureExternalId),
+    readFixtureSidelinedFromDb(input.fixtureExternalId),
+    matchCtx.supportsStandings
+      ? readTeamStandingsForFixture({
+          leagueExternalId: fixture.league.externalId,
+          seasonYear: fixture.seasonYear,
+          homeTeamExternalId: fixture.homeTeam.externalId,
+          awayTeamExternalId: fixture.awayTeam.externalId,
+        })
+      : Promise.resolve({ home: null, away: null }),
+    resolvePrematchReferenceForLive(input.fixtureExternalId, fixture.kickoffAt),
+  ]);
+
+  const lineupsState = resolveLineupsState(lineups);
+  const promptVersion = getAiPromptVersion();
+  const lineupsContext = compactLineupsForLiveContext(
+    mapLineupsForContext(lineups, lineupsState)
+  );
+  const standingsContext =
+    standings.home || standings.away
+      ? { home: standings.home, away: standings.away }
+      : null;
+  const sidelinedContext =
+    sidelined.length > 0
+      ? sidelined.map((entry) => ({
+          teamExternalId: entry.teamExternalId,
+          playerExternalId: entry.playerExternalId,
+          name: entry.name,
+          kind: entry.kind,
+          reason: entry.reason,
+        }))
+      : null;
+
+  const hasLiveMatchStats =
+    input.liveStats.xgHome != null ||
+    input.liveStats.xgAway != null ||
+    input.liveStats.redCardsHome > 0 ||
+    input.liveStats.redCardsAway > 0 ||
+    input.liveStats.shotsTotalHome != null ||
+    input.liveStats.shotsTotalAway != null ||
+    input.liveStats.shotsOnTargetHome != null ||
+    input.liveStats.shotsOnTargetAway != null ||
+    input.liveStats.ballPossessionHome != null ||
+    input.liveStats.ballPossessionAway != null;
+
+  const liveHasFormAll =
+    homeForm.results.length > 0 && awayForm.results.length > 0;
+  const liveHasH2h = h2h.meetings.length > 0;
+  const liveHasStandings = standingsContext != null;
+  const liveHasSidelined = sidelinedContext != null;
+
+  const { dataMissing: liveDataMissing } = buildDataCoverage({
+    supportsStandings: matchCtx.supportsStandings,
+    hasStandings: liveHasStandings,
+    hasFormAll: liveHasFormAll,
+    hasFormHomeAway: false,
+    hasH2h: liveHasH2h,
+    lineupsState,
+    hasSidelined: liveHasSidelined,
+  });
+
+  const dataAvailable = buildDataAvailableManifest({
+    supportsStandings: matchCtx.supportsStandings,
+    hasStandings: liveHasStandings,
+    hasFormAll: liveHasFormAll,
+    hasFormHomeAway: false,
+    hasH2h: liveHasH2h,
+    lineupsState,
+    hasSidelined: liveHasSidelined,
+    hasReferee: fixture.referee != null && fixture.referee.length > 0,
+    hasRound: fixture.round != null && fixture.round.length > 0,
+    hasVenue: fixture.venue?.name != null,
+    modelPrediction: true,
+    hasLiveMatchStats,
+  });
+
   const context: LiveAiContext = {
     fixtureExternalId: input.fixtureExternalId,
     kickoffAt: fixture.kickoffAt,
@@ -248,6 +480,9 @@ export async function buildLiveContext(input: {
       name: sanitizeProviderText(fixture.awayTeam.name) ?? "Away team",
       isNational: fixture.awayTeam.isNational,
     },
+    lineupsState,
+    round: sanitizeProviderText(fixture.round),
+    referee: sanitizeProviderText(fixture.referee),
     modelVersion: input.prediction.modelVersion,
     promptVersion,
     meaningfulTriggers: [...input.meaningfulTriggers].sort(),
@@ -263,11 +498,41 @@ export async function buildLiveContext(input: {
       predictedOutcome: input.prediction.predictedOutcome,
       dataQuality: input.prediction.inputSnapshot.dataQuality,
     },
+    form: {
+      homeLast5: formSliceFromSnapshot(homeForm),
+      awayLast5: formSliceFromSnapshot(awayForm),
+      homeLast5Home: null,
+      awayLast5Away: null,
+    },
+    standings: standingsContext,
+    lineups: lineupsContext,
+    sidelined: sidelinedContext,
+    dataAvailable,
+    dataMissing: liveDataMissing,
+    h2h:
+      h2h.meetings.length > 0
+        ? {
+            meetings: h2h.meetings.length,
+            homeWins: h2h.teamAWins,
+            draws: h2h.draws,
+            awayWins: h2h.teamBWins,
+            avgGoals:
+              h2h.meetings.length > 0
+                ? Number(
+                    (
+                      (h2h.teamAGoals + h2h.teamBGoals) /
+                      h2h.meetings.length
+                    ).toFixed(2)
+                  )
+                : null,
+          }
+        : null,
     liveStats: input.liveStats,
-    dataQuality:
-      input.prediction.inputSnapshot.dataQuality === "PARTIAL"
-        ? "PARTIAL"
-        : "COMPLETE",
+    prematchReference,
+    dataQuality: resolveDisplayDataQuality({
+      dataMissing: liveDataMissing,
+      predictionDataQuality: input.prediction.inputSnapshot.dataQuality,
+    }),
     dataTimestamp: new Date().toISOString(),
   };
 
@@ -289,6 +554,17 @@ export async function buildLiveContext(input: {
     meaningfulTriggers: context.meaningfulTriggers,
     prediction: context.prediction,
     liveStats: context.liveStats,
+    prematchReference: context.prematchReference,
+    lineupsState: context.lineupsState,
+    sidelined: context.sidelined,
+    form: context.form,
+    standings: context.standings,
+    lineups: context.lineups,
+    h2h: context.h2h,
+    dataAvailable: context.dataAvailable,
+    dataMissing: context.dataMissing,
+    referee: context.referee,
+    round: context.round,
   });
 
   return { context, contextHash };

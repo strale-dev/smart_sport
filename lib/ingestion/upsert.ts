@@ -13,6 +13,7 @@ import {
   teamRefToInsert,
   venueRefToInsert,
 } from "@/lib/api-football/to-db";
+import { isFinishedFixtureStatus } from "@/lib/fixtures/display";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   CountryRef,
@@ -455,6 +456,22 @@ export async function ingestFixtureFromRaw(
   );
 
   const fixtureId = await upsertFixtureRow(client, fixtureRow);
+
+  if (isFinishedFixtureStatus(domain.status)) {
+    const { maybeRecordPredictionEvaluation } =
+      await import("@/lib/predictions/record-evaluation");
+    try {
+      await maybeRecordPredictionEvaluation({
+        fixtureUuid: fixtureId,
+        fixture: domain,
+      });
+    } catch (evaluationError) {
+      console.error(
+        `[ingestFixtureFromRaw] prediction evaluation failed for ${domain.externalId}`,
+        evaluationError
+      );
+    }
+  }
 
   return { fixtureId, domain };
 }
