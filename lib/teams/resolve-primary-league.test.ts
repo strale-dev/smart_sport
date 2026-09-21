@@ -151,6 +151,59 @@ describe("resolvePrimaryLeagueFromFixtures", () => {
 
     expect(result?.leagueExternalId).toBe(39);
   });
+
+  it("prefers World international competitions for national teams", () => {
+    const fixtures = [
+      makeFixture({
+        homeTeam: {
+          externalId: 10,
+          name: "Serbia",
+          code: "SRB",
+          logoUrl: null,
+          isNational: true,
+        },
+        league: {
+          externalId: 39,
+          name: "Premier League",
+          type: "League",
+          country: {
+            externalId: "GB-ENG",
+            code: "GB-ENG",
+            name: "England",
+            flagUrl: null,
+          },
+          logoUrl: null,
+        },
+      }),
+      makeFixture({
+        externalId: 2,
+        homeTeam: {
+          externalId: 10,
+          name: "Serbia",
+          code: "SRB",
+          logoUrl: null,
+          isNational: true,
+        },
+        league: {
+          externalId: 5,
+          name: "UEFA Nations League",
+          type: "Cup",
+          country: {
+            externalId: null,
+            code: null,
+            name: "World",
+            flagUrl: null,
+          },
+          logoUrl: null,
+        },
+      }),
+    ];
+
+    const result = resolvePrimaryLeagueFromFixtures(fixtures);
+
+    expect(result?.leagueExternalId).toBe(5);
+    expect(result?.leagueName).toBe("UEFA Nations League");
+  });
 });
 
 describe("resolveSeasonYear", () => {

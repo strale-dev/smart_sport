@@ -119,9 +119,27 @@ function resolvePrimaryLeagueFromFixtureList(
   };
 }
 
+function isNationalTeamFixture(fixture: Fixture): boolean {
+  return fixture.homeTeam.isNational || fixture.awayTeam.isNational;
+}
+
+function isInternationalCompetition(fixture: Fixture): boolean {
+  const countryName = fixture.league.country?.name?.toLowerCase();
+  return countryName === "world";
+}
+
 export function resolvePrimaryLeagueFromFixtures(
   fixtures: Fixture[]
 ): TeamPrimaryLeague | null {
+  const hasNationalContext = fixtures.some(isNationalTeamFixture);
+
+  if (hasNationalContext) {
+    const internationalFixtures = fixtures.filter(isInternationalCompetition);
+    if (internationalFixtures.length > 0) {
+      return resolvePrimaryLeagueFromFixtureList(internationalFixtures);
+    }
+  }
+
   const leagueFixtures = fixtures.filter(isLeagueCompetition);
 
   return resolvePrimaryLeagueFromFixtureList(

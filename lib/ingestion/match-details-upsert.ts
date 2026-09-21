@@ -183,13 +183,21 @@ export async function upsertSquadPlayers(
 
   const client = createAdminClient();
   const teamId = await getTeamUuidByProviderId(client, teamProviderId);
+  const { data: teamRow } = teamId
+    ? await client
+        .from("teams")
+        .select("name, code, logo_url, is_national")
+        .eq("id", teamId)
+        .maybeSingle()
+    : { data: null };
+
   const teamRef = teamId
     ? {
         externalId: teamProviderId,
-        name: "Unknown",
-        code: null,
-        logoUrl: null,
-        isNational: false,
+        name: teamRow?.name ?? "Unknown",
+        code: teamRow?.code ?? null,
+        logoUrl: teamRow?.logo_url ?? null,
+        isNational: teamRow?.is_national ?? false,
       }
     : null;
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { FixturesDiscoveryFilters } from "@/components/fixtures/FixturesDiscoveryFilters";
 import { FixturesLeagueTabs } from "@/components/fixtures/FixturesLeagueTabs";
 import { FixturesPageClient } from "@/components/fixtures/FixturesPageClient";
 import { FixturesNotice } from "@/components/fixtures/FixturesNotice";
@@ -19,12 +20,12 @@ export const metadata: Metadata = {
 export default async function FixturesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ league?: string }>;
+  searchParams: Promise<{ league?: string; country?: string; q?: string }>;
 }) {
   const rawParams = await searchParams;
   const user = await getCurrentUser();
 
-  if (user && !rawParams.league) {
+  if (user && !rawParams.league && !rawParams.country && !rawParams.q) {
     const preferredProviderId = await readPreferredLeagueProviderId(user.id);
     if (preferredProviderId != null) {
       redirect(`/fixtures?league=${preferredProviderId}`);
@@ -53,6 +54,8 @@ export default async function FixturesPage({
         liveLeagueIds={data.liveLeagueIds}
         activeLeagueIds={data.activeLeagueIds}
       />
+
+      <FixturesDiscoveryFilters params={params} />
 
       <FixturesPageClient
         params={params}

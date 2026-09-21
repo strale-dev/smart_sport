@@ -65,40 +65,20 @@ export type LiveLeagueTab = {
   shortLabel?: string;
 };
 
-/** API-Sports league logo URL for filter tabs. */
-export function getLeagueLogoUrl(providerId: number): string {
-  return `https://media.api-sports.io/football/leagues/${providerId}.png`;
-}
+import {
+  findLeagueTab,
+  getAllLeagueTabProviderIds,
+  getLeagueLogoUrl,
+  getMoreLeagueTabs,
+  getPrimaryLeagueTabs,
+} from "@/lib/competitions/index";
 
-/** Top leagues shown as primary tabs (prestige order). */
-export const LIVE_LEAGUE_TABS: LiveLeagueTab[] = [
-  { providerId: 39, label: "Premier League", shortLabel: "EPL" },
-  { providerId: 140, label: "La Liga" },
-  { providerId: 135, label: "Serie A" },
-  { providerId: 78, label: "Bundesliga", shortLabel: "BL" },
-  { providerId: 61, label: "Ligue 1" },
-  { providerId: 2, label: "Champions League", shortLabel: "UCL" },
-  { providerId: 3, label: "Europa League", shortLabel: "UEL" },
-  { providerId: 848, label: "Conference League", shortLabel: "UECL" },
-];
+export { getLeagueLogoUrl };
 
-/** Leagues shown in the "More" dropdown. */
-export const LIVE_LEAGUE_MORE: LiveLeagueTab[] = [
-  { providerId: 94, label: "Primeira Liga" },
-  { providerId: 88, label: "Eredivisie" },
-  { providerId: 286, label: "Super Liga" },
-];
+export const LIVE_LEAGUE_TABS = getPrimaryLeagueTabs();
+export const LIVE_LEAGUE_MORE = getMoreLeagueTabs();
+export const LIVE_LEAGUE_PROVIDER_IDS = getAllLeagueTabProviderIds();
 
-export const LIVE_LEAGUE_PROVIDER_IDS = new Set([
-  ...LIVE_LEAGUE_TABS.map((tab) => tab.providerId),
-  ...LIVE_LEAGUE_MORE.map((tab) => tab.providerId),
-]);
-
-export function findLiveLeagueTab(
-  providerId: number
-): LiveLeagueTab | undefined {
-  return (
-    LIVE_LEAGUE_TABS.find((tab) => tab.providerId === providerId) ??
-    LIVE_LEAGUE_MORE.find((tab) => tab.providerId === providerId)
-  );
+export function findLiveLeagueTab(providerId: number) {
+  return findLeagueTab(providerId);
 }

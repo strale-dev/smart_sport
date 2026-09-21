@@ -41,6 +41,43 @@ function filterByLeague(fixtures: Fixture[], league?: number): Fixture[] {
   return fixtures.filter((fixture) => fixture.league.externalId === league);
 }
 
+function normalizeFilterToken(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function filterFixturesBySearchParams(
+  fixtures: Fixture[],
+  params: FixturesSearchParams
+): Fixture[] {
+  let result = filterByLeague(fixtures, params.league);
+
+  if (params.country) {
+    const countryNeedle = normalizeFilterToken(params.country);
+    result = result.filter((fixture) => {
+      const country = fixture.league.country;
+      if (!country) {
+        return false;
+      }
+      return (
+        normalizeFilterToken(country.name) === countryNeedle ||
+        (country.code != null &&
+          normalizeFilterToken(country.code) === countryNeedle)
+      );
+    });
+  }
+
+  if (params.q) {
+    const query = normalizeFilterToken(params.q);
+    result = result.filter((fixture) => {
+      const leagueName = fixture.league.name.toLowerCase();
+      const countryName = fixture.league.country?.name.toLowerCase() ?? "";
+      return leagueName.includes(query) || countryName.includes(query);
+    });
+  }
+
+  return result;
+}
+
 export { parseFixturesParams };
 
 export async function getFixturesData(
@@ -59,7 +96,7 @@ export async function getFixturesData(
   const result = await getMatchesInRange(fromUtc, toUtcExclusive);
   const nowMs = now.getTime();
   const allFixtures = resolvePresentationFixtures(result.data, nowMs);
-  const filtered = filterByLeague(allFixtures, params.league);
+  const filtered = filterFixturesBySearchParams(allFixtures, params);
 
   const { upcomingDayGroups, pastDayGroups } = buildUpcomingAndPastDayGroups(
     filtered,

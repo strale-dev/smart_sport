@@ -885,12 +885,19 @@ async function persistSquadPlayers(
   teamProviderId: number,
   squad: SquadPlayer[]
 ): Promise<void> {
+  const admin = createAdminClient();
+  const { data: teamRow } = await admin
+    .from("teams")
+    .select("name, code, logo_url, is_national")
+    .eq("provider_id", teamProviderId)
+    .maybeSingle();
+
   const teamRef = {
     externalId: teamProviderId,
-    name: "Unknown",
-    code: null,
-    logoUrl: null,
-    isNational: false,
+    name: teamRow?.name ?? "Unknown",
+    code: teamRow?.code ?? null,
+    logoUrl: teamRow?.logo_url ?? null,
+    isNational: teamRow?.is_national ?? false,
   };
 
   await upsertSquadPlayers(teamProviderId, squad).catch((error: unknown) => {

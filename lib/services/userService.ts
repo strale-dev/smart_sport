@@ -1,10 +1,10 @@
 import "server-only";
 
 import {
-  LIVE_LEAGUE_MORE,
-  LIVE_LEAGUE_PROVIDER_IDS,
-  LIVE_LEAGUE_TABS,
-} from "@/lib/live/constants";
+  getCompetitionRegistry,
+  isEnabledCompetition,
+} from "@/lib/competitions/index";
+import { LIVE_LEAGUE_MORE, LIVE_LEAGUE_TABS } from "@/lib/live/constants";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
@@ -154,7 +154,11 @@ export async function readPreferredLeagueProviderId(
     throw new Error(`Failed to read league: ${leagueError.message}`);
   }
 
-  if (!league || !LIVE_LEAGUE_PROVIDER_IDS.has(league.provider_id)) {
+  if (!league) {
+    return null;
+  }
+
+  if (!isEnabledCompetition(league.provider_id)) {
     return null;
   }
 
@@ -162,16 +166,28 @@ export async function readPreferredLeagueProviderId(
 }
 
 export async function listPreferrableLeagues(): Promise<PreferrableLeague[]> {
-  const providerOrder = [
+  const tabOrder = [
     ...LIVE_LEAGUE_TABS.map((tab) => tab.providerId),
     ...LIVE_LEAGUE_MORE.map((tab) => tab.providerId),
+  ];
+  const registryOrder = [...getCompetitionRegistry()]
+    .sort((left, right) => {
+      if (left.tier !== right.tier) {
+        return left.tier - right.tier;
+      }
+      return left.name.localeCompare(right.name);
+    })
+    .map((item) => item.providerId);
+  const providerOrder = [
+    ...tabOrder,
+    ...registryOrder.filter((id) => !tabOrder.includes(id)),
   ];
 
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("leagues")
     .select("id, name, provider_id")
-    .in("provider_id", [...LIVE_LEAGUE_PROVIDER_IDS]);
+    .in("provider_id", providerOrder);
 
   if (error) {
     throw new Error(`Failed to list leagues: ${error.message}`);

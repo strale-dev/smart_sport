@@ -1,5 +1,11 @@
+import { getCompetitionTier } from "@/lib/competitions/index";
 import { getStandings } from "@/lib/api-football/endpoints/leagues";
 import { getIngestionConfig } from "@/lib/ingestion/config";
+import {
+  pickStandingsLeagueIds,
+  shouldRunNonCriticalIngestion,
+  type StandingsScheduleInput,
+} from "@/lib/ingestion/schedule";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import {
   getCurrentSeasonForLeague,
@@ -103,6 +109,21 @@ export async function syncStandings(): Promise<SyncStandingsResult> {
   let apiRequests = 0;
   let rowsUpserted = 0;
 
+  if (!(await shouldRunNonCriticalIngestion())) {
+    return {
+      ok: true,
+      job: "sync-standings",
+      stats: {
+        leaguesRequested: config.leagueProviderIds.length,
+        leaguesSkipped: config.leagueProviderIds.length,
+        apiRequests: 0,
+        rowsUpserted: 0,
+      },
+    };
+  }
+
+  const scheduleCandidates: StandingsScheduleInput[] = [];
+
   for (const leagueProviderId of config.leagueProviderIds) {
     const leagueId = await getLeagueUuidByProviderId(client, leagueProviderId);
     if (!leagueId) {
@@ -110,13 +131,38 @@ export async function syncStandings(): Promise<SyncStandingsResult> {
       continue;
     }
 
-    if (
-      await isStandingsFreshForLeague(
-        client,
-        leagueId,
-        config.standingsFreshnessHours
-      )
-    ) {
+    const standingsStale = !(await isStandingsFreshForLeague(
+      client,
+      leagueId,
+      config.standingsFreshnessHours
+    ));
+
+    if (!standingsStale) {
+      leaguesSkipped += 1;
+      continue;
+    }
+
+    const season = await getCurrentSeasonForLeague(client, leagueId);
+    if (!season) {
+      leaguesSkipped += 1;
+      continue;
+    }
+
+    scheduleCandidates.push({
+      leagueProviderId,
+      tier: getCompetitionTier(leagueProviderId),
+      upcomingFixtureCount: 0,
+      liveOrTodayFixtureCount: 0,
+      standingsStale: true,
+    });
+  }
+
+  const selectedLeagueIds = pickStandingsLeagueIds(scheduleCandidates);
+  leaguesSkipped += scheduleCandidates.length - selectedLeagueIds.length;
+
+  for (const leagueProviderId of selectedLeagueIds) {
+    const leagueId = await getLeagueUuidByProviderId(client, leagueProviderId);
+    if (!leagueId) {
       leaguesSkipped += 1;
       continue;
     }

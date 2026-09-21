@@ -1,23 +1,46 @@
+import { getEnabledProviderIds } from "@/lib/competitions/index";
+import { LEGACY_CORE_PROVIDER_IDS } from "@/lib/competitions/legacy";
 import { FIXTURES_WINDOW_DAYS } from "@/lib/fixtures/constants";
 import { parsePublicEnv } from "@/lib/env";
 
-/** API-Football league IDs synced during development (Free key budget). */
-export const INGESTION_LEAGUE_PROVIDER_IDS = [
-  39, // Premier League
-  140, // La Liga
-  135, // Serie A
-  78, // Bundesliga
-  61, // Ligue 1
-  2, // UEFA Champions League
-  3, // UEFA Europa League
-  848, // UEFA Conference League
-  94, // Portugal Primeira Liga
-  88, // Netherlands Eredivisie
-  286, // Super Liga (Serbia)
-] as const;
+/** Dev/default subset — same IDs as pre-expansion production allowlist. */
+export const INGESTION_LEAGUE_PROVIDER_IDS = LEGACY_CORE_PROVIDER_IDS;
 
 export type IngestionLeagueProviderId =
   (typeof INGESTION_LEAGUE_PROVIDER_IDS)[number];
+
+function parseProviderIdList(raw: string | undefined): number[] | null {
+  if (!raw?.trim()) {
+    return null;
+  }
+
+  const ids = raw
+    .split(",")
+    .map((part) => Number.parseInt(part.trim(), 10))
+    .filter((value) => Number.isFinite(value));
+
+  return ids.length > 0 ? ids : null;
+}
+
+/** Production uses full registry; local dev defaults to legacy 11 unless overridden. */
+export function resolveIngestionLeagueProviderIds(
+  source: Record<string, string | undefined> = process.env
+): readonly number[] {
+  const explicit = parseProviderIdList(source.INGESTION_LEAGUE_PROVIDER_IDS);
+  if (explicit) {
+    return explicit;
+  }
+
+  const { NEXT_PUBLIC_APP_ENV } = parsePublicEnv(source);
+  if (
+    source.INGESTION_USE_FULL_REGISTRY === "true" ||
+    NEXT_PUBLIC_APP_ENV === "production"
+  ) {
+    return getEnabledProviderIds();
+  }
+
+  return INGESTION_LEAGUE_PROVIDER_IDS;
+}
 
 export type IngestionConfig = {
   leagueProviderIds: readonly number[];
@@ -73,7 +96,7 @@ export function getIngestionConfig(
   const isDevelopment = NEXT_PUBLIC_APP_ENV === "development";
 
   return {
-    leagueProviderIds: INGESTION_LEAGUE_PROVIDER_IDS,
+    leagueProviderIds: resolveIngestionLeagueProviderIds(source),
     fixtureWindowDays: isDevelopment ? FIXTURES_WINDOW_DAYS : 7,
     standingsFreshnessHours: isDevelopment ? 20 : 5,
     providerThrottleMs: isDevelopment ? 6_500 : 250,

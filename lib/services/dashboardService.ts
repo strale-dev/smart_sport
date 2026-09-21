@@ -1,4 +1,8 @@
 import {
+  filterDashboardRankingCandidates,
+  type DashboardPoolContext,
+} from "@/lib/competitions/dashboard-pool";
+import {
   assertNoPastFinishedInTodayPool,
   buildForwardFallbackFixtures,
   buildRecentResultsFixtures,
@@ -89,6 +93,16 @@ async function buildImportanceContext(
   };
 }
 
+function toDashboardPoolContext(
+  context: ImportanceContext
+): DashboardPoolContext {
+  return {
+    preferredLeagueExternalId: context.preferredLeagueExternalId,
+    prestigeByLeagueId: context.prestigeByLeagueId,
+    standingsByFixtureId: context.standingsByFixtureId,
+  };
+}
+
 function takeRankedFixtures(
   fixtures: Fixture[],
   context: ImportanceContext,
@@ -158,11 +172,6 @@ export async function getDashboardData(
   ]);
   assertNoPastFinishedInTodayPool(today, featuredCandidates);
 
-  const recentResults = buildRecentResultsFixtures(
-    yesterdayFixtures,
-    RECENT_RESULTS_LIMIT
-  );
-
   const allCandidates = dedupeFixtures([
     ...liveFixtures,
     ...importantCandidates,
@@ -174,10 +183,15 @@ export async function getDashboardData(
     now,
     preferredLeagueExternalId
   );
+  const poolContext = toDashboardPoolContext(context);
   const usedIds = new Set<number>();
 
   const featured =
-    takeRankedFixtures(featuredCandidates, context, 1)[0] ?? null;
+    takeRankedFixtures(
+      filterDashboardRankingCandidates(featuredCandidates, poolContext),
+      context,
+      1
+    )[0] ?? null;
 
   if (featured) {
     usedIds.add(featured.externalId);
@@ -194,7 +208,7 @@ export async function getDashboardData(
   }
 
   const todayImportant = takeImportantTodayFixtures(
-    importantCandidates,
+    filterDashboardRankingCandidates(importantCandidates, poolContext),
     context,
     TODAY_LIMIT,
     usedIds
@@ -216,10 +230,15 @@ export async function getDashboardData(
   });
 
   const upcoming = takeRankedFixtures(
-    upcomingCandidates,
+    filterDashboardRankingCandidates(upcomingCandidates, poolContext),
     context,
     UPCOMING_LIMIT,
     usedIds
+  );
+
+  const recentResults = buildRecentResultsFixtures(
+    filterDashboardRankingCandidates(yesterdayFixtures, poolContext),
+    RECENT_RESULTS_LIMIT
   );
 
   return {
