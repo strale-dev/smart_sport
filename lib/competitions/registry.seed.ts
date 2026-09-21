@@ -178,6 +178,68 @@ export const COMPETITION_SEED_MATCHES: SeedMatch[] = [
   },
   { tier: 2, category: "national_team", match: worldLeague("OFC Nations Cup") },
 
+  // Top 5 — second divisions & major cups
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("England", "Championship"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("England", "League One"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("England", "League Two"),
+  },
+  {
+    tier: 2,
+    category: "domestic_cup",
+    match: countryLeague("England", "FA Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Spain", "Segunda División"),
+  },
+  {
+    tier: 2,
+    category: "domestic_cup",
+    match: countryLeague("Spain", "Copa del Rey"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Italy", "Serie B"),
+  },
+  {
+    tier: 2,
+    category: "domestic_cup",
+    match: countryLeague("Italy", "Coppa Italia"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Germany", "2. Bundesliga"),
+  },
+  {
+    tier: 2,
+    category: "domestic_cup",
+    match: countryLeague("Germany", "DFB Pokal"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("France", "Ligue 2"),
+  },
+  {
+    tier: 2,
+    category: "domestic_cup",
+    match: countryLeague("France", "Coupe de France"),
+  },
+
   // Tier 2 Europe expansion (name-exact where possible)
   {
     tier: 2,
@@ -284,6 +346,356 @@ export const COMPETITION_SEED_MATCHES: SeedMatch[] = [
     category: "domestic_league",
     match: countryLeague("Russia", "Premier League"),
   },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Russia", "First League"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Russia", "Cup"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Belgium", "Cup"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Turkey", "Türkiye Kupası"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Greece", "Super League 2"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Greece", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Scotland", "Championship"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Scotland", "FA Cup"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Austria", "2. Liga"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Austria", "Cup"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Switzerland", "Challenge League"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Switzerland", "Schweizer Cup"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Denmark", "1. Division"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Denmark", "DBU Pokalen"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Sweden", "Superettan"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Sweden", "Svenska Cupen"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Norway", "1. Division"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Norway", "NM Cupen"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Poland", "I Liga"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Poland", "Cup"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Czech-Republic", "FNL"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Czech-Republic", "Cup"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Croatia", "Cup"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Serbia", "Prva Liga"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Serbia", "Cup"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Romania", "Liga II"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Romania", "Cupa României"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Ukraine", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Hungary", "NB I"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Hungary", "NB II"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Hungary", "Magyar Kupa"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Bulgaria", "First League"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Bulgaria", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Slovakia", "Super Liga"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Slovakia", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Slovenia", "1. SNL"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Slovenia", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Israel", "Ligat Ha'al"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Israel", "State Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Ireland", "Premier Division"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Ireland", "FAI Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Finland", "Veikkausliiga"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Finland", "Ykkönen"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Finland", "Suomen Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Iceland", "Úrvalsdeild"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Bosnia", "Premijer Liga"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Bosnia", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Montenegro", "First League"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Montenegro", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Macedonia", "First League"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Albania", "Superliga"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Albania", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Georgia", "Erovnuli Liga"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Georgia", "Erovnuli Liga 2"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Georgia", "David Kipiani Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Armenia", "Premier League"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Armenia", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Azerbaijan", "Premyer Liqa"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Azerbaijan", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Kazakhstan", "Premier League"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Kazakhstan", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Latvia", "Virsliga"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Latvia", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Lithuania", "A Lyga"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Lithuania", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Estonia", "Meistriliiga"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Estonia", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Cyprus", "1. Division"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Cyprus", "Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Kosovo", "Superliga"),
+  },
 
   // Americas / Asia / Africa tier 2+
   {
@@ -312,9 +724,29 @@ export const COMPETITION_SEED_MATCHES: SeedMatch[] = [
     match: countryLeague("Colombia", "Primera A"),
   },
   {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Colombia", "Primera B"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Colombia", "Copa Colombia"),
+  },
+  {
     tier: 2,
     category: "domestic_league",
     match: countryLeague("Chile", "Primera División"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Chile", "Primera B"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Chile", "Copa Chile"),
   },
   {
     tier: 2,
@@ -327,9 +759,19 @@ export const COMPETITION_SEED_MATCHES: SeedMatch[] = [
     match: countryLeague("Ecuador", "Liga Pro"),
   },
   {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Ecuador", "Liga Pro Serie B"),
+  },
+  {
     tier: 2,
     category: "domestic_league",
     match: countryLeague("Paraguay", "Division Profesional - Apertura"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryNameIncludes("Paraguay", "division profesional - clausura"),
   },
   {
     tier: 2,
@@ -339,7 +781,57 @@ export const COMPETITION_SEED_MATCHES: SeedMatch[] = [
   {
     tier: 2,
     category: "domestic_league",
+    match: countryLeague("Bolivia", "Primera División"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Venezuela", "Primera División"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("USA", "USL Championship"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("USA", "US Open Cup"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Canada", "Canadian Premier League"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Canada", "Canadian Championship"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Mexico", "Liga de Expansión MX"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Mexico", "Copa MX"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
     match: countryLeague("Saudi-Arabia", "Pro League"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Saudi-Arabia", "Division 1"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Saudi-Arabia", "King's Cup"),
   },
   {
     tier: 2,
@@ -347,14 +839,49 @@ export const COMPETITION_SEED_MATCHES: SeedMatch[] = [
     match: countryLeague("Japan", "J1 League"),
   },
   {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Japan", "J2 League"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("Japan", "J3 League"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Japan", "Emperor Cup"),
+  },
+  {
     tier: 2,
     category: "domestic_league",
     match: countryLeague("South-Korea", "K League 1"),
   },
   {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("South-Korea", "K League 2"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("South-Korea", "FA Cup"),
+  },
+  {
     tier: 2,
     category: "domestic_league",
     match: countryLeague("China", "Super League"),
+  },
+  {
+    tier: 3,
+    category: "domestic_league",
+    match: countryLeague("China", "League One"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("China", "FA Cup"),
   },
   {
     tier: 2,
@@ -403,6 +930,41 @@ export const COMPETITION_SEED_MATCHES: SeedMatch[] = [
   },
   {
     tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Nigeria", "NPFL"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Ghana", "Premier League"),
+  },
+  {
+    tier: 2,
+    category: "domestic_league",
+    match: countryLeague("Kenya", "FKF Premier League"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Egypt", "Cup"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("South-Africa", "Cup"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Morocco", "Cup"),
+  },
+  {
+    tier: 3,
+    category: "domestic_cup",
+    match: countryLeague("Tunisia", "Cup"),
+  },
+  {
+    tier: 2,
     category: "continental_club",
     match: worldLeague("CAF Confederation Cup"),
   },
@@ -410,6 +972,21 @@ export const COMPETITION_SEED_MATCHES: SeedMatch[] = [
     tier: 2,
     category: "continental_club",
     match: worldLeague("AFC Champions League Two"),
+  },
+  {
+    tier: 2,
+    category: "continental_club",
+    match: worldLeague("UEFA Super Cup"),
+  },
+  {
+    tier: 2,
+    category: "continental_club",
+    match: worldLeague("CONMEBOL Recopa"),
+  },
+  {
+    tier: 2,
+    category: "continental_club",
+    match: worldLeague("CAF Super Cup"),
   },
 ];
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getCompetitionTier,
   getEnabledProviderIds,
   getPrimaryLeagueTabs,
   isEnabledCompetition,
@@ -24,9 +25,19 @@ describe("competition registry compatibility", () => {
     ]);
   });
 
+  it("keeps legacy core at tier 1 except Super Liga (286) at tier 2", () => {
+    for (const providerId of LEGACY_CORE_PROVIDER_IDS) {
+      if (providerId === 286) {
+        expect(getCompetitionTier(providerId)).toBe(2);
+        continue;
+      }
+      expect(getCompetitionTier(providerId)).toBe(1);
+    }
+  });
+
   it("enables a bounded sane registry size", () => {
     const enabled = getEnabledProviderIds();
-    expect(enabled.length).toBeGreaterThan(50);
+    expect(enabled.length).toBeGreaterThan(150);
     expect(enabled.length).toBeLessThan(300);
   });
 });

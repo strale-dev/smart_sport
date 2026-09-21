@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-09-21T10:18:29.894Z",
+  "generatedAt": "2026-09-21T12:01:29.177Z",
   "source": "api-football/leagues",
   "totalFromApi": 1245,
-  "enabledCount": 86,
+  "enabledCount": 201,
   "competitions": [
     {
       "providerId": 17,
@@ -15,7 +15,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -34,7 +34,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -53,10 +53,10 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
-        "lineups": true,
-        "fixtureStatistics": true,
-        "fixtureEvents": true,
+        "standings": true,
+        "lineups": false,
+        "fixtureStatistics": false,
+        "fixtureEvents": false,
         "teamSeasonStatistics": false,
         "playerLeaderboards": false
       }
@@ -92,9 +92,9 @@
       "capabilities": {
         "fixtures": true,
         "standings": false,
-        "lineups": true,
-        "fixtureStatistics": true,
-        "fixtureEvents": true,
+        "lineups": false,
+        "fixtureStatistics": false,
+        "fixtureEvents": false,
         "teamSeasonStatistics": false,
         "playerLeaderboards": false
       }
@@ -129,7 +129,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -149,9 +149,9 @@
       "capabilities": {
         "fixtures": true,
         "standings": false,
-        "lineups": true,
-        "fixtureStatistics": true,
-        "fixtureEvents": true,
+        "lineups": false,
+        "fixtureStatistics": false,
+        "fixtureEvents": false,
         "teamSeasonStatistics": false,
         "playerLeaderboards": false
       }
@@ -167,7 +167,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -186,7 +186,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -205,7 +205,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -243,7 +243,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -262,7 +262,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -281,7 +281,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -301,8 +301,8 @@
       "capabilities": {
         "fixtures": true,
         "standings": false,
-        "lineups": true,
-        "fixtureStatistics": true,
+        "lineups": false,
+        "fixtureStatistics": false,
         "fixtureEvents": true,
         "teamSeasonStatistics": false,
         "playerLeaderboards": false
@@ -359,7 +359,7 @@
         "fixtures": true,
         "standings": true,
         "lineups": true,
-        "fixtureStatistics": true,
+        "fixtureStatistics": false,
         "fixtureEvents": true,
         "teamSeasonStatistics": true,
         "playerLeaderboards": true
@@ -490,7 +490,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -509,7 +509,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -528,7 +528,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -547,10 +547,10 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
-        "lineups": true,
-        "fixtureStatistics": true,
-        "fixtureEvents": true,
+        "standings": true,
+        "lineups": false,
+        "fixtureStatistics": false,
+        "fixtureEvents": false,
         "teamSeasonStatistics": false,
         "playerLeaderboards": false
       }
@@ -566,7 +566,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -585,7 +585,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -604,7 +604,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -623,7 +623,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -642,7 +642,7 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
@@ -663,7 +663,7 @@
         "fixtures": true,
         "standings": false,
         "lineups": true,
-        "fixtureStatistics": true,
+        "fixtureStatistics": false,
         "fixtureEvents": true,
         "teamSeasonStatistics": false,
         "playerLeaderboards": false
@@ -680,12 +680,88 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
         "teamSeasonStatistics": false,
         "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 318,
+      "name": "1. Division",
+      "countryName": "Cyprus",
+      "countryCode": "CY",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 373,
+      "name": "1. SNL",
+      "countryName": "Slovenia",
+      "countryCode": "SI",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 79,
+      "name": "2. Bundesliga",
+      "countryName": "Germany",
+      "countryCode": "DE",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 362,
+      "name": "A Lyga",
+      "countryName": "Lithuania",
+      "countryCode": "LT",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
       }
     },
     {
@@ -718,9 +794,9 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
-        "lineups": true,
-        "fixtureStatistics": true,
+        "standings": true,
+        "lineups": false,
+        "fixtureStatistics": false,
         "fixtureEvents": true,
         "teamSeasonStatistics": false,
         "playerLeaderboards": false
@@ -738,8 +814,8 @@
       "capabilities": {
         "fixtures": true,
         "standings": false,
-        "lineups": true,
-        "fixtureStatistics": true,
+        "lineups": false,
+        "fixtureStatistics": false,
         "fixtureEvents": true,
         "teamSeasonStatistics": false,
         "playerLeaderboards": false
@@ -775,9 +851,9 @@
       "enabled": true,
       "capabilities": {
         "fixtures": true,
-        "standings": false,
+        "standings": true,
         "lineups": true,
-        "fixtureStatistics": true,
+        "fixtureStatistics": false,
         "fixtureEvents": true,
         "teamSeasonStatistics": false,
         "playerLeaderboards": false
@@ -833,11 +909,49 @@
       "capabilities": {
         "fixtures": true,
         "standings": false,
+        "lineups": false,
+        "fixtureStatistics": false,
+        "fixtureEvents": false,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 533,
+      "name": "CAF Super Cup",
+      "countryName": "World",
+      "countryCode": null,
+      "providerType": "Cup",
+      "category": "continental_club",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
         "teamSeasonStatistics": false,
         "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 479,
+      "name": "Canadian Premier League",
+      "countryName": "Canada",
+      "countryCode": "CA",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
       }
     },
     {
@@ -860,10 +974,86 @@
       }
     },
     {
+      "providerId": 180,
+      "name": "Championship",
+      "countryName": "Scotland",
+      "countryCode": "GB-SCT",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 40,
+      "name": "Championship",
+      "countryName": "England",
+      "countryCode": "GB-ENG",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 541,
+      "name": "CONMEBOL Recopa",
+      "countryName": "World",
+      "countryCode": null,
+      "providerType": "Cup",
+      "category": "continental_club",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
       "providerId": 130,
       "name": "Copa Argentina",
       "countryName": "Argentina",
       "countryCode": "AR",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 143,
+      "name": "Copa del Rey",
+      "countryName": "Spain",
+      "countryCode": "ES",
       "providerType": "Cup",
       "category": "domestic_cup",
       "tier": 2,
@@ -898,6 +1088,44 @@
       }
     },
     {
+      "providerId": 137,
+      "name": "Coppa Italia",
+      "countryName": "Italy",
+      "countryCode": "IT",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 66,
+      "name": "Coupe de France",
+      "countryName": "France",
+      "countryCode": "FR",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
       "providerId": 345,
       "name": "Czech Liga",
       "countryName": "Czech-Republic",
@@ -917,8 +1145,46 @@
       }
     },
     {
+      "providerId": 81,
+      "name": "DFB Pokal",
+      "countryName": "Germany",
+      "countryCode": "DE",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
       "providerId": 250,
       "name": "Division Profesional - Apertura",
+      "countryName": "Paraguay",
+      "countryCode": "PY",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 252,
+      "name": "Division Profesional - Clausura",
       "countryName": "Paraguay",
       "countryCode": "PY",
       "providerType": "League",
@@ -978,6 +1244,120 @@
       "name": "Eliteserien",
       "countryName": "Norway",
       "countryCode": "NO",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 327,
+      "name": "Erovnuli Liga",
+      "countryName": "Georgia",
+      "countryCode": "GE",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 45,
+      "name": "FA Cup",
+      "countryName": "England",
+      "countryCode": "GB-ENG",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 371,
+      "name": "First League",
+      "countryName": "Macedonia",
+      "countryCode": "MK",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 355,
+      "name": "First League",
+      "countryName": "Montenegro",
+      "countryCode": "ME",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 172,
+      "name": "First League",
+      "countryName": "Bulgaria",
+      "countryCode": "BG",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 276,
+      "name": "FKF Premier League",
+      "countryName": "Kenya",
+      "countryCode": "KE",
       "providerType": "League",
       "category": "domestic_league",
       "tier": 2,
@@ -1107,6 +1487,25 @@
       }
     },
     {
+      "providerId": 383,
+      "name": "Ligat Ha'al",
+      "countryName": "Israel",
+      "countryCode": "IL",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
       "providerId": 202,
       "name": "Ligue 1",
       "countryName": "Tunisia",
@@ -1145,6 +1544,82 @@
       }
     },
     {
+      "providerId": 62,
+      "name": "Ligue 2",
+      "countryName": "France",
+      "countryCode": "FR",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 329,
+      "name": "Meistriliiga",
+      "countryName": "Estonia",
+      "countryCode": "EE",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 271,
+      "name": "NB I",
+      "countryName": "Hungary",
+      "countryCode": "HU",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 399,
+      "name": "NPFL",
+      "countryName": "Nigeria",
+      "countryCode": "NG",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
       "providerId": 806,
       "name": "OFC Nations Cup",
       "countryName": "World",
@@ -1157,7 +1632,7 @@
         "fixtures": true,
         "standings": false,
         "lineups": true,
-        "fixtureStatistics": true,
+        "fixtureStatistics": false,
         "fixtureEvents": true,
         "teamSeasonStatistics": false,
         "playerLeaderboards": false
@@ -1168,6 +1643,25 @@
       "name": "Persian Gulf Pro League",
       "countryName": "Iran",
       "countryCode": "IR",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 357,
+      "name": "Premier Division",
+      "countryName": "Ireland",
+      "countryCode": "IE",
       "providerType": "League",
       "category": "domestic_league",
       "tier": 2,
@@ -1206,6 +1700,63 @@
       "name": "Premier League",
       "countryName": "Egypt",
       "countryCode": "EG",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 570,
+      "name": "Premier League",
+      "countryName": "Ghana",
+      "countryCode": "GH",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 342,
+      "name": "Premier League",
+      "countryName": "Armenia",
+      "countryCode": "AM",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 389,
+      "name": "Premier League",
+      "countryName": "Kazakhstan",
+      "countryCode": "KZ",
       "providerType": "League",
       "category": "domestic_league",
       "tier": 2,
@@ -1278,10 +1829,67 @@
       }
     },
     {
+      "providerId": 315,
+      "name": "Premijer Liga",
+      "countryName": "Bosnia",
+      "countryCode": "BA",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 419,
+      "name": "Premyer Liqa",
+      "countryName": "Azerbaijan",
+      "countryCode": "AZ",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
       "providerId": 239,
       "name": "Primera A",
       "countryName": "Colombia",
       "countryCode": "CO",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 299,
+      "name": "Primera División",
+      "countryName": "Venezuela",
+      "countryCode": "VE",
       "providerType": "League",
       "category": "domestic_league",
       "tier": 2,
@@ -1335,6 +1943,25 @@
       }
     },
     {
+      "providerId": 344,
+      "name": "Primera División",
+      "countryName": "Bolivia",
+      "countryCode": "BO",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
       "providerId": 265,
       "name": "Primera División",
       "countryName": "Chile",
@@ -1365,8 +1992,8 @@
       "capabilities": {
         "fixtures": true,
         "standings": true,
-        "lineups": true,
-        "fixtureStatistics": true,
+        "lineups": false,
+        "fixtureStatistics": false,
         "fixtureEvents": true,
         "teamSeasonStatistics": true,
         "playerLeaderboards": true
@@ -1411,6 +2038,25 @@
       }
     },
     {
+      "providerId": 141,
+      "name": "Segunda División",
+      "countryName": "Spain",
+      "countryCode": "ES",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
       "providerId": 95,
       "name": "Segunda Liga",
       "countryName": "Portugal",
@@ -1434,6 +2080,25 @@
       "name": "Serie B",
       "countryName": "Brazil",
       "countryCode": "BR",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 136,
+      "name": "Serie B",
+      "countryName": "Italy",
+      "countryCode": "IT",
       "providerType": "League",
       "category": "domestic_league",
       "tier": 2,
@@ -1563,6 +2228,25 @@
       }
     },
     {
+      "providerId": 332,
+      "name": "Super Liga",
+      "countryName": "Slovakia",
+      "countryCode": "SK",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
       "providerId": 119,
       "name": "Superliga",
       "countryName": "Denmark",
@@ -1570,6 +2254,158 @@
       "providerType": "League",
       "category": "domestic_league",
       "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 310,
+      "name": "Superliga",
+      "countryName": "Albania",
+      "countryCode": "AL",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 664,
+      "name": "Superliga",
+      "countryName": "Kosovo",
+      "countryCode": "XK",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 531,
+      "name": "UEFA Super Cup",
+      "countryName": "World",
+      "countryCode": null,
+      "providerType": "Cup",
+      "category": "continental_club",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 164,
+      "name": "Úrvalsdeild",
+      "countryName": "Iceland",
+      "countryCode": "IS",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 244,
+      "name": "Veikkausliiga",
+      "countryName": "Finland",
+      "countryCode": "FI",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 365,
+      "name": "Virsliga",
+      "countryName": "Latvia",
+      "countryCode": "LV",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 2,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 120,
+      "name": "1. Division",
+      "countryName": "Denmark",
+      "countryCode": "DK",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 104,
+      "name": "1. Division",
+      "countryName": "Norway",
+      "countryCode": "NO",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
       "enabled": true,
       "capabilities": {
         "fixtures": true,
@@ -1601,10 +2437,1283 @@
       }
     },
     {
+      "providerId": 219,
+      "name": "2. Liga",
+      "countryName": "Austria",
+      "countryCode": "AT",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 259,
+      "name": "Canadian Championship",
+      "countryName": "Canada",
+      "countryCode": "CA",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 208,
+      "name": "Challenge League",
+      "countryName": "Switzerland",
+      "countryCode": "CH",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 267,
+      "name": "Copa Chile",
+      "countryName": "Chile",
+      "countryCode": "CL",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 241,
+      "name": "Copa Colombia",
+      "countryName": "Colombia",
+      "countryCode": "CO",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 264,
+      "name": "Copa MX",
+      "countryName": "Mexico",
+      "countryCode": "MX",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 335,
+      "name": "Cup",
+      "countryName": "Ukraine",
+      "countryCode": "UA",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 199,
+      "name": "Cup",
+      "countryName": "Greece",
+      "countryCode": "GR",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 220,
+      "name": "Cup",
+      "countryName": "Austria",
+      "countryCode": "AT",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 420,
+      "name": "Cup",
+      "countryName": "Azerbaijan",
+      "countryCode": "AZ",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 511,
+      "name": "Cup",
+      "countryName": "Tunisia",
+      "countryCode": "TN",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 314,
+      "name": "Cup",
+      "countryName": "Bosnia",
+      "countryCode": "BA",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 174,
+      "name": "Cup",
+      "countryName": "Bulgaria",
+      "countryCode": "BG",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 498,
+      "name": "Cup",
+      "countryName": "Kazakhstan",
+      "countryCode": "KZ",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 507,
+      "name": "Cup",
+      "countryName": "South-Africa",
+      "countryCode": "ZA",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 321,
+      "name": "Cup",
+      "countryName": "Cyprus",
+      "countryCode": "CY",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 212,
+      "name": "Cup",
+      "countryName": "Croatia",
+      "countryCode": "HR",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 714,
+      "name": "Cup",
+      "countryName": "Egypt",
+      "countryCode": "EG",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 237,
+      "name": "Cup",
+      "countryName": "Russia",
+      "countryCode": "RU",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 108,
+      "name": "Cup",
+      "countryName": "Poland",
+      "countryCode": "PL",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 347,
+      "name": "Cup",
+      "countryName": "Czech-Republic",
+      "countryCode": "CZ",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 147,
+      "name": "Cup",
+      "countryName": "Belgium",
+      "countryCode": "BE",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 375,
+      "name": "Cup",
+      "countryName": "Slovenia",
+      "countryCode": "SI",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 822,
+      "name": "Cup",
+      "countryName": "Morocco",
+      "countryCode": "MA",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 657,
+      "name": "Cup",
+      "countryName": "Estonia",
+      "countryCode": "EE",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 658,
+      "name": "Cup",
+      "countryName": "Latvia",
+      "countryCode": "LV",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 661,
+      "name": "Cup",
+      "countryName": "Lithuania",
+      "countryCode": "LT",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 680,
+      "name": "Cup",
+      "countryName": "Slovakia",
+      "countryCode": "SK",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 707,
+      "name": "Cup",
+      "countryName": "Albania",
+      "countryCode": "AL",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 709,
+      "name": "Cup",
+      "countryName": "Armenia",
+      "countryCode": "AM",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 723,
+      "name": "Cup",
+      "countryName": "Montenegro",
+      "countryCode": "ME",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 732,
+      "name": "Cup",
+      "countryName": "Serbia",
+      "countryCode": "RS",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 285,
+      "name": "Cupa României",
+      "countryName": "Romania",
+      "countryCode": "RO",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 672,
+      "name": "David Kipiani Cup",
+      "countryName": "Georgia",
+      "countryCode": "GE",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 121,
+      "name": "DBU Pokalen",
+      "countryName": "Denmark",
+      "countryCode": "DK",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 308,
+      "name": "Division 1",
+      "countryName": "Saudi-Arabia",
+      "countryCode": "SA",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 102,
+      "name": "Emperor Cup",
+      "countryName": "Japan",
+      "countryCode": "JP",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 326,
+      "name": "Erovnuli Liga 2",
+      "countryName": "Georgia",
+      "countryCode": "GE",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 294,
+      "name": "FA Cup",
+      "countryName": "South-Korea",
+      "countryCode": "KR",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 171,
+      "name": "FA Cup",
+      "countryName": "China",
+      "countryCode": "CN",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 181,
+      "name": "FA Cup",
+      "countryName": "Scotland",
+      "countryCode": "GB-SCT",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 359,
+      "name": "FAI Cup",
+      "countryName": "Ireland",
+      "countryCode": "IE",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 236,
+      "name": "First League",
+      "countryName": "Russia",
+      "countryCode": "RU",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 346,
+      "name": "FNL",
+      "countryName": "Czech-Republic",
+      "countryCode": "CZ",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 107,
+      "name": "I Liga",
+      "countryName": "Poland",
+      "countryCode": "PL",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 99,
+      "name": "J2 League",
+      "countryName": "Japan",
+      "countryCode": "JP",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 100,
+      "name": "J3 League",
+      "countryName": "Japan",
+      "countryCode": "JP",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 293,
+      "name": "K League 2",
+      "countryName": "South-Korea",
+      "countryCode": "KR",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 504,
+      "name": "King's Cup",
+      "countryName": "Saudi-Arabia",
+      "countryCode": "SA",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
       "providerId": 90,
       "name": "KNVB Beker",
       "countryName": "Netherlands",
       "countryCode": "NL",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": false,
+        "fixtureStatistics": false,
+        "fixtureEvents": false,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 41,
+      "name": "League One",
+      "countryName": "England",
+      "countryCode": "GB-ENG",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 170,
+      "name": "League One",
+      "countryName": "China",
+      "countryCode": "CN",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 42,
+      "name": "League Two",
+      "countryName": "England",
+      "countryCode": "GB-ENG",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 263,
+      "name": "Liga de Expansión MX",
+      "countryName": "Mexico",
+      "countryCode": "MX",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 284,
+      "name": "Liga II",
+      "countryName": "Romania",
+      "countryCode": "RO",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 243,
+      "name": "Liga Pro Serie B",
+      "countryName": "Ecuador",
+      "countryCode": "EC",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 273,
+      "name": "Magyar Kupa",
+      "countryName": "Hungary",
+      "countryCode": "HU",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 272,
+      "name": "NB II",
+      "countryName": "Hungary",
+      "countryCode": "HU",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 105,
+      "name": "NM Cupen",
+      "countryName": "Norway",
+      "countryCode": "NO",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 240,
+      "name": "Primera B",
+      "countryName": "Colombia",
+      "countryCode": "CO",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 266,
+      "name": "Primera B",
+      "countryName": "Chile",
+      "countryCode": "CL",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 287,
+      "name": "Prva Liga",
+      "countryName": "Serbia",
+      "countryCode": "RS",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 209,
+      "name": "Schweizer Cup",
+      "countryName": "Switzerland",
+      "countryCode": "CH",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 384,
+      "name": "State Cup",
+      "countryName": "Israel",
+      "countryCode": "IL",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 246,
+      "name": "Suomen Cup",
+      "countryName": "Finland",
+      "countryCode": "FI",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 494,
+      "name": "Super League 2",
+      "countryName": "Greece",
+      "countryCode": "GR",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 114,
+      "name": "Superettan",
+      "countryName": "Sweden",
+      "countryCode": "SE",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 115,
+      "name": "Svenska Cupen",
+      "countryName": "Sweden",
+      "countryCode": "SE",
       "providerType": "Cup",
       "category": "domestic_cup",
       "tier": 3,
@@ -1631,11 +3740,87 @@
       "capabilities": {
         "fixtures": true,
         "standings": false,
+        "lineups": false,
+        "fixtureStatistics": false,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 206,
+      "name": "Türkiye Kupası",
+      "countryName": "Turkey",
+      "countryCode": "TR",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
         "lineups": true,
         "fixtureStatistics": true,
         "fixtureEvents": true,
         "teamSeasonStatistics": false,
         "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 257,
+      "name": "US Open Cup",
+      "countryName": "USA",
+      "countryCode": "US",
+      "providerType": "Cup",
+      "category": "domestic_cup",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": false,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": false,
+        "playerLeaderboards": false
+      }
+    },
+    {
+      "providerId": 255,
+      "name": "USL Championship",
+      "countryName": "USA",
+      "countryCode": "US",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
+      }
+    },
+    {
+      "providerId": 245,
+      "name": "Ykkönen",
+      "countryName": "Finland",
+      "countryCode": "FI",
+      "providerType": "League",
+      "category": "domestic_league",
+      "tier": 3,
+      "enabled": true,
+      "capabilities": {
+        "fixtures": true,
+        "standings": true,
+        "lineups": true,
+        "fixtureStatistics": true,
+        "fixtureEvents": true,
+        "teamSeasonStatistics": true,
+        "playerLeaderboards": true
       }
     }
   ]
