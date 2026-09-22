@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { SparklesIcon, TrendingUpIcon } from "lucide-react";
 
+import { AIEngineAnalysisNotice } from "@/components/ai/AIEngineAnalysisNotice";
 import { usePrematchInsight } from "@/components/ai/AIInsightProvider";
 import { ConfidenceBadge } from "@/components/ai/ConfidenceBadge";
 import { AnalysisDataCoverage } from "@/components/ai/AnalysisDataCoverage";
@@ -192,7 +193,8 @@ function FinishedPredictionReview({
 function PreMatchAiEngineCard({ fixture }: { fixture: Fixture }) {
   const homeTeam = fixture.homeTeam;
   const awayTeam = fixture.awayTeam;
-  const { state, insight, insightMode, prediction } = usePrematchInsight();
+  const { state, insight, insightMode, prediction, displayExperience } =
+    usePrematchInsight();
 
   if (state === "loading") {
     return (
@@ -211,21 +213,30 @@ function PreMatchAiEngineCard({ fixture }: { fixture: Fixture }) {
     );
   }
 
-  if (state !== "ok" || !insight) {
-    if (!prediction) {
+  if (!displayExperience.showNarrative || state !== "ok" || !insight) {
+    if (
+      displayExperience.showModelPrediction &&
+      prediction?.type === "PREMATCH"
+    ) {
       return (
         <MatchAnalyticsCard>
-          <MatchCardHeader>
+          <MatchCardHeader className="gap-1">
             <MatchCardTitle className="flex items-center gap-2">
               <SparklesIcon aria-hidden className="size-4" />
               AI engine
             </MatchCardTitle>
+            {displayExperience.description ? (
+              <p className="text-muted-foreground text-xs">
+                {displayExperience.description}
+              </p>
+            ) : null}
           </MatchCardHeader>
           <MatchCardContent>
-            <MatchEmptyStateFromFixture
-              id="aiEngine"
-              fixture={fixture}
-              icon={TrendingUpIcon}
+            <WinProbabilitiesBar
+              probabilities={prediction.winProbabilities}
+              winOutcome={prediction.predictedOutcome}
+              homeTeam={homeTeam}
+              awayTeam={awayTeam}
             />
           </MatchCardContent>
         </MatchAnalyticsCard>
@@ -241,12 +252,18 @@ function PreMatchAiEngineCard({ fixture }: { fixture: Fixture }) {
           </MatchCardTitle>
         </MatchCardHeader>
         <MatchCardContent>
-          <WinProbabilitiesBar
-            probabilities={prediction.winProbabilities}
-            winOutcome={prediction.predictedOutcome}
-            homeTeam={homeTeam}
-            awayTeam={awayTeam}
-          />
+          {displayExperience.headline ? (
+            <AIEngineAnalysisNotice
+              experience={displayExperience}
+              className="border-0 bg-transparent py-4"
+            />
+          ) : (
+            <MatchEmptyStateFromFixture
+              id="aiEngine"
+              fixture={fixture}
+              icon={TrendingUpIcon}
+            />
+          )}
         </MatchCardContent>
       </MatchAnalyticsCard>
     );

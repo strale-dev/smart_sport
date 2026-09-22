@@ -216,10 +216,12 @@ export async function buildPrematchFeatures(
       ? Number(((h2h.teamAGoals + h2h.teamBGoals) / homeMeetings).toFixed(2))
       : null;
 
+  const form5HomePlayed = form5Home.results.length;
+  const form5AwayPlayed = form5Away.results.length;
   const hasXg = homeXg.samples > 0 && awayXg.samples > 0;
   const dataQuality: PredictionDataQuality =
-    form5Home.matches >= 3 &&
-    form5Away.matches >= 3 &&
+    form5HomePlayed >= 3 &&
+    form5AwayPlayed >= 3 &&
     (hasXg || homeXg.samples === 0)
       ? hasXg
         ? "COMPLETE"
@@ -264,20 +266,20 @@ export async function buildPrematchFeatures(
     homeRestDays,
     awayRestDays,
     homeGoalsForAvg:
-      form5Home.matches > 0
-        ? Number((form5Home.goalsFor / form5Home.matches).toFixed(2))
+      form5HomePlayed > 0
+        ? Number((form5Home.goalsFor / form5HomePlayed).toFixed(2))
         : null,
     awayGoalsForAvg:
-      form5Away.matches > 0
-        ? Number((form5Away.goalsFor / form5Away.matches).toFixed(2))
+      form5AwayPlayed > 0
+        ? Number((form5Away.goalsFor / form5AwayPlayed).toFixed(2))
         : null,
     homeGoalsAgainstAvg:
-      form5Home.matches > 0
-        ? Number((form5Home.goalsAgainst / form5Home.matches).toFixed(2))
+      form5HomePlayed > 0
+        ? Number((form5Home.goalsAgainst / form5HomePlayed).toFixed(2))
         : null,
     awayGoalsAgainstAvg:
-      form5Away.matches > 0
-        ? Number((form5Away.goalsAgainst / form5Away.matches).toFixed(2))
+      form5AwayPlayed > 0
+        ? Number((form5Away.goalsAgainst / form5AwayPlayed).toFixed(2))
         : null,
     homeXgForAvg: homeXg.xgForAvg,
     awayXgForAvg: awayXg.xgForAvg,

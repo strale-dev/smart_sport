@@ -118,6 +118,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
         key={`${fixture.externalId}-${fixture.status}-${isGuest ? "guest" : "user"}`}
         fixtureId={fixture.externalId}
         fixtureStatus={fixture.status}
+        kickoffAt={fixture.kickoffAt}
         isGuest={isGuest}
       >
         <MatchAIHeroSection

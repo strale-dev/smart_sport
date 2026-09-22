@@ -58,6 +58,7 @@ function renderWithProviders(ui: ReactElement) {
       <AIInsightProvider
         fixtureId={fixture.externalId}
         fixtureStatus={fixture.status}
+        kickoffAt={fixture.kickoffAt}
         isGuest
       >
         {ui}

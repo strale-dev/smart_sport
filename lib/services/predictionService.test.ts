@@ -68,6 +68,48 @@ vi.mock("@/lib/models/features", () => ({
   scorePrematchFromFeatures,
 }));
 
+const stablePrematchFeatures = {
+  fixtureExternalId: 123,
+  asOf: "2026-03-01T15:00:00.000Z",
+  homeTeamProviderId: 1,
+  awayTeamProviderId: 2,
+  leagueProviderId: 39,
+  eloHome: 1500,
+  eloAway: 1500,
+  eloDiff: 0,
+  form5HomePpg: 1.5,
+  form5AwayPpg: 1.2,
+  form5HomeVenuePpg: null,
+  form5AwayVenuePpg: null,
+  form10HomePpg: null,
+  form10AwayPpg: null,
+  h2hHomeWinRate: null,
+  h2hGoalAvg: null,
+  homeLeagueRank: null,
+  awayLeagueRank: null,
+  leaguePositionDiff: null,
+  homeStandingPoints: null,
+  awayStandingPoints: null,
+  standingPointsDiff: null,
+  homeRestDays: null,
+  awayRestDays: null,
+  homeGoalsForAvg: null,
+  awayGoalsForAvg: null,
+  homeGoalsAgainstAvg: null,
+  awayGoalsAgainstAvg: null,
+  homeXgForAvg: null,
+  awayXgForAvg: null,
+  homeXgAgainstAvg: null,
+  awayXgAgainstAvg: null,
+  homeInjuryImpact: null,
+  awayInjuryImpact: null,
+  homeTopScorersSidelined: 0,
+  awayTopScorersSidelined: 0,
+  lineupsState: "MISSING" as const,
+  hasXg: false,
+  dataQuality: "PARTIAL" as const,
+};
+
 describe("predictionService", () => {
   beforeEach(() => {
     resetMemoryLocksForTests();
@@ -88,11 +130,7 @@ describe("predictionService", () => {
     readLatestPrematchPrediction.mockResolvedValue(null);
     readOfficialPrematchPrediction.mockResolvedValue(null);
 
-    buildPrematchFeatures.mockResolvedValue({
-      fixtureExternalId: 123,
-      asOf: new Date().toISOString(),
-      dataQuality: "PARTIAL",
-    });
+    buildPrematchFeatures.mockResolvedValue(stablePrematchFeatures);
 
     scorePrematchFromFeatures.mockReturnValue({
       winProbabilities: { home: 0.5, draw: 0.25, away: 0.25 },
@@ -124,7 +162,7 @@ describe("predictionService", () => {
       btts_prob: 0.52,
       weaker_team_scoring_prob: 0.48,
       confidence: "MEDIUM",
-      input_snapshot: { fixtureExternalId: 123 },
+      input_snapshot: stablePrematchFeatures,
       created_at: new Date().toISOString(),
     }));
   });
@@ -148,7 +186,7 @@ describe("predictionService", () => {
       btts_prob: 0.52,
       weaker_team_scoring_prob: 0.48,
       confidence: "MEDIUM",
-      input_snapshot: { fixtureExternalId: 123 },
+      input_snapshot: stablePrematchFeatures,
       created_at: new Date().toISOString(),
     });
 
@@ -196,7 +234,7 @@ describe("predictionService", () => {
         btts_prob: 0.52,
         weaker_team_scoring_prob: 0.48,
         confidence: "MEDIUM",
-        input_snapshot: { fixtureExternalId: 123 },
+        input_snapshot: stablePrematchFeatures,
         created_at: new Date().toISOString(),
       };
       return storedRow;

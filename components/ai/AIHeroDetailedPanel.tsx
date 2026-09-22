@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { SparklesIcon } from "lucide-react";
 
+import { AIEngineAnalysisNotice } from "@/components/ai/AIEngineAnalysisNotice";
 import { usePrematchInsight } from "@/components/ai/AIInsightProvider";
 import { AIHeroMotionSection } from "@/components/ai/AIHeroMotionSection";
 import { ConfidenceBadge } from "@/components/ai/ConfidenceBadge";
@@ -58,7 +59,8 @@ export function AIHeroDetailedPanel({
   homeTeam,
   awayTeam,
 }: AIHeroDetailedPanelProps) {
-  const { state, insight, prediction, insightMode } = usePrematchInsight();
+  const { state, insight, prediction, insightMode, displayExperience } =
+    usePrematchInsight();
 
   if (state === "guest") {
     return (
@@ -84,11 +86,50 @@ export function AIHeroDetailedPanel({
     );
   }
 
-  if (state !== "ok" || !insight || !insightMode) {
+  if (!(
+    displayExperience.showNarrative &&
+    state === "ok" &&
+    insight &&
+    insightMode
+  )) {
+    if (
+      displayExperience.showModelPrediction &&
+      prediction?.type === "PREMATCH"
+    ) {
+      return (
+        <Card className="w-full">
+          <CardHeader className="gap-2">
+            <CardTitle className="font-heading text-base">AI Engine</CardTitle>
+            <CardDescription>
+              {displayExperience.description ??
+                "Fixture-specific model prediction. AI commentary is not available yet."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <WinProbabilitiesBar
+              probabilities={prediction.winProbabilities}
+              winOutcome={prediction.predictedOutcome}
+              homeTeam={homeTeam}
+              awayTeam={awayTeam}
+            />
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (displayExperience.headline && displayExperience.description) {
+      return (
+        <AIEngineAnalysisNotice
+          experience={displayExperience}
+          className="border-border/70 bg-card/40 rounded-xl border py-10"
+        />
+      );
+    }
+
     return (
       <AIEngineTabPendingState
         title="Detailed analysis not ready yet"
-        description="Use the AI match analysis card above the tabs to generate or review the summary. Full commentary, scenarios, and extended factors appear here once analysis is available."
+        description="Full commentary, scenarios, and key factors appear here once AI analysis is available for this fixture."
       />
     );
   }

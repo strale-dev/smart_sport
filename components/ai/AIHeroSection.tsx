@@ -1,25 +1,35 @@
 "use client";
 
 import { usePrematchInsight } from "@/components/ai/AIInsightProvider";
+import { AIEngineAnalysisNotice } from "@/components/ai/AIEngineAnalysisNotice";
 import { AIHeroCard } from "@/components/ai/AIHeroCard";
 import { AIHeroFallbackCard } from "@/components/ai/AIHeroFallbackCard";
 import { AIHeroLimitState } from "@/components/ai/AIHeroLimitState";
 import { AIHeroLockedCard } from "@/components/ai/AIHeroLockedCard";
-import { AIHeroMissState } from "@/components/ai/AIHeroMissState";
 import { AIHeroSkeleton } from "@/components/ai/AIHeroSkeleton";
 import { AIHeroUnavailableState } from "@/components/ai/AIHeroUnavailableState";
+import { AIHeroShell } from "@/components/ai/AIHeroShell";
 import { WinProbabilitiesBar } from "@/components/ai/WinProbabilitiesBar";
 import { ErrorState } from "@/components/common/ErrorState";
 import { predictedOutcomeFromProbabilities } from "@/lib/models/confidence";
 import { Badge } from "@/components/ui/badge";
 import type { TeamRef } from "@/types/domain";
-import type { PrematchPredictionResult } from "@/types/prediction";
+import type {
+  LivePredictionResult,
+  PrematchPredictionResult,
+} from "@/types/prediction";
 
 type AIHeroSectionProps = {
   homeTeam: Pick<TeamRef, "name" | "code">;
   awayTeam: Pick<TeamRef, "name" | "code">;
   returnTo: string;
 };
+
+function prematchPrediction(
+  prediction: PrematchPredictionResult | LivePredictionResult | null
+): PrematchPredictionResult | null {
+  return prediction?.type === "PREMATCH" ? prediction : null;
+}
 
 export function AIHeroSection({
   homeTeam,
@@ -40,18 +50,21 @@ export function AIHeroSection({
     generate,
     refetch,
     isGenerating,
+    displayExperience,
   } = usePrematchInsight();
+
+  const prematch = prematchPrediction(prediction);
 
   if (state === "guest") {
     if (
       fixturePhase === "LIVE" &&
-      prediction &&
-      prediction.type === "PREMATCH"
+      displayExperience.showModelPrediction &&
+      prematch
     ) {
       return (
         <div className="space-y-4">
           <AIHeroFallbackCard
-            prediction={prediction as PrematchPredictionResult}
+            prediction={prematch}
             mode="generating"
             message="Live model numbers are available below. Sign up free for full live analyst commentary."
             homeTeam={homeTeam}
@@ -91,31 +104,6 @@ export function AIHeroSection({
     return <AIHeroSkeleton />;
   }
 
-  if (state === "generating" && prediction && prediction.type === "PREMATCH") {
-    return (
-      <AIHeroFallbackCard
-        prediction={prediction}
-        mode="generating"
-        homeTeam={homeTeam}
-        awayTeam={awayTeam}
-        isRetrying={isGenerating}
-      />
-    );
-  }
-
-  if (state === "miss") {
-    if (isGenerating) {
-      return <AIHeroSkeleton />;
-    }
-
-    return (
-      <AIHeroMissState
-        onGenerate={() => void generate()}
-        isGenerating={isGenerating}
-      />
-    );
-  }
-
   if (state === "unavailable") {
     return <AIHeroUnavailableState />;
   }
@@ -124,22 +112,83 @@ export function AIHeroSection({
     return <AIHeroLimitState limit={limit} used={used} />;
   }
 
-  if (state === "fallback" && prediction && prediction.type === "PREMATCH") {
+  if (state === "error") {
+    return (
+      <ErrorState
+        title="Could not load AI analysis"
+        description={errorMessage ?? undefined}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
+
+  if (
+    displayExperience.showNarrative &&
+    state === "ok" &&
+    insight &&
+    insightMode
+  ) {
+    return (
+      <AIHeroCard
+        insight={insight}
+        prediction={prediction}
+        insightMode={insightMode}
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        liveWinProbabilities={liveWinProbabilities}
+        supplementalMessage={fallbackMessage}
+      />
+    );
+  }
+
+  if (
+    displayExperience.tier === "scheduled" ||
+    (!displayExperience.showModelPrediction && !displayExperience.showNarrative)
+  ) {
+    return (
+      <AIHeroShell variant="plain">
+        <AIEngineAnalysisNotice
+          experience={displayExperience}
+          className="border-0 bg-transparent py-6"
+        />
+      </AIHeroShell>
+    );
+  }
+
+  if (displayExperience.showModelPrediction && prematch) {
+    const modelMessage =
+      state === "fallback"
+        ? (fallbackMessage ?? displayExperience.description)
+        : displayExperience.description;
+
+    const mode =
+      state === "fallback"
+        ? fixturePhase === "LIVE"
+          ? "generating"
+          : "error"
+        : state === "generating" || isGenerating
+          ? "generating"
+          : "generating";
+
     return (
       <div className="space-y-4">
         <AIHeroFallbackCard
-          prediction={prediction as PrematchPredictionResult}
-          mode={fixturePhase === "LIVE" ? "generating" : "error"}
-          message={fallbackMessage}
+          prediction={prematch}
+          mode={mode}
+          message={modelMessage}
           homeTeam={homeTeam}
           awayTeam={awayTeam}
-          onRetry={fixturePhase === "LIVE" ? undefined : () => void generate()}
+          onRetry={
+            state === "fallback" && fixturePhase !== "LIVE"
+              ? () => void generate()
+              : undefined
+          }
           isRetrying={isGenerating}
         />
         {fixturePhase === "LIVE" && liveWinProbabilities ? (
           <AIHeroFallbackCard
             prediction={{
-              ...(prediction as PrematchPredictionResult),
+              ...prematch,
               winProbabilities: liveWinProbabilities,
               predictedOutcome:
                 predictedOutcomeFromProbabilities(liveWinProbabilities),
@@ -154,29 +203,16 @@ export function AIHeroSection({
     );
   }
 
-  if (state === "error") {
-    return (
-      <ErrorState
-        title="Could not load AI analysis"
-        description={errorMessage ?? undefined}
-        onRetry={() => void refetch()}
-      />
-    );
-  }
-
-  if (state !== "ok" || !insight || !insightMode) {
+  if (state === "miss" && isGenerating) {
     return <AIHeroSkeleton />;
   }
 
   return (
-    <AIHeroCard
-      insight={insight}
-      prediction={prediction}
-      insightMode={insightMode}
-      homeTeam={homeTeam}
-      awayTeam={awayTeam}
-      liveWinProbabilities={liveWinProbabilities}
-      supplementalMessage={fallbackMessage}
-    />
+    <AIHeroShell variant="plain">
+      <AIEngineAnalysisNotice
+        experience={displayExperience}
+        className="border-0 bg-transparent py-6"
+      />
+    </AIHeroShell>
   );
 }

@@ -25,6 +25,10 @@ import {
   type PrematchInsightViewModel,
 } from "@/lib/ai/prematch-insight-state";
 import {
+  resolvePrematchDisplayExperience,
+  type PrematchDisplayExperience,
+} from "@/lib/ai/prematch-availability";
+import {
   canBackfillMissingPrematchInsight,
   canGeneratePrematchInsight,
   isFixtureAnalyzable,
@@ -43,11 +47,13 @@ const HISTORICAL_PREMATCH_STALE_MS = 60_000;
 type AIInsightProviderProps = {
   fixtureId: number;
   fixtureStatus: string;
+  kickoffAt: string;
   isGuest: boolean;
   children: ReactNode;
 };
 
 type AIInsightContextValue = PrematchInsightViewModel & {
+  displayExperience: PrematchDisplayExperience;
   generate: () => Promise<void>;
   refetch: () => Promise<void>;
   isGenerating: boolean;
@@ -73,6 +79,7 @@ function createInitialViewModel(
 export function AIInsightProvider({
   fixtureId,
   fixtureStatus,
+  kickoffAt,
   isGuest,
   children,
 }: AIInsightProviderProps) {
@@ -226,6 +233,27 @@ export function AIInsightProvider({
 
   const viewModel = liveViewModel ?? prematchViewModel;
 
+  const displayExperience = useMemo(
+    () =>
+      resolvePrematchDisplayExperience({
+        kickoffAt,
+        fixturePhase: viewModel.fixturePhase,
+        hookState: viewModel.state,
+        hasInsight: viewModel.insight != null,
+        prediction:
+          viewModel.prediction?.type === "PREMATCH"
+            ? viewModel.prediction
+            : null,
+      }),
+    [
+      kickoffAt,
+      viewModel.fixturePhase,
+      viewModel.insight,
+      viewModel.prediction,
+      viewModel.state,
+    ]
+  );
+
   const canEnsurePrematch =
     canGeneratePrematchInsight(fixtureStatus) ||
     canBackfillMissingPrematchInsight(fixtureStatus);
@@ -286,7 +314,12 @@ export function AIInsightProvider({
     }
 
     const data = prematchInsightQuery.data;
-    if (!data || data.status !== "MISS" || !canEnsurePrematch) {
+    if (
+      !data ||
+      data.status !== "MISS" ||
+      !canEnsurePrematch ||
+      !displayExperience.shouldAutoGenerateNarrative
+    ) {
       return;
     }
 
@@ -299,6 +332,7 @@ export function AIInsightProvider({
     };
   }, [
     canEnsurePrematch,
+    displayExperience.shouldAutoGenerateNarrative,
     ensurePrematchInsight,
     prematchInsightQuery.data,
     prematchQueryEnabled,
@@ -310,7 +344,12 @@ export function AIInsightProvider({
     }
 
     const data = historicalPrematchQuery.data;
-    if (!data || data.status !== "MISS" || !canEnsurePrematch) {
+    if (
+      !data ||
+      data.status !== "MISS" ||
+      !canEnsurePrematch ||
+      !displayExperience.shouldAutoGenerateNarrative
+    ) {
       return;
     }
 
@@ -323,6 +362,7 @@ export function AIInsightProvider({
     };
   }, [
     canEnsurePrematch,
+    displayExperience.shouldAutoGenerateNarrative,
     ensurePrematchInsight,
     historicalPrematchQuery.data,
     isGuest,
@@ -420,11 +460,12 @@ export function AIInsightProvider({
   const value = useMemo<AIInsightContextValue>(
     () => ({
       ...viewModel,
+      displayExperience,
       generate,
       refetch,
       isGenerating,
     }),
-    [viewModel, generate, refetch, isGenerating]
+    [viewModel, displayExperience, generate, refetch, isGenerating]
   );
 
   return (

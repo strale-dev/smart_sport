@@ -27,6 +27,9 @@ import {
   buildPrematchFeatures,
   scorePrematchFromFeatures,
 } from "@/lib/models/features";
+import { PREMATCH_SCHEDULED_LEAD_MS } from "@/lib/ai/prematch-availability";
+import { computePrematchFeatureFingerprint } from "@/lib/models/prematch-feature-fingerprint";
+import type { PrematchFeatureVector } from "@/types/prediction";
 
 const PREMATCH_STATUSES = new Set(["NS", "TBD"]);
 
@@ -61,6 +64,30 @@ const LOCK_WAIT_MS = 250;
 
 function isFreshPrediction(createdAt: string, now = Date.now()): boolean {
   return now - new Date(createdAt).getTime() < PREMATCH_FRESHNESS_MS;
+}
+
+function isPrematchComputeWindowOpen(
+  kickoffAt: string,
+  now = Date.now()
+): boolean {
+  return new Date(kickoffAt).getTime() - now <= PREMATCH_SCHEDULED_LEAD_MS;
+}
+
+async function storedPredictionMatchesCurrentFeatures(input: {
+  fixtureExternalId: number;
+  storedSnapshot: PrematchFeatureVector;
+}): Promise<boolean> {
+  const current = await buildPrematchFeatures(input.fixtureExternalId, {
+    fixtureExternalId: input.fixtureExternalId,
+  });
+  if (!current) {
+    return true;
+  }
+
+  return (
+    computePrematchFeatureFingerprint(current) ===
+    computePrematchFeatureFingerprint(input.storedSnapshot)
+  );
 }
 
 function sleep(ms: number): Promise<void> {
@@ -141,6 +168,15 @@ async function readFreshPrematch(
     return null;
   }
 
+  const snapshot = latest.input_snapshot as PrematchFeatureVector;
+  const fingerprintMatches = await storedPredictionMatchesCurrentFeatures({
+    fixtureExternalId,
+    storedSnapshot: snapshot,
+  });
+  if (!fingerprintMatches) {
+    return null;
+  }
+
   return mapPredictionRowToResult(
     latest,
     fixtureExternalId,
@@ -186,6 +222,19 @@ export async function getOrComputePrematch(
     isKickoffReached(fixture.kickoff_at)
   ) {
     const row = await readPrematchRowForFixture(fixture);
+    if (!row) {
+      return null;
+    }
+    return mapPredictionRowToResult(
+      row,
+      fixtureExternalId,
+      modelVersion.version,
+      true
+    );
+  }
+
+  if (!isPrematchComputeWindowOpen(fixture.kickoff_at)) {
+    const row = await readLatestPrematchPrediction(fixture.id);
     if (!row) {
       return null;
     }
