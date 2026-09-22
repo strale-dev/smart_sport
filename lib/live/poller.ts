@@ -228,6 +228,13 @@ export async function runFixturePollChainTick(
           meaningfulEvents: tickResult.meaningfulEvents,
           snapshot: tickResult.snapshot,
         });
+      } else if (
+        tickResult.syncedAt &&
+        tickResult.pipelineResult?.liveInsightGenerated
+      ) {
+        await broadcastMatchUpdate(fixtureProviderId, tickResult.syncedAt, {
+          liveInsightGenerated: true,
+        });
       }
 
       await writeLastPollAt(lastAtKey, Date.now());

@@ -56,6 +56,7 @@ export async function broadcastMatchUpdate(
   options?: {
     meaningfulEvents?: MeaningfulEventBroadcastPayload[];
     snapshot?: MatchLiveSnapshot;
+    liveInsightGenerated?: boolean;
   }
 ): Promise<void> {
   const payload: LiveBroadcastPayload = {
@@ -71,6 +72,10 @@ export async function broadcastMatchUpdate(
 
   if (options?.snapshot) {
     payload.snapshot = options.snapshot;
+  }
+
+  if (options?.liveInsightGenerated) {
+    payload.liveInsightGenerated = true;
   }
 
   const feedPayload: LiveBroadcastPayload = {

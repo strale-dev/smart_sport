@@ -71,7 +71,7 @@ export function MatchRow({
       <Link
         id={anchorId}
         href={`/matches/${fixture.externalId}`}
-        className="hover:bg-muted/40 focus-visible:ring-ring/50 block rounded-xl px-3 py-3 transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
+        className="hover:bg-muted/40 focus-visible:ring-ring/50 block min-w-0 rounded-xl px-3 py-3 transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
       >
         <MatchFixtureScoreboard
           fixture={fixture}

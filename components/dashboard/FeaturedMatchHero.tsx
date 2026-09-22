@@ -67,41 +67,51 @@ export function FeaturedMatchHero({ fixture }: FeaturedMatchHeroProps) {
           <span aria-hidden="true">·</span>
           <span>{featuredStatusLabel(fixture, timeZone)}</span>
         </CardDescription>
-        <CardTitle className="font-heading text-xl sm:text-2xl">
+        <CardTitle className="font-heading line-clamp-2 text-xl break-words sm:text-2xl">
           {fixture.homeTeam.name} vs {fixture.awayTeam.name}
         </CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-4">
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4">
-          <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex min-w-0 flex-col items-center gap-2 text-center">
             <TeamLogo
               name={fixture.homeTeam.name}
               logoUrl={fixture.homeTeam.logoUrl}
-              className="size-12"
+              className="size-10 sm:size-12"
             />
-            <span className="text-sm font-medium">{fixture.homeTeam.name}</span>
+            <span
+              title={fixture.homeTeam.name}
+              className="line-clamp-2 w-full min-w-0 text-sm font-medium"
+            >
+              {fixture.homeTeam.name}
+            </span>
           </div>
 
-          <div className="text-center">
+          <div className="shrink-0 text-center">
             {showScore ? (
-              <p className="font-mono text-4xl font-semibold tabular-nums">
+              <p className="font-mono text-2xl font-semibold tabular-nums sm:text-4xl">
                 {formatFixtureScore(fixture, timeZone)}
               </p>
             ) : (
-              <p className="font-mono text-2xl font-semibold tabular-nums">
+              <p className="font-mono text-xl font-semibold tabular-nums sm:text-2xl">
                 {formatFixtureKickoffTime(fixture.kickoffAt, timeZone)}
               </p>
             )}
           </div>
 
-          <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex min-w-0 flex-col items-center gap-2 text-center">
             <TeamLogo
               name={fixture.awayTeam.name}
               logoUrl={fixture.awayTeam.logoUrl}
-              className="size-12"
+              className="size-10 sm:size-12"
             />
-            <span className="text-sm font-medium">{fixture.awayTeam.name}</span>
+            <span
+              title={fixture.awayTeam.name}
+              className="line-clamp-2 w-full min-w-0 text-sm font-medium"
+            >
+              {fixture.awayTeam.name}
+            </span>
           </div>
         </div>
 

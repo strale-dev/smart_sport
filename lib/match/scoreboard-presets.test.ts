@@ -16,7 +16,9 @@ describe("getMatchScoreboardPreset", () => {
     expect(preset.linkTeams).toBe(true);
     expect(preset.showHalftimeLine).toBe(true);
     expect(preset.logoPriority).toBe(true);
-    expect(preset.scoreClassName).toContain("text-2xl");
-    expect(preset.logoClassName).toContain("size-10");
+    expect(preset.scoreClassName).toContain("text-xl");
+    expect(preset.scoreClassName).toContain("sm:text-4xl");
+    expect(preset.logoClassName).toContain("size-8");
+    expect(preset.logoClassName).toContain("sm:size-16");
   });
 });

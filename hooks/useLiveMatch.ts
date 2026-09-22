@@ -113,7 +113,7 @@ export function useLiveMatch(
           });
         }
 
-        if (events && events.length > 0) {
+        if ((events && events.length > 0) || payload.liveInsightGenerated) {
           void queryClient.invalidateQueries({
             queryKey: liveKeys.liveInsight(fixtureProviderId),
           });

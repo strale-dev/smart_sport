@@ -38,10 +38,10 @@ const headerPreset: MatchScoreboardPreset = {
   animateScore: true,
   truncateTeamNames: false,
   scheduledCenterVariant: "badge",
-  scoreClassName: "text-2xl sm:text-4xl",
+  scoreClassName: "text-xl sm:text-4xl",
   scheduledKickoffClassName:
     "px-3 py-1.5 text-base sm:px-3.5 sm:py-2 sm:text-lg",
-  logoClassName: "size-10 sm:size-16",
+  logoClassName: "size-8 sm:size-16",
   logoSizes: MATCH_HEADER_LOGO_SIZES,
   logoPriority: true,
   teamNameClassName: "text-sm font-semibold sm:text-xl md:text-2xl",

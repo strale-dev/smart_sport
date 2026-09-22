@@ -46,6 +46,39 @@ export function canGeneratePrematchInsight(status: string): boolean {
   return resolveFixturePhase(status) === "PREMATCH";
 }
 
+/** One stored pre-match narrative may be created after kickoff when none exists. */
+export function canBackfillMissingPrematchInsight(status: string): boolean {
+  const phase = resolveFixturePhase(status);
+  return phase === "LIVE" || phase === "FINISHED";
+}
+
+export type HistoricalPrematchWriteAction =
+  "return_stored" | "backfill" | "guest_forbidden" | "generation_not_allowed";
+
+/**
+ * Live and finished fixtures never regenerate when a pre-match row already exists.
+ * Cron does not create that first row; only a signed-in user open does.
+ */
+export function historicalPrematchWriteAction(input: {
+  trigger: "user" | "cron";
+  hasUserId: boolean;
+  hasStoredPrematch: boolean;
+}): HistoricalPrematchWriteAction {
+  if (input.hasStoredPrematch) {
+    return "return_stored";
+  }
+
+  if (input.trigger === "user" && !input.hasUserId) {
+    return "guest_forbidden";
+  }
+
+  if (input.trigger === "user") {
+    return "backfill";
+  }
+
+  return "generation_not_allowed";
+}
+
 export function isHistoricalInsightOnly(status: string): boolean {
   const phase = resolveFixturePhase(status);
   return phase === "LIVE" || phase === "FINISHED";

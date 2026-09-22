@@ -18,4 +18,6 @@ export type LiveBroadcastPayload = {
   meaningfulEvents?: MeaningfulEventBroadcastPayload[];
   /** Full authoritative match state (match channel only). */
   snapshot?: MatchLiveSnapshot;
+  /** Live narrative was stored on a tick that did not change the score snapshot. */
+  liveInsightGenerated?: boolean;
 };

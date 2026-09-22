@@ -33,11 +33,14 @@ import {
 import { mergeNarrativeWithPrediction } from "@/lib/ai/merge-insight";
 import type {
   LiveInsightResponse,
+  PrematchInsightMode,
   PrematchInsightResponse,
 } from "@/lib/ai/schemas";
 import { validateAIInsightPayload } from "@/lib/ai/schemas";
 import {
+  canBackfillMissingPrematchInsight,
   canGeneratePrematchInsight,
+  historicalPrematchWriteAction,
   resolveFixturePhase,
 } from "@/lib/ai/status-map";
 import {
@@ -72,6 +75,20 @@ export type GeneratePrematchInsightOptions = {
   trigger: "user" | "cron";
 };
 
+function reportPrematchInsightOutcome(
+  outcome: "unavailable" | "fallback",
+  fixtureExternalId: number,
+  extra: Record<string, unknown>
+): void {
+  Sentry.captureMessage(`prematch_insight_${outcome}`, {
+    level: outcome === "fallback" ? "warning" : "info",
+    extra: {
+      fixtureExternalId,
+      ...extra,
+    },
+  });
+}
+
 function buildFallbackResponse(
   fixtureExternalId: number,
   prediction: NonNullable<Awaited<ReturnType<typeof getOrComputePrematch>>>,
@@ -91,11 +108,12 @@ async function readHistoricalPrematchInsight(
 ): Promise<PrematchInsightResponse> {
   const row = await readLatestPrematchInsight(fixtureUuid);
   if (!row) {
-    return {
-      status: "UNAVAILABLE",
-      fixtureExternalId,
-      reason: "NO_STORED_INSIGHT",
-    };
+    const prediction = await getLatestPrematch(fixtureExternalId);
+    if (prediction) {
+      return { status: "MISS", fixtureExternalId, prediction };
+    }
+
+    return { status: "MISS", fixtureExternalId };
   }
 
   const prediction = await getLatestPrematch(fixtureExternalId);
@@ -241,6 +259,7 @@ export async function readPrematchInsight(
 /**
  * Pre-match insight: one row per (fixture_id, PREMATCH, context_hash), shared by all users.
  * Personal daily quota does not gate creation or reads; cron and authenticated ensure fill gaps.
+ * After kickoff, a signed-in open may create the first row once. Later hash changes do not.
  */
 export async function generatePrematchInsight(
   fixtureExternalId: number,
@@ -251,11 +270,72 @@ export async function generatePrematchInsight(
     return { status: "MISS", fixtureExternalId };
   }
 
-  if (!canGeneratePrematchInsight(fixture.status)) {
+  const phase = resolveFixturePhase(fixture.status);
+  const insightMode: PrematchInsightMode = canBackfillMissingPrematchInsight(
+    fixture.status
+  )
+    ? "historical"
+    : "prematch";
+
+  if (phase === "NEITHER") {
+    reportPrematchInsightOutcome("unavailable", fixtureExternalId, {
+      reason: "FIXTURE_NOT_ANALYZABLE",
+      trigger: options.trigger,
+      fixtureStatus: fixture.status,
+    });
     return {
       status: "UNAVAILABLE",
       fixtureExternalId,
-      reason: "NO_STORED_INSIGHT",
+      reason: "FIXTURE_NOT_ANALYZABLE",
+    };
+  }
+
+  if (insightMode === "historical") {
+    const stored = await readLatestPrematchInsight(fixture.id);
+    const action = historicalPrematchWriteAction({
+      trigger: options.trigger,
+      hasUserId: Boolean(options.userId),
+      hasStoredPrematch: stored != null,
+    });
+
+    if (action === "return_stored" && stored) {
+      const prediction =
+        (await getLatestPrematch(fixtureExternalId)) ??
+        (await getOrComputePrematch(fixtureExternalId));
+      if (!prediction) {
+        return { status: "MISS", fixtureExternalId };
+      }
+
+      return {
+        status: "OK",
+        insight: mapAiInsightRowToStored(stored, fixtureExternalId, true),
+        prediction,
+        cached: true,
+        insightMode: "historical",
+      };
+    }
+
+    if (action === "guest_forbidden") {
+      return { status: "GUEST_FORBIDDEN" };
+    }
+
+    if (action === "generation_not_allowed") {
+      reportPrematchInsightOutcome("unavailable", fixtureExternalId, {
+        reason: "GENERATION_NOT_ALLOWED",
+        trigger: options.trigger,
+        fixtureStatus: fixture.status,
+      });
+      return {
+        status: "UNAVAILABLE",
+        fixtureExternalId,
+        reason: "GENERATION_NOT_ALLOWED",
+      };
+    }
+  } else if (!canGeneratePrematchInsight(fixture.status)) {
+    return {
+      status: "UNAVAILABLE",
+      fixtureExternalId,
+      reason: "GENERATION_NOT_ALLOWED",
     };
   }
 
@@ -280,7 +360,7 @@ export async function generatePrematchInsight(
       insight: existing,
       prediction,
       cached: true,
-      insightMode: "prematch",
+      insightMode,
     };
   }
 
@@ -292,6 +372,13 @@ export async function generatePrematchInsight(
     const generated = await withPrematchInsightLock(
       fixtureExternalId,
       async () => {
+        if (insightMode === "historical") {
+          const latest = await readLatestPrematchInsight(fixture.id);
+          if (latest) {
+            return mapAiInsightRowToStored(latest, fixtureExternalId, true);
+          }
+        }
+
         const cachedInsideLock = await readPrematchInsightFromStore(
           fixture.id,
           fixtureExternalId,
@@ -346,11 +433,16 @@ export async function generatePrematchInsight(
       status: "OK",
       insight: generated,
       prediction,
-      cached: false,
-      insightMode: "prematch",
+      cached: generated.cached,
+      insightMode,
     };
   } catch (error) {
     console.error("[aiService] prematch generation failed:", error);
+    reportPrematchInsightOutcome("fallback", fixtureExternalId, {
+      trigger: options.trigger,
+      message: toUserFacingAiErrorMessage(error),
+      errorName: error instanceof Error ? error.name : "unknown",
+    });
     return buildFallbackResponse(
       fixtureExternalId,
       prediction,
@@ -503,7 +595,14 @@ export async function generateLiveInsight(
           ? error.message
           : error.message;
       console.error("[aiService] live generation failed:", message);
-      Sentry.captureException(error);
+      Sentry.captureMessage("live_insight_generation_failed", {
+        level: "warning",
+        extra: {
+          fixtureExternalId: input.fixtureExternalId,
+          errorName: error.name,
+          message,
+        },
+      });
       return { ok: false, reason: message };
     }
 

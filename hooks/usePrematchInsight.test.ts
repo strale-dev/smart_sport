@@ -207,20 +207,45 @@ describe("usePrematchInsight support modules", () => {
             cached: false,
             insightMode: "prematch",
           }) satisfies PrematchInsightResponse,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () =>
+          ({
+            status: "OK",
+            insight: baseInsight,
+            prediction: basePrediction,
+            cached: false,
+            insightMode: "prematch",
+          }) satisfies PrematchInsightResponse,
       });
     vi.stubGlobal("fetch", fetchMock);
 
     await fetchPrematchInsightGet(456);
     await fetchPrematchInsightGet(456);
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(
       fetchMock.mock.calls.every((call) => call[1]?.method !== "POST")
     ).toBe(true);
 
     await fetchPrematchInsightPost(456);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[1]?.[1]?.method).toBe("POST");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[2]?.[1]?.method).toBe("POST");
+  });
+
+  it("throws when prematch generation responds with an HTTP error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+        json: async () => ({ ok: false, error: "INTERNAL_ERROR" }),
+      }))
+    );
+
+    await expect(fetchPrematchInsightPost(789)).rejects.toThrow(/500/);
   });
 
   it("blocks generate for non-prematch statuses at the status-map layer", () => {

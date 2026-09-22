@@ -76,11 +76,13 @@ export function MatchFixtureScoreboard({
         sizes={logoSizes}
       />
       <span
+        title={fixture.homeTeam.name}
         className={cn(
           teamNameClassName,
+          "min-w-0 flex-1 text-left",
           truncateTeamNames
             ? "truncate"
-            : "min-w-0 text-left leading-snug break-words"
+            : "max-sm:truncate sm:leading-snug sm:break-words sm:whitespace-normal"
         )}
       >
         {fixture.homeTeam.name}
@@ -91,11 +93,13 @@ export function MatchFixtureScoreboard({
   const awayCell = (
     <>
       <span
+        title={fixture.awayTeam.name}
         className={cn(
           teamNameClassName,
+          "min-w-0 flex-1 text-right",
           truncateTeamNames
-            ? "truncate text-right"
-            : "min-w-0 text-right leading-snug break-words"
+            ? "truncate"
+            : "max-sm:truncate sm:leading-snug sm:break-words sm:whitespace-normal"
         )}
       >
         {fixture.awayTeam.name}

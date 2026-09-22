@@ -252,6 +252,9 @@ export type LiveInsightResponse =
       status: "UNAVAILABLE";
       fixtureExternalId: number;
       reason?: "NOT_LIVE" | "FIXTURE_NOT_ANALYZABLE";
+    }
+  | {
+      status: "GUEST_FORBIDDEN";
     };
 
 export type PrematchInsightResponse =
@@ -270,7 +273,10 @@ export type PrematchInsightResponse =
   | {
       status: "UNAVAILABLE";
       fixtureExternalId: number;
-      reason?: "NO_STORED_INSIGHT" | "FIXTURE_NOT_ANALYZABLE";
+      reason?:
+        | "NO_STORED_INSIGHT"
+        | "FIXTURE_NOT_ANALYZABLE"
+        | "GENERATION_NOT_ALLOWED";
     }
   | {
       status: "FALLBACK";

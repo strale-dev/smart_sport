@@ -48,13 +48,24 @@ export function H2HCompactCard({ fixture, h2h }: H2HCompactCardProps) {
             icon={SwordsIcon}
           />
         ) : (
-          <p className="text-center text-sm font-medium tabular-nums">
-            {homeName} <span className="font-mono text-base">{homeWins}</span>
-            <span className="text-muted-foreground mx-2">|</span>
-            Draw <span className="font-mono text-base">{h2h.draws}</span>
-            <span className="text-muted-foreground mx-2">|</span>
-            {awayName} <span className="font-mono text-base">{awayWins}</span>
-          </p>
+          <div className="grid grid-cols-3 items-start gap-2 text-center text-sm">
+            <div className="min-w-0">
+              <p className="line-clamp-2 font-medium" title={homeName}>
+                {homeName}
+              </p>
+              <p className="font-mono text-base tabular-nums">{homeWins}</p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-muted-foreground font-medium">Draw</p>
+              <p className="font-mono text-base tabular-nums">{h2h.draws}</p>
+            </div>
+            <div className="min-w-0">
+              <p className="line-clamp-2 font-medium" title={awayName}>
+                {awayName}
+              </p>
+              <p className="font-mono text-base tabular-nums">{awayWins}</p>
+            </div>
+          </div>
         )}
       </MatchCardContent>
     </MatchAnalyticsCard>

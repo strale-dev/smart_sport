@@ -96,7 +96,7 @@ export function LiveStatsCard({ fixture, stats }: LiveStatsCardProps) {
           <MatchCardTitle>Live stats</MatchCardTitle>
           {hasPartialData ? <DataQualityChip quality="PARTIAL" /> : null}
         </div>
-        <MatchCardDescription>
+        <MatchCardDescription className="line-clamp-2 break-words">
           {fixture.homeTeam.name} vs {fixture.awayTeam.name}
         </MatchCardDescription>
       </MatchCardHeader>

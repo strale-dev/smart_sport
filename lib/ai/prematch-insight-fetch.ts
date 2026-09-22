@@ -2,46 +2,14 @@ import type { PrematchInsightResponse } from "@/lib/ai/schemas";
 
 type FetchCacheEntry = {
   promise: Promise<PrematchInsightResponse>;
-  response?: PrematchInsightResponse;
 };
 
 const getCache = new Map<number, FetchCacheEntry>();
-
-function shouldPersistPrematchResponse(
-  payload: PrematchInsightResponse
-): boolean {
-  return payload.status !== "FALLBACK";
-}
-
-function persistPrematchResponse(
-  fixtureId: number,
-  payload: PrematchInsightResponse
-): void {
-  if (!shouldPersistPrematchResponse(payload)) {
-    getCache.delete(fixtureId);
-    return;
-  }
-
-  const entry = getCache.get(fixtureId);
-  if (entry) {
-    entry.response = payload;
-    return;
-  }
-
-  getCache.set(fixtureId, {
-    promise: Promise.resolve(payload),
-    response: payload,
-  });
-}
 
 export async function fetchPrematchInsightGet(
   fixtureId: number
 ): Promise<PrematchInsightResponse> {
   const cached = getCache.get(fixtureId);
-  if (cached?.response) {
-    return cached.response;
-  }
-
   if (cached?.promise) {
     return cached.promise;
   }
@@ -49,19 +17,24 @@ export async function fetchPrematchInsightGet(
   const promise = fetch(`/api/ai/prematch/${fixtureId}`, {
     method: "GET",
     cache: "no-store",
-  }).then(async (response) => {
-    if (response.status === 403) {
-      return { status: "GUEST_FORBIDDEN" } satisfies PrematchInsightResponse;
-    }
+  })
+    .then(async (response) => {
+      if (response.status === 403) {
+        return { status: "GUEST_FORBIDDEN" } satisfies PrematchInsightResponse;
+      }
 
-    if (!response.ok) {
-      throw new Error(`Failed to load AI insight (${response.status})`);
-    }
+      if (!response.ok) {
+        throw new Error(`Failed to load AI insight (${response.status})`);
+      }
 
-    const payload = (await response.json()) as PrematchInsightResponse;
-    persistPrematchResponse(fixtureId, payload);
-    return payload;
-  });
+      return (await response.json()) as PrematchInsightResponse;
+    })
+    .finally(() => {
+      const current = getCache.get(fixtureId);
+      if (current?.promise === promise) {
+        getCache.delete(fixtureId);
+      }
+    });
 
   getCache.set(fixtureId, { promise });
   return promise;
@@ -79,9 +52,11 @@ export async function fetchPrematchInsightPost(
     return { status: "GUEST_FORBIDDEN" };
   }
 
-  const payload = (await response.json()) as PrematchInsightResponse;
-  persistPrematchResponse(fixtureId, payload);
-  return payload;
+  if (!response.ok) {
+    throw new Error(`Failed to generate AI insight (${response.status})`);
+  }
+
+  return (await response.json()) as PrematchInsightResponse;
 }
 
 export function clearPrematchInsightFetchCache(fixtureId?: number): void {

@@ -54,6 +54,14 @@ export function mapLiveInsightResponseToViewModel(
         fixturePhase,
         errorMessage: null,
       };
+    case "GUEST_FORBIDDEN":
+      return {
+        state: "guest",
+        insight: null,
+        insightMode: null,
+        fixturePhase,
+        errorMessage: null,
+      };
     default:
       return {
         state: "error",
@@ -113,6 +121,13 @@ export function resolveLivePhaseViewModel(
     ...createEmptyPrematchInsightViewModel(fixtureStatus),
     liveWinProbabilities,
   });
+
+  if (liveInsightData?.status === "GUEST_FORBIDDEN") {
+    return {
+      ...empty(),
+      state: "guest",
+    };
+  }
 
   if (liveInsightData?.status === "OK") {
     const mapped = mapLiveInsightResponseToViewModel(

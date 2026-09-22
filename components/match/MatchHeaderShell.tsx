@@ -25,7 +25,7 @@ function MatchHeaderShellHeader({
 }: React.ComponentProps<typeof CardHeader>) {
   return (
     <CardHeader
-      className={cn("gap-2 px-6 pt-8 pb-0 sm:px-8 sm:pt-10", className)}
+      className={cn("gap-2 px-4 pt-8 pb-0 sm:px-8 sm:pt-10", className)}
       {...props}
     />
   );
@@ -38,7 +38,7 @@ function MatchHeaderShellContent({
   return (
     <CardContent
       className={cn(
-        "space-y-4 px-6 pt-4 pb-8 sm:px-8 sm:pt-5 sm:pb-10",
+        "space-y-4 px-4 pt-4 pb-8 sm:px-8 sm:pt-5 sm:pb-10",
         className
       )}
       {...props}
