@@ -10,6 +10,7 @@ import { isViewerPollActiveForFixture } from "@/lib/live/viewer-poll-active";
 import { dispatchNotificationsFromLive } from "@/lib/notifications/dispatch-from-live";
 import { listLiveFixtureProviderIdsWithTeamFollowers } from "@/lib/notifications/audience";
 import { broadcastMatchUpdate } from "@/lib/live/broadcaster";
+import { recordFollowPollTick } from "@/lib/live/poll-stats";
 import { waitForCadence, writeLastPollAt } from "@/lib/live/poller";
 import { parsePublicEnv, getCronSecret } from "@/lib/env";
 import { getRedis } from "@/lib/redis/client";
@@ -158,6 +159,7 @@ export async function runFollowNotificationPollChainTick(
   const lockHeld = await renewLock(lockKey, LIVE_POLL_LOCK_TTL_SEC);
 
   if (!lockHeld && !(await acquireLock(lockKey, LIVE_POLL_LOCK_TTL_SEC))) {
+    await recordFollowPollTick({ skipped: true });
     return {
       ok: true,
       fixtureProviderId,
@@ -171,6 +173,7 @@ export async function runFollowNotificationPollChainTick(
   if (!(await shouldContinueFollowNotificationPoll(fixtureProviderId))) {
     await unmarkFollowNotificationPollActive(fixtureProviderId);
     await releaseLock(lockKey);
+    await recordFollowPollTick({ skipped: true });
     return {
       ok: true,
       fixtureProviderId,
@@ -185,6 +188,7 @@ export async function runFollowNotificationPollChainTick(
   if (!(await shouldContinueFollowNotificationPoll(fixtureProviderId))) {
     await unmarkFollowNotificationPollActive(fixtureProviderId);
     await releaseLock(lockKey);
+    await recordFollowPollTick({ skipped: true });
     return {
       ok: true,
       fixtureProviderId,
@@ -196,6 +200,7 @@ export async function runFollowNotificationPollChainTick(
   if (await isViewerPollActiveForFixture(fixtureProviderId)) {
     await renewLock(lockKey, LIVE_POLL_LOCK_TTL_SEC);
     scheduleFollowNotificationPollTick(fixtureProviderId);
+    await recordFollowPollTick({ skipped: true });
     return {
       ok: true,
       fixtureProviderId,
@@ -213,6 +218,7 @@ export async function runFollowNotificationPollChainTick(
   if (!detectorLockAcquired) {
     await renewLock(lockKey, LIVE_POLL_LOCK_TTL_SEC);
     scheduleFollowNotificationPollTick(fixtureProviderId);
+    await recordFollowPollTick({ skipped: true });
     return {
       ok: true,
       fixtureProviderId,
@@ -221,8 +227,10 @@ export async function runFollowNotificationPollChainTick(
     };
   }
 
+  let ingested = false;
   try {
     const tickResult = await runFixtureLiveIngestAndPipeline(fixtureProviderId);
+    ingested = true;
 
     if (
       tickResult.changed &&
@@ -257,6 +265,7 @@ export async function runFollowNotificationPollChainTick(
     await releaseLock(lockKey);
   }
 
+  await recordFollowPollTick({ ingested });
   return { ok: true, fixtureProviderId };
 }
 

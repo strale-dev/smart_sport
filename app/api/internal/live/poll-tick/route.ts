@@ -1,6 +1,10 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import {
+  formatApiFootballFailureReason,
+  isOptionalProviderFailure,
+} from "@/lib/api-football/safe-call";
 import { verifyInternalLiveRequest } from "@/lib/live/internal-auth";
 import { runFixturePollChainTick } from "@/lib/live/poller";
 
@@ -31,6 +35,17 @@ export async function POST(request: NextRequest) {
     const result = await runFixturePollChainTick(fixtureProviderId);
     return NextResponse.json(result);
   } catch (error) {
+    if (isOptionalProviderFailure(error)) {
+      console.warn(
+        `[live/poll-tick] provider unavailable for fixture ${fixtureProviderId} — ${formatApiFootballFailureReason(error)}`
+      );
+      return NextResponse.json({
+        ok: false,
+        fixtureProviderId,
+        reason: "provider_unavailable",
+      });
+    }
+
     console.error(
       `[live/poll-tick] unhandled error for fixture ${fixtureProviderId}`,
       error

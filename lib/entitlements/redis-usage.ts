@@ -16,6 +16,59 @@ import {
 
 const AI_USAGE_REDIS_TTL_SEC = 86_400 * 2;
 
+type RedisPipeline =
+  NonNullable<ReturnType<typeof getRedis>> extends infer R
+    ? R extends { pipeline: () => infer P }
+      ? P
+      : never
+    : never;
+
+function createTrackedPipeline(
+  redis: NonNullable<ReturnType<typeof getRedis>>
+): {
+  pipeline: RedisPipeline;
+  execIfNotEmpty: () => Promise<unknown>;
+} {
+  const pipeline = redis.pipeline();
+  let commandCount = 0;
+
+  return {
+    pipeline: new Proxy(pipeline, {
+      get(target, property, receiver) {
+        const value = Reflect.get(target, property, receiver);
+        if (property === "exec") {
+          return async () => {
+            if (commandCount === 0) {
+              return [];
+            }
+            commandCount = 0;
+            return target.exec();
+          };
+        }
+
+        if (typeof value === "function") {
+          return (...args: unknown[]) => {
+            commandCount += 1;
+            return (value as (...inner: unknown[]) => unknown).apply(
+              target,
+              args
+            );
+          };
+        }
+
+        return value;
+      },
+    }) as RedisPipeline,
+    execIfNotEmpty: async () => {
+      if (commandCount === 0) {
+        return [];
+      }
+      commandCount = 0;
+      return pipeline.exec();
+    },
+  };
+}
+
 type RedisHash = {
   predictions?: string;
   deep?: string;
@@ -40,7 +93,7 @@ async function touchUsageKeys(userId: string, usageDay: string): Promise<void> {
     return;
   }
 
-  const pipeline = redis.pipeline();
+  const { pipeline, execIfNotEmpty } = createTrackedPipeline(redis);
   pipeline.expire(aiUsageHashKey(userId, usageDay), AI_USAGE_REDIS_TTL_SEC);
   pipeline.expire(
     aiUsageLiveMatchesKey(userId, usageDay),
@@ -49,7 +102,7 @@ async function touchUsageKeys(userId: string, usageDay: string): Promise<void> {
   pipeline.expire(aiUsageLastLiveKey(userId, usageDay), AI_USAGE_REDIS_TTL_SEC);
   pipeline.sadd(aiUsageActiveUsersKey(usageDay), userId);
   pipeline.expire(aiUsageActiveUsersKey(usageDay), AI_USAGE_REDIS_TTL_SEC);
-  await pipeline.exec();
+  await execIfNotEmpty();
 }
 
 export async function readRedisUsageRow(
@@ -94,7 +147,7 @@ export async function incrementRedisUsageCounters(
     return null;
   }
 
-  const pipeline = redis.pipeline();
+  const { pipeline, execIfNotEmpty } = createTrackedPipeline(redis);
   if (increment.predictions) {
     pipeline.hincrby(
       aiUsageHashKey(userId, usageDay),
@@ -117,14 +170,7 @@ export async function incrementRedisUsageCounters(
     );
   }
 
-  const hasCounterIncrements =
-    Boolean(increment.predictions) ||
-    Boolean(increment.deepAnalyses) ||
-    Boolean(increment.generations);
-
-  if (hasCounterIncrements) {
-    await pipeline.exec();
-  }
+  await execIfNotEmpty();
 
   if (increment.liveFixtureUuid) {
     await redis.sadd(

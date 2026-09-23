@@ -267,59 +267,56 @@ export async function getMatchesInRange(
   return toServiceResult(result);
 }
 
+async function resolveFixtureById(id: number): Promise<Fixture | null> {
+  if (!isApiFootballIngestOnly()) {
+    const fromProvider = await safeOptionalProviderFetch(
+      `fixture ${id}`,
+      () => getFixtureByIdEndpoint(id),
+      null
+    );
+    if (fromProvider) {
+      return fromProvider;
+    }
+  }
+
+  const fromDb = await readFixtureByProviderIdFromDb(id);
+  if (fromDb) {
+    return fromDb;
+  }
+
+  await ensureFixturePersisted(id);
+  const persisted = await readFixtureByProviderIdFromDb(id);
+  if (persisted) {
+    return persisted;
+  }
+
+  const fromProviderRaw = await safeOptionalProviderFetch(
+    `fixture ${id}`,
+    () => getFixtureByIdWithRaw(id),
+    null
+  );
+
+  if (
+    fromProviderRaw?.domain &&
+    isLeagueInAllowlist(fromProviderRaw.domain.league.externalId)
+  ) {
+    return fromProviderRaw.domain;
+  }
+
+  return null;
+}
+
 export async function getFixtureById(
   id: number
 ): Promise<ServiceResult<Fixture | null>> {
-  if (isApiFootballIngestOnly()) {
-    const dbResult = await cached({
-      key: providerFixtureKey(id),
-      freshTtlSeconds: (fixture: Fixture | null) =>
-        fixture
-          ? fixtureFreshTtlSeconds(fixture.status)
-          : CACHE_TTL.fixtureNonLiveFresh,
-      staleTtlSeconds: CACHE_TTL.fixtureStale,
-      fn: async () => {
-        const fromDb = await readFixtureByProviderIdFromDb(id);
-        if (fromDb) {
-          return fromDb;
-        }
-
-        await ensureFixturePersisted(id);
-        const persisted = await readFixtureByProviderIdFromDb(id);
-        if (persisted) {
-          return persisted;
-        }
-
-        const fromProvider = await safeOptionalProviderFetch(
-          `fixture ${id}`,
-          () => getFixtureByIdWithRaw(id),
-          null
-        );
-
-        if (
-          fromProvider?.domain &&
-          isLeagueInAllowlist(fromProvider.domain.league.externalId)
-        ) {
-          return fromProvider.domain;
-        }
-
-        return null;
-      },
-    });
-
-    return toServiceResult(dbResult);
-  }
-
-  const result = await cachedProviderOrDb({
+  const result = await cached({
     key: providerFixtureKey(id),
-    freshTtlSeconds: (fixture) =>
+    freshTtlSeconds: (fixture: Fixture | null) =>
       fixture
         ? fixtureFreshTtlSeconds(fixture.status)
         : CACHE_TTL.fixtureNonLiveFresh,
     staleTtlSeconds: CACHE_TTL.fixtureStale,
-    providerFn: () => getFixtureByIdEndpoint(id),
-    dbFn: () => readFixtureByProviderIdFromDb(id),
-    label: "getFixtureById",
+    fn: () => resolveFixtureById(id),
   });
 
   return toServiceResult(result);

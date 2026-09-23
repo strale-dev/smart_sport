@@ -1555,6 +1555,38 @@ function normalizeTeamProviderIds(providerIds: number[]): number[] {
   return [...unique];
 }
 
+async function readTeamsByProviderIdsChunk(
+  client: ReturnType<typeof createAdminClient>,
+  chunk: number[]
+): Promise<Array<{ id: string; provider_id: number }>> {
+  if (chunk.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await client
+    .from("teams")
+    .select("id, provider_id")
+    .in("provider_id", chunk);
+
+  if (!error) {
+    return data ?? [];
+  }
+
+  if (chunk.length > 1 && error.message.toLowerCase().includes("bad request")) {
+    const mid = Math.ceil(chunk.length / 2);
+    const [left, right] = await Promise.all([
+      readTeamsByProviderIdsChunk(client, chunk.slice(0, mid)),
+      readTeamsByProviderIdsChunk(client, chunk.slice(mid)),
+    ]);
+    return [...left, ...right];
+  }
+
+  console.warn(
+    `[db-read] Failed to read teams for H2H lookup (${chunk.length} ids): ${error.message}`
+  );
+  return [];
+}
+
 async function readTeamsByProviderIds(
   client: ReturnType<typeof createAdminClient>,
   providerIds: number[]
@@ -1572,16 +1604,7 @@ async function readTeamsByProviderIds(
     i += TEAM_PROVIDER_ID_IN_CHUNK_SIZE
   ) {
     const chunk = normalizedIds.slice(i, i + TEAM_PROVIDER_ID_IN_CHUNK_SIZE);
-    const { data, error } = await client
-      .from("teams")
-      .select("id, provider_id")
-      .in("provider_id", chunk);
-
-    if (error) {
-      throw new Error(`Failed to read teams for H2H lookup: ${error.message}`);
-    }
-
-    teams.push(...(data ?? []));
+    teams.push(...(await readTeamsByProviderIdsChunk(client, chunk)));
   }
 
   return teams;

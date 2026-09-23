@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { ZodError } from "zod";
 
 import {
   mapAiInsightRowToStored,
@@ -37,6 +38,7 @@ import type {
   PrematchInsightResponse,
 } from "@/lib/ai/schemas";
 import { validateAIInsightPayload } from "@/lib/ai/schemas";
+import { isFixtureSpecificPrematchModel } from "@/lib/ai/prematch-availability";
 import {
   canBackfillMissingPrematchInsight,
   canGeneratePrematchInsight,
@@ -344,6 +346,21 @@ export async function generatePrematchInsight(
     return { status: "MISS", fixtureExternalId };
   }
 
+  const snapshot = prediction.inputSnapshot;
+  if (!snapshot || !isFixtureSpecificPrematchModel(snapshot, prediction)) {
+    reportPrematchInsightOutcome("unavailable", fixtureExternalId, {
+      reason: "GENERATION_NOT_ALLOWED",
+      trigger: options.trigger,
+      fixtureStatus: fixture.status,
+      detail: "generic_baseline_model",
+    });
+    return {
+      status: "UNAVAILABLE",
+      fixtureExternalId,
+      reason: "GENERATION_NOT_ALLOWED",
+    };
+  }
+
   const { context, contextHash } = await buildPrematchContext(
     fixtureExternalId,
     prediction
@@ -588,11 +605,12 @@ export async function generateLiveInsight(
   } catch (error) {
     if (
       error instanceof OpenAiNotConfiguredError ||
-      error instanceof OpenAiGenerationError
+      error instanceof OpenAiGenerationError ||
+      error instanceof ZodError
     ) {
       const message =
-        error instanceof OpenAiNotConfiguredError
-          ? error.message
+        error instanceof ZodError
+          ? "Live insight failed narrative validation"
           : error.message;
       console.error("[aiService] live generation failed:", message);
       Sentry.captureMessage("live_insight_generation_failed", {

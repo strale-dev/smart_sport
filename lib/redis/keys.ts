@@ -153,6 +153,13 @@ export function providerSearchPlayersKey(query: string): string {
   return `provider:search:players:${query.toLowerCase()}`;
 }
 
+export function globalSearchKey(
+  normalizedQuery: string,
+  mode: "palette" | "full"
+): string {
+  return `search:global:${mode}:${normalizedQuery}`;
+}
+
 export function providerSeasonsKey(leagueId: number): string {
   return `provider:league:${leagueId}:seasons`;
 }
@@ -374,4 +381,9 @@ export function liveInsightLastContextKey(fixtureProviderId: number): string {
 
 export function predictionsTopPicksKey(utcDate: string): string {
   return `predictions:top-picks:${utcDate}`;
+}
+
+/** UTC day (YYYY-MM-DD) hash of live poll counters for internal ops. */
+export function livePollStatsDayKey(utcDay: string): string {
+  return `live:stats:poll:${utcDay}`;
 }

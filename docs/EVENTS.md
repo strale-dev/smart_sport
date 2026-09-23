@@ -27,11 +27,12 @@
 
 ## Phase 4 — AI service (backend + UI)
 
-| Event                  | Trigger                                                 | Properties                                 | Source                                                                 | Funnel         |
-| ---------------------- | ------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------- | -------------- |
-| `ai_insight_generated` | Server generates a fresh pre-match insight (cache miss) | `fixture_id`, `cached`, `model`, `app_env` | `app/api/ai/prematch/[fixtureId]/route.ts` via `lib/posthog/server.ts` | AI consumption |
-| `ai_generate_clicked`  | User clicks Generate analysis on match page             | `fixture_id`                               | `components/ai/AIInsightProvider.tsx`                                  | AI consumption |
-| `ai_limit_reached`     | Client receives `AI_LIMIT_REACHED` from POST            | `fixture_id`, `limit`, `used`              | `components/ai/AIInsightProvider.tsx`                                  | Upgrade funnel |
+| Event                           | Trigger                                                 | Properties                                  | Source                                                                  | Funnel         |
+| ------------------------------- | ------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------- | -------------- |
+| `ai_insight_generated`          | Server generates a fresh pre-match insight (cache miss) | `fixture_id`, `cached`, `model`, `app_env`  | `app/api/ai/prematch/[fixtureId]/route.ts` via `lib/posthog/server.ts`  | AI consumption |
+| `internal_model_metrics_viewed` | Founder opens internal accuracy dashboard               | `period_days`, `evaluated_count`, `app_env` | `app/(app)/internal/model-metrics/page.tsx` via `lib/posthog/server.ts` | Internal ops   |
+| `ai_generate_clicked`           | User clicks Generate analysis on match page             | `fixture_id`                                | `components/ai/AIInsightProvider.tsx`                                   | AI consumption |
+| `ai_limit_reached`              | Client receives `AI_LIMIT_REACHED` from POST            | `fixture_id`, `limit`, `used`               | `components/ai/AIInsightProvider.tsx`                                   | Upgrade funnel |
 
 ## Phase 5 — Live engine UI
 

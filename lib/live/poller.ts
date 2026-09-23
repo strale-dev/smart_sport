@@ -26,7 +26,14 @@ import {
   lockFixturePollKey,
   lockLiveCenterPollKey,
 } from "@/lib/redis/keys";
+import {
+  recordCenterPollTick,
+  recordFixturePollTick,
+} from "@/lib/live/poll-stats";
+import { getStoredQuotaSnapshot } from "@/lib/api-football/quota";
 import { acquireLock, releaseLock, renewLock } from "@/lib/redis/lock";
+
+const LIVE_LOW_BUDGET_POLL_INTERVAL_FACTOR = 1.25;
 
 const memoryLastPollAt = new Map<string, number>();
 
@@ -69,7 +76,13 @@ export async function writeLastPollAt(
 }
 
 export async function waitForCadence(lastAtKey: string): Promise<void> {
-  const targetIntervalMs = randomPollIntervalMs();
+  let targetIntervalMs = randomPollIntervalMs();
+  const quota = await getStoredQuotaSnapshot();
+  if (quota.isLowBudget) {
+    targetIntervalMs = Math.round(
+      targetIntervalMs * LIVE_LOW_BUDGET_POLL_INTERVAL_FACTOR
+    );
+  }
   const lastAt = await readLastPollAt(lastAtKey);
   if (lastAt == null) {
     return;
@@ -153,6 +166,7 @@ export async function runFixturePollChainTick(
   const lockHeld = await ensureLockHeld(lockKey);
 
   if (!lockHeld) {
+    await recordFixturePollTick({ skipped: true });
     return {
       ok: true,
       fixtureProviderId,
@@ -163,6 +177,7 @@ export async function runFixturePollChainTick(
 
   if (!(await shouldContinueFixturePoll(fixtureProviderId))) {
     await releaseLock(lockKey);
+    await recordFixturePollTick({ skipped: true });
     return {
       ok: true,
       fixtureProviderId,
@@ -176,6 +191,7 @@ export async function runFixturePollChainTick(
 
   if (!(await shouldContinueFixturePoll(fixtureProviderId))) {
     await releaseLock(lockKey);
+    await recordFixturePollTick({ skipped: true });
     return {
       ok: true,
       fixtureProviderId,
@@ -197,6 +213,7 @@ export async function runFixturePollChainTick(
     } else {
       await releaseLock(lockKey);
     }
+    await recordFixturePollTick({ skipped: true });
     return {
       ok: true,
       fixtureProviderId,
@@ -205,10 +222,12 @@ export async function runFixturePollChainTick(
     };
   }
 
+  let ingested = false;
   try {
     try {
       const tickResult =
         await runFixtureLiveIngestAndPipeline(fixtureProviderId);
+      ingested = true;
 
       if (
         tickResult.changed &&
@@ -256,6 +275,7 @@ export async function runFixturePollChainTick(
     await releaseLock(lockKey);
   }
 
+  await recordFixturePollTick({ ingested });
   return { ok: true, fixtureProviderId };
 }
 
@@ -270,11 +290,13 @@ export async function runLiveCenterPollChainTick(): Promise<LiveCenterPollTickRe
   const lockHeld = await ensureLockHeld(lockKey);
 
   if (!lockHeld) {
+    await recordCenterPollTick({ skipped: true });
     return { ok: true, skipped: true, reason: "lock_not_held" };
   }
 
   if (!(await shouldContinueLiveCenterPoll())) {
     await releaseLock(lockKey);
+    await recordCenterPollTick({ skipped: true });
     return { ok: true, skipped: true, reason: "no_viewers" };
   }
 
@@ -283,13 +305,21 @@ export async function runLiveCenterPollChainTick(): Promise<LiveCenterPollTickRe
 
   if (!(await shouldContinueLiveCenterPoll())) {
     await releaseLock(lockKey);
+    await recordCenterPollTick({ skipped: true });
     return { ok: true, skipped: true, reason: "stopped_before_poll" };
   }
 
   const ingestResult = await ingestLiveCenterTick();
+  const ingested = Boolean(ingestResult.ok && !ingestResult.skipped);
   if (ingestResult.ok) {
     await broadcastLiveFeedUpdate(new Date().toISOString(), "live-center");
   }
+  await recordCenterPollTick({
+    ingested,
+    skipped: ingestResult.skipped,
+    apiRequests: ingestResult.stats?.apiRequests,
+    fixturesUpserted: ingestResult.stats?.fixturesUpserted,
+  });
   await writeLastPollAt(lastAtKey, Date.now());
   await renewLock(lockKey, LIVE_POLL_LOCK_TTL_SEC);
 

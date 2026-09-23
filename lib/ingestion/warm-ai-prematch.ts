@@ -1,5 +1,7 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import * as Sentry from "@sentry/nextjs";
+
 import { generatePrematchInsight } from "@/lib/services/aiService";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type WarmAiPrematchScope = "daily" | "imminent";
 
@@ -104,18 +106,34 @@ export async function warmAiPrematchInsights(
     }
   }
 
+  const stats = {
+    scope,
+    candidates: fixtureIds.length,
+    processed,
+    stoppedEarly,
+    generated,
+    cached,
+    fallback,
+    errors,
+  };
+
+  Sentry.addBreadcrumb({
+    category: "ai.warm",
+    message: "warm_ai_prematch_completed",
+    level: fallback > 0 || errors > 0 ? "warning" : "info",
+    data: stats,
+  });
+
+  if (fallback > 0 || errors > 0) {
+    Sentry.captureMessage("warm_ai_prematch_degraded", {
+      level: "warning",
+      extra: stats,
+    });
+  }
+
   return {
     ok: true,
     job: "warm-ai-prematch",
-    stats: {
-      scope,
-      candidates: fixtureIds.length,
-      processed,
-      stoppedEarly,
-      generated,
-      cached,
-      fallback,
-      errors,
-    },
+    stats,
   };
 }

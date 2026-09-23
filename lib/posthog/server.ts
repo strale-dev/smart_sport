@@ -96,6 +96,36 @@ export type BillingLifecycleEventInput = {
   providerSubscriptionId?: string | null;
 };
 
+export type InternalModelMetricsViewedInput = {
+  userId: string;
+  periodDays: number;
+  evaluatedCount: number;
+};
+
+export async function captureInternalModelMetricsViewed(
+  input: InternalModelMetricsViewedInput
+): Promise<void> {
+  const posthogKey = getServerEnv().NEXT_PUBLIC_POSTHOG_KEY;
+
+  if (!isPostHogProjectKey(posthogKey)) {
+    return;
+  }
+
+  const posthog = getPostHog();
+
+  posthog.capture({
+    distinctId: input.userId,
+    event: "internal_model_metrics_viewed",
+    properties: {
+      period_days: input.periodDays,
+      evaluated_count: input.evaluatedCount,
+      app_env: env.NEXT_PUBLIC_APP_ENV,
+    },
+  });
+
+  await posthog.shutdown();
+}
+
 export async function captureBillingLifecycleEvent(
   input: BillingLifecycleEventInput
 ): Promise<void> {

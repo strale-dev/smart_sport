@@ -175,6 +175,26 @@ type LiveBroadcastPayload = {
 - **Apply in Supabase Dashboard → SQL Editor** (postgres owner): [SQL editor](https://supabase.com/dashboard/project/zovobemlpqoclyjhvkpw/sql/new) — paste the migration file. CLI/MCP `db push` / `db query -f` cannot alter `realtime.messages` (`must be owner of table messages`).
 - Verify: `npm.cmd run live:verify-rls`
 
+## Ops metrics (post-launch)
+
+Internal founder dashboard: `/internal/model-metrics` (requires `INTERNAL_ADMIN_USER_IDS`).
+
+### Redis counters (UTC day)
+
+Each internal poll route increments fields on `live:stats:poll:YYYY-MM-DD`:
+
+| Field                                              | Meaning                        |
+| -------------------------------------------------- | ------------------------------ |
+| `fixture_poll_calls` / `_ingest` / `_skipped`      | Match-detail poll chain        |
+| `center_poll_calls` / `_ingest` / `_skipped`       | Live Center bulk tick          |
+| `center_api_requests` / `center_fixtures_upserted` | Work done inside center ingest |
+| `follow_poll_calls` / `_ingest` / `_skipped`       | Follow-notification poll chain |
+
+### Tuning decisions (2026-09-23)
+
+- **Adaptive cadence:** when API-Football day quota is in the low-budget band (`isLowBudget` from response headers), server poll interval is multiplied by **1.25** in `waitForCadence` ([`lib/live/poller.ts`](../lib/live/poller.ts)).
+- **Next steps:** after 3–7 days of production counters on `/internal/model-metrics`, adjust `LIVE_SERVER_POLL_MIN_MS` / `MAX_MS` or `FOLLOW_NOTIFICATION_MAX_CONCURRENT_POLLS` if center or follow chains dominate usage. Document any constant change here with before/after Redis totals.
+
 ### Broadcast smoke (two tabs)
 
 1. Enable `LIVE_POLLING_ENABLED=true` and Pro API key; apply Realtime RLS migration.

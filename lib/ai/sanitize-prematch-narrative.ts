@@ -1,4 +1,6 @@
-import type { AIInsightPrematchNarrativePayload } from "@/lib/ai/schemas";
+type NarrativeWithKeyFactors = {
+  keyFactors: Array<{ label: string; weight: number; evidence: string }>;
+};
 
 function firstContextNumber(contextJson: string): string | null {
   const match = contextJson.match(/\d+\.?\d*/);
@@ -6,10 +8,9 @@ function firstContextNumber(contextJson: string): string | null {
 }
 
 /** Ensures key factor evidence includes a digit so validation and UI trust rules hold. */
-export function repairPrematchNarrativeEvidence(
-  parsed: AIInsightPrematchNarrativePayload,
-  contextJson: string
-): AIInsightPrematchNarrativePayload {
+export function repairInsightNarrativeEvidence<
+  T extends NarrativeWithKeyFactors,
+>(parsed: T, contextJson: string): T {
   const fallbackDigit = firstContextNumber(contextJson);
   if (!fallbackDigit) {
     return parsed;
@@ -29,3 +30,6 @@ export function repairPrematchNarrativeEvidence(
     }),
   };
 }
+
+/** @deprecated Use repairInsightNarrativeEvidence */
+export const repairPrematchNarrativeEvidence = repairInsightNarrativeEvidence;

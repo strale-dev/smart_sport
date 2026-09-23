@@ -222,15 +222,24 @@ export async function getOrComputePrematch(
     isKickoffReached(fixture.kickoff_at)
   ) {
     const row = await readPrematchRowForFixture(fixture);
-    if (!row) {
+    if (row) {
+      return mapPredictionRowToResult(
+        row,
+        fixtureExternalId,
+        modelVersion.version,
+        true
+      );
+    }
+
+    try {
+      return await computeAndPersistPrematch(fixtureExternalId, fixture.id);
+    } catch (error) {
+      console.warn(
+        `[predictionService] unable to backfill prematch baseline for fixture ${fixtureExternalId}`,
+        error
+      );
       return null;
     }
-    return mapPredictionRowToResult(
-      row,
-      fixtureExternalId,
-      modelVersion.version,
-      true
-    );
   }
 
   if (!isPrematchComputeWindowOpen(fixture.kickoff_at)) {
@@ -397,10 +406,14 @@ export async function updateLiveProbability(input: {
       LOCK_RENEW_INTERVAL_MS,
       async () => {
         const modelVersion = await getActiveModelVersion();
-        const priorInsideLock = await resolvePriorWinProbabilities(
+        let priorInsideLock = await resolvePriorWinProbabilities(
           fixture.id,
           input.fixtureExternalId
         );
+        if (!priorInsideLock) {
+          const backfill = await getOrComputePrematch(input.fixtureExternalId);
+          priorInsideLock = backfill?.winProbabilities ?? null;
+        }
         if (!priorInsideLock) {
           return null;
         }

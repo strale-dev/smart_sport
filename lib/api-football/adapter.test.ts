@@ -122,6 +122,19 @@ describe("mapLineup", () => {
     expect(lineup.players).toHaveLength(2);
     expect(lineup.players[0]?.isStarting).toBe(true);
   });
+
+  it("handles partial lineup payloads without startXI or substitutes", () => {
+    const lineup = mapLineup({
+      team: { id: 33, name: "Team", logo: null },
+      coach: { id: 1, name: "Coach", photo: null },
+      formation: null,
+      startXI: undefined as unknown as RawApiFootballLineup["startXI"],
+      substitutes: undefined as unknown as RawApiFootballLineup["substitutes"],
+    });
+
+    expect(lineup.players).toEqual([]);
+    expect(lineup.isConfirmed).toBe(false);
+  });
 });
 
 describe("mapFixturePlayerPerformance", () => {

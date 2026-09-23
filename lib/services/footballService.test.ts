@@ -62,6 +62,18 @@ describe("footballService", () => {
     expect(getSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("falls back to the database when getFixtureById provider returns null", async () => {
+    vi.spyOn(fixtureEndpoints, "getFixtureById").mockResolvedValue(null);
+    const dbSpy = vi
+      .spyOn(dbRead, "readFixtureByProviderIdFromDb")
+      .mockResolvedValue(sampleFixture);
+
+    const result = await footballService.getFixtureById(1035037);
+
+    expect(result.data?.externalId).toBe(1035037);
+    expect(dbSpy).toHaveBeenCalled();
+  });
+
   it("falls back to the database when getTeamById provider errors", async () => {
     vi.spyOn(teamEndpoints, "getTeamById").mockRejectedValue(
       new ApiFootballError("API-Football provider returned errors", {

@@ -3,7 +3,7 @@ import { ZodError } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
 import pRetry from "p-retry";
 
-import { repairPrematchNarrativeEvidence } from "@/lib/ai/sanitize-prematch-narrative";
+import { repairInsightNarrativeEvidence } from "@/lib/ai/sanitize-prematch-narrative";
 import { getOpenAiModelDefault, hasOpenAiConfig } from "@/lib/env";
 import { getServerEnv } from "@/lib/env.server";
 import {
@@ -135,7 +135,10 @@ export async function generateLiveStructuredInsight(input: {
         );
       }
 
-      const parsed = validateAIInsightLiveNarrative(message.parsed);
+      const raw = AIInsightLiveOpenAiResponseSchema.parse(message.parsed);
+      const parsed = validateAIInsightLiveNarrative(
+        repairInsightNarrativeEvidence(raw, input.userPrompt)
+      );
 
       const tokensInput = completion.usage?.prompt_tokens ?? 0;
       const tokensOutput = completion.usage?.completion_tokens ?? 0;
@@ -151,7 +154,8 @@ export async function generateLiveStructuredInsight(input: {
     },
     {
       retries: 1,
-      shouldRetry: ({ error }) => isTransientOpenAiError(error),
+      shouldRetry: ({ error }) =>
+        isTransientOpenAiError(error) || error instanceof ZodError,
     }
   );
 }
@@ -188,7 +192,7 @@ export async function generatePrematchStructuredInsight(input: {
 
       const raw = AIInsightPrematchOpenAiResponseSchema.parse(message.parsed);
       const parsed = validateAIInsightPrematchNarrative(
-        repairPrematchNarrativeEvidence(raw, input.userPrompt)
+        repairInsightNarrativeEvidence(raw, input.userPrompt)
       );
 
       const tokensInput = completion.usage?.prompt_tokens ?? 0;

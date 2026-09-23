@@ -706,6 +706,8 @@ create table public.model_versions (
 create index model_versions_active_idx on public.model_versions (is_active) where is_active;
 ```
 
+**Offline calibration (post-launch):** generate a proposal JSON with `npm run model:propose-calibration` (dry-run to stdout; `--write` saves `tmp/model-calibration-proposal.json`). After reviewing metrics on `/internal/model-metrics`, activate with `npm run model:activate-version -- tmp/model-calibration-proposal.json --activate` (deactivates other rows, sets one `is_active`).
+
 ### 8.2 `predictions`
 
 Every prediction snapshot is stored. Live matches → many rows per fixture.

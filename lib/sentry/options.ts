@@ -1,3 +1,5 @@
+import { sentryBeforeSend } from "@/lib/sentry/before-send";
+
 const PLACEHOLDER_DSN_PATTERN = /examplePublicKey|@o0\.ingest/;
 
 export function isSentryEnabled(dsn: string | undefined): dsn is string {
@@ -14,4 +16,5 @@ export const sentryBaseOptions = {
   tracesSampleRate: process.env.NODE_ENV === "development" ? 1.0 : 0.1,
   sendDefaultPii: false,
   environment: getSentryEnvironment(),
+  beforeSend: sentryBeforeSend,
 } as const;

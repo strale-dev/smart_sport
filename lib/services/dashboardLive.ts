@@ -26,7 +26,10 @@ async function buildImportanceContext(
     await Promise.all([
       readLeaguePrestigeMap(),
       readStandingsRanksForFixtures(fixtures),
-      readH2hInterestForFixtures(fixtures),
+      readH2hInterestForFixtures(fixtures).catch((error) => {
+        console.warn("[dashboardLive] H2H interest lookup failed:", error);
+        return new Map<number, number>();
+      }),
     ]);
 
   return {

@@ -25,7 +25,7 @@ describe("incrementRedisUsageCounters", () => {
     vi.clearAllMocks();
   });
 
-  it("does not exec an empty pipeline when only liveFixtureUuid is set", async () => {
+  it("does not exec counter pipeline when only liveFixtureUuid is set", async () => {
     const { incrementRedisUsageCounters } =
       await import("@/lib/entitlements/redis-usage");
 
@@ -38,5 +38,15 @@ describe("incrementRedisUsageCounters", () => {
     expect(pipeline.hincrby).not.toHaveBeenCalled();
     expect(pipelineExec).toHaveBeenCalledTimes(1);
     expect(redisMock.sadd).toHaveBeenCalled();
+  });
+
+  it("does not exec when increment payload is empty", async () => {
+    const { incrementRedisUsageCounters } =
+      await import("@/lib/entitlements/redis-usage");
+
+    await incrementRedisUsageCounters("user-1", {}, "2026-09-19");
+
+    expect(pipeline.hincrby).not.toHaveBeenCalled();
+    expect(pipelineExec).toHaveBeenCalledTimes(1);
   });
 });

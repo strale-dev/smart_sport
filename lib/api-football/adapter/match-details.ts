@@ -70,7 +70,7 @@ export function mapFixtureEvent(
 export function mapFixtureStatistics(
   raw: RawApiFootballTeamStatistics
 ): FixtureTeamStatistics {
-  const stats = raw.statistics;
+  const stats = raw.statistics ?? [];
 
   return {
     teamExternalId: raw.team.id,
@@ -136,16 +136,16 @@ function mapLineupPlayer(
 
 export function mapLineup(raw: RawApiFootballLineup): Lineup {
   const players = [
-    ...raw.startXI.map((entry) => mapLineupPlayer(entry, true)),
-    ...raw.substitutes.map((entry) => mapLineupPlayer(entry, false)),
+    ...(raw.startXI ?? []).map((entry) => mapLineupPlayer(entry, true)),
+    ...(raw.substitutes ?? []).map((entry) => mapLineupPlayer(entry, false)),
   ];
 
   return {
     teamExternalId: raw.team.id,
     formation: raw.formation,
-    coachName: raw.coach.name,
-    coachExternalId: raw.coach.id,
-    coachPhotoUrl: raw.coach.photo,
+    coachName: raw.coach?.name ?? null,
+    coachExternalId: raw.coach?.id ?? null,
+    coachPhotoUrl: raw.coach?.photo ?? null,
     isConfirmed: players.length > 0,
     players,
   };
@@ -154,8 +154,8 @@ export function mapLineup(raw: RawApiFootballLineup): Lineup {
 export function mapFixturePlayerPerformance(
   raw: RawApiFootballFixturePlayer
 ): FixturePlayerPerformance[] {
-  return raw.players.flatMap((entry) =>
-    entry.statistics.map((stat) => ({
+  return (raw.players ?? []).flatMap((entry) =>
+    (entry.statistics ?? []).map((stat) => ({
       teamExternalId: raw.team.id,
       playerExternalId: entry.player.id,
       name: entry.player.name,

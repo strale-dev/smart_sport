@@ -2,6 +2,7 @@ export const AUTH_REQUIRED_PREFIXES = [
   "/dashboard",
   "/profile",
   "/favorites",
+  "/internal",
 ] as const;
 
 export const GUEST_OK_PREFIXES = [

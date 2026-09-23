@@ -1,5 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
-
 import { readLatestLiveInsight } from "@/lib/ai/db";
 import { LIVE_STATUSES } from "@/lib/ai/status-map";
 import type {
@@ -289,14 +287,6 @@ export async function runMeaningfulEventPipeline(input: {
         triggers: triggerKinds,
       })
     );
-    Sentry.captureMessage("live_prediction_unavailable", {
-      level: "warning",
-      extra: {
-        fixtureProviderId: input.fixtureProviderId,
-        triggers: triggerKinds,
-      },
-    });
-
     return {
       detectResult,
       broadcastEvents: events.map(toMeaningfulEventBroadcastPayload),

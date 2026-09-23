@@ -2114,23 +2114,69 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      search_players: {
-        Args: { max_results?: number; q: string }
+      search_fixtures: {
+        Args: {
+          from_at?: string
+          max_results?: number
+          q: string
+          to_at?: string
+        }
         Returns: {
-          full_name: string
-          id: string
-          photo_url: string
-          position: Database["public"]["Enums"]["player_position"]
+          away_logo_url: string
+          away_name: string
+          away_provider_id: number
+          home_logo_url: string
+          home_name: string
+          home_provider_id: number
+          kickoff_at: string
+          league_logo_url: string
+          league_name: string
+          league_provider_id: number
+          provider_id: number
+          score_away: number
+          score_home: number
           sim: number
+          status: Database["public"]["Enums"]["fixture_status"]
         }[]
       }
-      search_teams: {
+      search_leagues: {
         Args: { max_results?: number; q: string }
         Returns: {
           country_name: string
           id: string
           logo_url: string
           name: string
+          prestige_score: number
+          provider_id: number
+          sim: number
+        }[]
+      }
+      search_players: {
+        Args: { max_results?: number; q: string }
+        Returns: {
+          first_name: string
+          full_name: string
+          id: string
+          last_name: string
+          photo_url: string
+          position: Database["public"]["Enums"]["player_position"]
+          provider_id: number
+          sim: number
+          team_logo_url: string
+          team_name: string
+          team_provider_id: number
+        }[]
+      }
+      search_teams: {
+        Args: { max_results?: number; q: string }
+        Returns: {
+          code: string
+          country_name: string
+          elo_rating: number
+          id: string
+          logo_url: string
+          name: string
+          provider_id: number
           sim: number
         }[]
       }

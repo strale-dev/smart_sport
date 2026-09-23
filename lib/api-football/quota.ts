@@ -129,6 +129,14 @@ export async function recordQuotaFromHeaders(
   return snapshot;
 }
 
+/** Reads the last recorded day/minute quota from Redis (works across serverless instances). */
+export async function getStoredQuotaSnapshot(
+  date = new Date()
+): Promise<QuotaSnapshot> {
+  await hydrateQuotaFromRedis(date);
+  return getInMemoryQuotaSnapshot(date);
+}
+
 export function getInMemoryQuotaSnapshot(date = new Date()): QuotaSnapshot {
   const snapshot: QuotaSnapshot = {
     dayRemaining: inMemoryQuota.dayRemaining,

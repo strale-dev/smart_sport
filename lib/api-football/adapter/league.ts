@@ -31,7 +31,7 @@ export function mapStandingsGroup(
 ): StandingsGroup[] {
   const league = raw.league;
 
-  return league.standings.map((group, index) => ({
+  return (league.standings ?? []).map((group, index) => ({
     leagueExternalId: league.id,
     seasonYear: league.season,
     groupName: group[0]?.group || `group-${index + 1}`,

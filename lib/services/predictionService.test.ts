@@ -253,6 +253,56 @@ describe("predictionService", () => {
     expect(second?.predictionId).toBe("prediction-1");
   });
 
+  it("backfills prematch when kickoff passed and no stored row exists", async () => {
+    const kickoffAt = new Date(Date.now() - 3_600_000).toISOString();
+    resolveFixtureUuidByExternalId.mockResolvedValue({
+      id: "fixture-uuid",
+      status: "1H",
+      kickoff_at: kickoffAt,
+    });
+    readLatestPrematchPrediction.mockResolvedValue(null);
+    readOfficialPrematchPrediction.mockResolvedValue(null);
+    buildPrematchFeatures.mockResolvedValue(stablePrematchFeatures);
+    scorePrematchFromFeatures.mockReturnValue({
+      winProbabilities: { home: 0.5, draw: 0.25, away: 0.25 },
+      expectedGoalsHome: 1.5,
+      expectedGoalsAway: 1.1,
+      expectedGoalsTotal: 2.6,
+      expectedGoalsTotalMin: 2,
+      expectedGoalsTotalMax: 3,
+      over2Prob: 0.55,
+      over3Prob: 0.3,
+      bttsProb: 0.52,
+      weakerTeamScoringProb: 0.48,
+      confidence: "MEDIUM",
+    });
+    insertPrematchPrediction.mockResolvedValue({
+      id: "prediction-live-backfill",
+      fixture_id: "fixture-uuid",
+      model_version_id: "model-1",
+      home_win_prob: 0.5,
+      draw_prob: 0.25,
+      away_win_prob: 0.25,
+      expected_goals_home: 1.5,
+      expected_goals_away: 1.1,
+      expected_goals_total_min: 2,
+      expected_goals_total_max: 3,
+      btts_prob: 0.52,
+      weaker_team_scoring_prob: 0.48,
+      confidence: "MEDIUM",
+      input_snapshot: stablePrematchFeatures,
+      created_at: new Date().toISOString(),
+    });
+
+    const { getOrComputePrematch } =
+      await import("@/lib/services/predictionService");
+
+    const result = await getOrComputePrematch(123);
+
+    expect(result?.predictionId).toBe("prediction-live-backfill");
+    expect(insertPrematchPrediction).toHaveBeenCalledTimes(1);
+  });
+
   it("returns official prematch snapshot after kickoff without inserting", async () => {
     const kickoffAt = new Date(Date.now() - 86_400_000).toISOString();
     resolveFixtureUuidByExternalId.mockResolvedValue({

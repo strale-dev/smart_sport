@@ -67,6 +67,7 @@ export const serverEnvSchema = publicEnvSchema.extend({
   SENTRY_DSN: z.string().url(),
   SENTRY_ORG: z.string().min(1),
   SENTRY_PROJECT: z.string().min(1),
+  INTERNAL_ADMIN_USER_IDS: z.string().optional(),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
@@ -160,6 +161,7 @@ function readServerEnvSource(
     SENTRY_DSN: source.SENTRY_DSN,
     SENTRY_ORG: source.SENTRY_ORG,
     SENTRY_PROJECT: source.SENTRY_PROJECT,
+    INTERNAL_ADMIN_USER_IDS: emptyToUndefined(source.INTERNAL_ADMIN_USER_IDS),
   };
 }
 

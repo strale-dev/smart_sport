@@ -10,6 +10,7 @@ export const POSTHOG_EVENTS = {
   matchH2hScopeChanged: "match_h2h_scope_changed",
   matchMomentumViewed: "match_momentum_viewed",
   aiInsightGenerated: "ai_insight_generated",
+  internalModelMetricsViewed: "internal_model_metrics_viewed",
   aiLimitReached: "ai_limit_reached",
   aiGenerateClicked: "ai_generate_clicked",
   teamViewed: "team_viewed",
