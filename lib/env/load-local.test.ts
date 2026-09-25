@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeEnvValue } from "@/lib/env/load-local";
+import { normalizeEnvValue } from "@/lib/env/normalize-env-value";
 
 describe("normalizeEnvValue", () => {
   it("strips double quotes", () => {

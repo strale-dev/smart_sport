@@ -8,7 +8,9 @@ import { SparklesIcon } from "lucide-react";
 import { ChartCardSkeleton } from "@/components/match/ChartCardSkeleton";
 import { PlayerCareerTab } from "@/components/player/PlayerCareerTab";
 import { PlayerMatchesTab } from "@/components/player/PlayerMatchesTab";
+import { PlayerBiographyCard } from "@/components/player/PlayerBiographyCard";
 import { PlayerOverviewFacts } from "@/components/player/PlayerOverviewFacts";
+import type { PlayerBiographyView } from "@/lib/wikipedia/player-bio-service";
 import { PlayerStatisticsTab } from "@/components/player/PlayerStatisticsTab";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -36,11 +38,23 @@ const PlayerAttributeOverviewCardLazy = dynamic(
   }
 );
 
+const PlayerAttributeRadarCardLazy = dynamic(
+  () =>
+    import("@/components/player/PlayerAttributeRadarCard").then(
+      (module) => module.PlayerAttributeRadarCard
+    ),
+  {
+    loading: () => <ChartCardSkeleton title="Attribute profile" />,
+  }
+);
+
 type PlayerDetailsTabsProps = {
   player: Player;
   seasonStats: PlayerSeasonStatistics | null;
   matchHistory: PlayerMatchHistoryPage;
   career: PlayerCareerEntry[];
+  biography: PlayerBiographyView | null;
+  premiumAnalytics: boolean;
 };
 
 export function PlayerDetailsTabs({
@@ -48,6 +62,8 @@ export function PlayerDetailsTabs({
   seasonStats,
   matchHistory,
   career,
+  biography,
+  premiumAnalytics,
 }: PlayerDetailsTabsProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -92,9 +108,15 @@ export function PlayerDetailsTabs({
 
       <TabsContent value="overview" className="space-y-4">
         <PlayerOverviewFacts player={player} seasonStats={seasonStats} />
+        <PlayerBiographyCard bio={biography} />
         <PlayerAttributeOverviewCardLazy
           position={player.position}
           stats={seasonStats}
+        />
+        <PlayerAttributeRadarCardLazy
+          position={player.position}
+          stats={seasonStats}
+          premiumAnalytics={premiumAnalytics}
         />
       </TabsContent>
 

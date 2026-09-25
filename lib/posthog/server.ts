@@ -126,6 +126,33 @@ export async function captureInternalModelMetricsViewed(
   await posthog.shutdown();
 }
 
+export type PushLifecycleEventInput = {
+  userId: string;
+  event: "push_subscribed" | "push_unsubscribed" | "push_send_failed";
+};
+
+export async function capturePushLifecycleEvent(
+  input: PushLifecycleEventInput
+): Promise<void> {
+  const posthogKey = getServerEnv().NEXT_PUBLIC_POSTHOG_KEY;
+
+  if (!isPostHogProjectKey(posthogKey)) {
+    return;
+  }
+
+  const posthog = getPostHog();
+
+  posthog.capture({
+    distinctId: input.userId,
+    event: input.event,
+    properties: {
+      app_env: env.NEXT_PUBLIC_APP_ENV,
+    },
+  });
+
+  await posthog.shutdown();
+}
+
 export async function captureBillingLifecycleEvent(
   input: BillingLifecycleEventInput
 ): Promise<void> {

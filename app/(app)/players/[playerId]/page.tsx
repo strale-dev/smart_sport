@@ -18,7 +18,12 @@ import {
   pickPrimarySeasonStatistics,
 } from "@/lib/services/playerProfileService";
 import { isFollowingProvider } from "@/lib/services/followService";
+import { canAccessPremiumAnalytics } from "@/lib/entitlements/analytics-gate";
 import { getCurrentUser } from "@/lib/supabase/user";
+import {
+  ensurePlayerBiography,
+  resolvePlayerUuidByProviderId,
+} from "@/lib/wikipedia/player-bio-service";
 import type { PlayerCareerEntry, PlayerSeasonStatistics } from "@/types/domain";
 
 type PlayerPageProps = {
@@ -115,6 +120,19 @@ export default async function PlayerPage({
       }).catch(() => false)
     : false;
 
+  const [premiumAnalytics, playerUuid] = await Promise.all([
+    canAccessPremiumAnalytics(user?.id ?? null),
+    resolvePlayerUuidByProviderId(id).catch(() => null),
+  ]);
+
+  const biography = playerUuid
+    ? await ensurePlayerBiography({
+        playerUuid,
+        fullName: enrichedPlayer.fullName,
+        nationality: enrichedPlayer.nationality,
+      }).catch(() => null)
+    : null;
+
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">
       <PlayerHeader
@@ -134,6 +152,8 @@ export default async function PlayerPage({
         seasonStats={seasonStats}
         matchHistory={matchHistoryResult.data}
         career={careerResult.data}
+        biography={biography}
+        premiumAnalytics={premiumAnalytics}
       />
       <PlayerViewAnalytics player={enrichedPlayer} isGuest={!user} />
     </div>

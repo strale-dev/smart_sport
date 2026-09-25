@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { PlayerDetailsTabs } from "@/components/player/PlayerDetailsTabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { PlayerBiographyView } from "@/lib/wikipedia/player-bio-service";
 import type {
   Player,
   PlayerCareerEntry,
@@ -14,6 +15,8 @@ type PlayerDetailsTabsSectionProps = {
   seasonStats: PlayerSeasonStatistics | null;
   matchHistory: PlayerMatchHistoryPage;
   career: PlayerCareerEntry[];
+  biography: PlayerBiographyView | null;
+  premiumAnalytics: boolean;
 };
 
 function PlayerDetailsTabsFallback() {
@@ -34,6 +37,8 @@ export function PlayerDetailsTabsSection({
   seasonStats,
   matchHistory,
   career,
+  biography,
+  premiumAnalytics,
 }: PlayerDetailsTabsSectionProps) {
   return (
     <Suspense fallback={<PlayerDetailsTabsFallback />}>
@@ -42,6 +47,8 @@ export function PlayerDetailsTabsSection({
         seasonStats={seasonStats}
         matchHistory={matchHistory}
         career={career}
+        biography={biography}
+        premiumAnalytics={premiumAnalytics}
       />
     </Suspense>
   );

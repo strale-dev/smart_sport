@@ -1,18 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export function normalizeEnvValue(value: string): string {
-  const trimmed = value.trim().replace(/\r$/, "");
+import { normalizeEnvValue } from "@/lib/env/normalize-env-value";
 
-  if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    return trimmed.slice(1, -1);
-  }
-
-  return trimmed;
-}
+export { normalizeEnvValue };
 
 type LoadEnvFileOptions = {
   override?: boolean;

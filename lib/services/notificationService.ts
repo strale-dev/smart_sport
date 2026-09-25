@@ -5,6 +5,9 @@ import {
   type NotificationKind,
 } from "@/lib/notifications/dedupe";
 import { isNotificationKindEnabled } from "@/lib/notifications/preferences";
+import { buildPushUrlFromPayload } from "@/lib/push/notification-url";
+import { sendPushToUser } from "@/lib/push/send";
+import { getServerEnv } from "@/lib/env.server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database, Json } from "@/types/supabase";
 
@@ -125,6 +128,18 @@ export async function enqueueNotification(
       createdAt: data.created_at,
     });
   }
+
+  void sendPushToUser(input.userId, {
+    title: input.title,
+    body: input.body,
+    url: buildPushUrlFromPayload(
+      payloadRecord,
+      getServerEnv().NEXT_PUBLIC_SITE_URL
+    ),
+    tag: input.dedupeKey ?? data.id,
+  }).catch((pushError: unknown) => {
+    console.warn("[push] dispatch failed", pushError);
+  });
 
   return {
     ok: true,

@@ -18,6 +18,7 @@ import type {
 type MatchOverviewLiveClientProps = {
   fixture: Fixture;
   returnTo: string;
+  premiumAnalytics: boolean;
   initialEvents: FixtureEvent[];
   initialStatistics: FixtureTeamStatistics[];
   homeForm3: FormSnapshot;
@@ -31,6 +32,7 @@ type MatchOverviewLiveClientProps = {
 export function MatchOverviewLiveClient({
   fixture: serverFixture,
   returnTo,
+  premiumAnalytics,
   initialEvents,
   initialStatistics,
   homeForm3,
@@ -61,6 +63,7 @@ export function MatchOverviewLiveClient({
       fixture={fixture}
       renderMode="live"
       returnTo={returnTo}
+      premiumAnalytics={premiumAnalytics}
       events={events}
       momentumBuckets={momentumBuckets}
       homeForm3={homeForm3}

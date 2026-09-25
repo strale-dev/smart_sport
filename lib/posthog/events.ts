@@ -1,6 +1,11 @@
 export const POSTHOG_EVENTS = {
   landingView: "landing_view",
+  landingExperimentViewed: "landing_experiment_viewed",
   waitlistCtaClick: "waitlist_cta_click",
+  pushSubscribed: "push_subscribed",
+  pushUnsubscribed: "push_unsubscribed",
+  premiumAnalyticsLockedView: "premium_analytics_locked_view",
+  premiumAnalyticsUpgradeClick: "premium_analytics_upgrade_click",
   cookieConsentUpdated: "cookie_consent_updated",
   signupCompleted: "signup_completed",
   loginCompleted: "login_completed",

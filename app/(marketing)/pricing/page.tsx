@@ -23,13 +23,14 @@ const premiumFeatures = [
   "Unlimited AI match insights (fair-use protected)",
   "Deeper pre-match and live AI analysis",
   "Higher live refresh cadence on meaningful events",
-  "Advanced stats and extended historical context",
+  "Form last 10, H2H same competition, match momentum, full team comparison",
+  "FIFA-style attribute radar on player profiles",
   "Unlimited team and player follows",
 ] as const;
 
 const freeFeatures = [
   "5 AI predictions per day",
-  "Basic match stats, form, and H2H",
+  "Basic match stats, form last 5, and all-competition H2H",
   "Live scores while viewing",
   "Follow up to 2 live matches at once",
 ] as const;

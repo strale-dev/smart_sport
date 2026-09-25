@@ -85,6 +85,20 @@ Product events used for DAU/retention: [`lib/posthog/product-events.ts`](../lib/
 
 ---
 
+## Near-term post-launch
+
+| Event                             | Trigger                                 | Properties              | Source                                              |
+| --------------------------------- | --------------------------------------- | ----------------------- | --------------------------------------------------- |
+| `landing_experiment_viewed`       | Hero experiment variant resolved        | `experiment`, `variant` | `components/marketing/LandingHeroExperiment.tsx`    |
+| `push_subscribed`                 | Push subscription saved                 | _(none)_                | Client + `app/api/push/subscribe/route.ts` (server) |
+| `push_unsubscribed`               | Push subscription removed               | _(none)_                | Client + `app/api/push/unsubscribe/route.ts`        |
+| `premium_analytics_locked_view`   | Premium lock overlay shown              | `feature`               | `components/entitlements/PremiumFeatureLock.tsx`    |
+| `premium_analytics_upgrade_click` | User clicks Upgrade from analytics lock | `feature`               | `components/entitlements/PremiumFeatureLock.tsx`    |
+
+PostHog feature flag: `landing-hero-v2` (control vs test). Create the experiment in PostHog before relying on variant traffic.
+
+---
+
 ## Planned (later phases)
 
 From [Tech.md §21.1](./Tech.md#211-posthog) — not yet implemented:

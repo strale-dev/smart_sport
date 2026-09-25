@@ -883,6 +883,8 @@ create table public.user_preferences (
   notify_lineup_confirmed     boolean not null default true,
   notify_prediction_shift     boolean not null default true,
   notify_ai_insight_refreshed boolean not null default false,
+  notify_push                 boolean not null default false,
+  push_prompt_dismissed_at    timestamptz,
   sound_goal_enabled          boolean not null default false,
   sound_full_time_enabled     boolean not null default false,
   email_marketing_optin       boolean not null default false,
@@ -939,7 +941,15 @@ create index favorites_user_idx on public.favorites (user_id);
 create index favorites_fixture_idx on public.favorites (fixture_id);
 ```
 
-### 11.3 `notifications`
+### 11.3 `push_subscriptions`
+
+Web Push endpoints per user/device (RLS: user-owned). Used when `user_preferences.notify_push` is true.
+
+### 11.4 `player_biographies`
+
+Wikipedia-sourced excerpts keyed by `player_id` (`fetch_status`, attribution fields). Public read.
+
+### 11.5 `notifications`
 
 In-app notification inbox.
 

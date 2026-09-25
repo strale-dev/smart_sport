@@ -9,6 +9,7 @@ export const publicEnvSchema = z.object({
   NEXT_PUBLIC_POSTHOG_HOST: z.string().url(),
   NEXT_PUBLIC_SITE_URL: z.string().url(),
   NEXT_PUBLIC_APP_ENV: appEnvSchema,
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
 });
 
 export const serverEnvSchema = publicEnvSchema.extend({
@@ -68,6 +69,9 @@ export const serverEnvSchema = publicEnvSchema.extend({
   SENTRY_ORG: z.string().min(1),
   SENTRY_PROJECT: z.string().min(1),
   INTERNAL_ADMIN_USER_IDS: z.string().optional(),
+  VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+  VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+  VAPID_SUBJECT: z.string().min(1).optional(),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
@@ -79,7 +83,7 @@ function formatZodError(error: z.ZodError): string {
     .join("\n");
 }
 
-import { normalizeEnvValue } from "@/lib/env/load-local";
+import { normalizeEnvValue } from "@/lib/env/normalize-env-value";
 
 function emptyToUndefined(value: string | undefined): string | undefined {
   if (value === "" || value === undefined) {
@@ -100,6 +104,9 @@ function readPublicEnvSource(
     NEXT_PUBLIC_POSTHOG_HOST: source.NEXT_PUBLIC_POSTHOG_HOST,
     NEXT_PUBLIC_SITE_URL: source.NEXT_PUBLIC_SITE_URL,
     NEXT_PUBLIC_APP_ENV: source.NEXT_PUBLIC_APP_ENV,
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: emptyToUndefined(
+      source.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+    ),
   };
 }
 
@@ -162,6 +169,9 @@ function readServerEnvSource(
     SENTRY_ORG: source.SENTRY_ORG,
     SENTRY_PROJECT: source.SENTRY_PROJECT,
     INTERNAL_ADMIN_USER_IDS: emptyToUndefined(source.INTERNAL_ADMIN_USER_IDS),
+    VAPID_PUBLIC_KEY: emptyToUndefined(source.VAPID_PUBLIC_KEY),
+    VAPID_PRIVATE_KEY: emptyToUndefined(source.VAPID_PRIVATE_KEY),
+    VAPID_SUBJECT: emptyToUndefined(source.VAPID_SUBJECT),
   };
 }
 

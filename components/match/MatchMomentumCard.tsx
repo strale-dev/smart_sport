@@ -21,6 +21,7 @@ import {
   MatchCardHeader,
   MatchCardTitle,
 } from "@/components/match/MatchAnalyticsCard";
+import { PremiumFeatureLock } from "@/components/entitlements/PremiumFeatureLock";
 import type { MomentumBucket } from "@/lib/momentum/computeMatchMomentum";
 import { captureClientEvent } from "@/lib/posthog/client";
 import { POSTHOG_EVENTS } from "@/lib/posthog/events";
@@ -32,11 +33,13 @@ type MatchMomentumCardProps = {
     "externalId" | "status" | "homeTeam" | "awayTeam" | "league"
   >;
   buckets: MomentumBucket[];
+  premiumAnalytics?: boolean;
 };
 
 export function MatchMomentumCard({
   fixture,
   buckets,
+  premiumAnalytics = true,
 }: MatchMomentumCardProps) {
   const { externalId: fixtureId, status } = fixture;
   const homeTeamName = fixture.homeTeam.name;
@@ -83,6 +86,26 @@ export function MatchMomentumCard({
     away: bucket.awayIntensity,
   }));
 
+  const chart = (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart
+        data={chartData}
+        margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+        <YAxis tick={{ fontSize: 11 }} width={28} />
+        <Tooltip />
+        <Bar dataKey="home" name={homeTeamName} fill="hsl(var(--primary))" />
+        <Bar
+          dataKey="away"
+          name={awayTeamName}
+          fill="hsl(var(--muted-foreground))"
+        />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
   return (
     <MatchAnalyticsCard>
       <MatchCardHeader className="gap-2">
@@ -92,27 +115,17 @@ export function MatchMomentumCard({
         </MatchCardDescription>
       </MatchCardHeader>
       <MatchCardContent className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={chartData}
-            margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+        {premiumAnalytics ? (
+          chart
+        ) : (
+          <PremiumFeatureLock
+            feature="match_momentum"
+            title="Premium match momentum"
+            description="Upgrade to see intensity buckets across the full match timeline."
           >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} width={28} />
-            <Tooltip />
-            <Bar
-              dataKey="home"
-              name={homeTeamName}
-              fill="hsl(var(--primary))"
-            />
-            <Bar
-              dataKey="away"
-              name={awayTeamName}
-              fill="hsl(var(--muted-foreground))"
-            />
-          </BarChart>
-        </ResponsiveContainer>
+            {chart}
+          </PremiumFeatureLock>
+        )}
       </MatchCardContent>
     </MatchAnalyticsCard>
   );

@@ -50,6 +50,7 @@ type OverviewTabContentProps = {
   fixture: Fixture;
   renderMode: MatchOverviewRenderMode;
   returnTo: string;
+  premiumAnalytics?: boolean;
   events: FixtureEvent[];
   momentumBuckets: MomentumBucket[];
   homeForm3?: FormSnapshot;
@@ -80,6 +81,7 @@ export function OverviewTabContent({
   fixture,
   renderMode,
   returnTo,
+  premiumAnalytics = true,
   events,
   momentumBuckets,
   homeForm3 = EMPTY_FORM_3,
@@ -170,6 +172,7 @@ export function OverviewTabContent({
         key="momentum"
         fixture={fixture}
         buckets={momentumBuckets}
+        premiumAnalytics={premiumAnalytics}
       />
     ) : null,
     playerOfMatch: isOverviewCardVisible("playerOfMatch", resolvedMode) ? (

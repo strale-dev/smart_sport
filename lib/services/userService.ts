@@ -25,6 +25,8 @@ export type UserPreferencesRow = {
   notifyLineupConfirmed: boolean;
   notifyPredictionShift: boolean;
   notifyAiInsightRefreshed: boolean;
+  notifyPush: boolean;
+  pushPromptDismissedAt: string | null;
   soundGoalEnabled: boolean;
   soundFullTimeEnabled: boolean;
   emailMarketingOptin: boolean;
@@ -40,7 +42,7 @@ const PROFILE_SELECT =
   "id, email, display_name, avatar_url, timezone, preferred_league_id, language";
 
 const PREFERENCES_SELECT =
-  "notify_goal, notify_full_time, notify_lineup_confirmed, notify_prediction_shift, notify_ai_insight_refreshed, sound_goal_enabled, sound_full_time_enabled, email_marketing_optin";
+  "notify_goal, notify_full_time, notify_lineup_confirmed, notify_prediction_shift, notify_ai_insight_refreshed, notify_push, push_prompt_dismissed_at, sound_goal_enabled, sound_full_time_enabled, email_marketing_optin";
 
 function mapProfile(row: {
   id: string;
@@ -68,6 +70,8 @@ function mapPreferences(row: {
   notify_lineup_confirmed: boolean;
   notify_prediction_shift: boolean;
   notify_ai_insight_refreshed: boolean;
+  notify_push: boolean;
+  push_prompt_dismissed_at: string | null;
   sound_goal_enabled: boolean;
   sound_full_time_enabled: boolean;
   email_marketing_optin: boolean;
@@ -78,6 +82,8 @@ function mapPreferences(row: {
     notifyLineupConfirmed: row.notify_lineup_confirmed,
     notifyPredictionShift: row.notify_prediction_shift,
     notifyAiInsightRefreshed: row.notify_ai_insight_refreshed,
+    notifyPush: row.notify_push,
+    pushPromptDismissedAt: row.push_prompt_dismissed_at,
     soundGoalEnabled: row.sound_goal_enabled,
     soundFullTimeEnabled: row.sound_full_time_enabled,
     emailMarketingOptin: row.email_marketing_optin,

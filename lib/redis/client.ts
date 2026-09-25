@@ -1,6 +1,6 @@
 import { Redis } from "@upstash/redis";
 
-import { normalizeEnvValue } from "@/lib/env/load-local";
+import { normalizeEnvValue } from "@/lib/env/normalize-env-value";
 import { hasRedisConfig } from "@/lib/env";
 
 let cachedRedis: Redis | null | undefined;

@@ -26,6 +26,7 @@ import {
 } from "@/lib/services/footballService";
 import type { MatchLiveSnapshot } from "@/lib/live/live-fetch";
 import { isFixtureFavorited } from "@/lib/services/followService";
+import { canAccessPremiumAnalytics } from "@/lib/entitlements/analytics-gate";
 import { getCurrentUser } from "@/lib/supabase/user";
 
 type MatchPageProps = {
@@ -77,6 +78,8 @@ export default async function MatchPage({ params }: MatchPageProps) {
     awayTeam: fixture.awayTeam,
   });
   const isGuest = !user;
+
+  const premiumAnalytics = await canAccessPremiumAnalytics(user?.id ?? null);
 
   const [initialFavorited, initialLiveSnapshot] = await Promise.all([
     user
@@ -138,6 +141,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
                 fixture={fixture}
                 liveSnapshot={initialLiveSnapshot}
                 returnTo={returnTo}
+                premiumAnalytics={premiumAnalytics}
               />
             </Suspense>
           }
@@ -148,7 +152,10 @@ export default async function MatchPage({ params }: MatchPageProps) {
           }
           statistics={
             <Suspense fallback={<MatchTabPanelFallback />}>
-              <MatchStatisticsPanel fixture={fixture} />
+              <MatchStatisticsPanel
+                fixture={fixture}
+                premiumAnalytics={premiumAnalytics}
+              />
             </Suspense>
           }
           standings={
@@ -158,7 +165,10 @@ export default async function MatchPage({ params }: MatchPageProps) {
           }
           matches={
             <Suspense fallback={<MatchTabPanelFallback />}>
-              <MatchMatchesPanel fixture={fixture} />
+              <MatchMatchesPanel
+                fixture={fixture}
+                premiumAnalytics={premiumAnalytics}
+              />
             </Suspense>
           }
         />

@@ -24,6 +24,7 @@ type FormCardProps = {
   homeForm10: FormSnapshot;
   awayForm5: FormSnapshot;
   awayForm10: FormSnapshot;
+  premiumAnalytics?: boolean;
 };
 
 export function FormCard({
@@ -32,14 +33,20 @@ export function FormCard({
   homeForm10,
   awayForm5,
   awayForm10,
+  premiumAnalytics = true,
 }: FormCardProps) {
   const fixtureId = fixture.externalId;
   const homeTeamName = fixture.homeTeam.name;
   const awayTeamName = fixture.awayTeam.name;
-  const [matchCount, setMatchCount] = useState<5 | 10>(10);
+  const [matchCount, setMatchCount] = useState<5 | 10>(
+    premiumAnalytics ? 10 : 5
+  );
 
   function handleMatchCountChange(value: string) {
     const matches = Number(value) as 5 | 10;
+    if (matches === 10 && !premiumAnalytics) {
+      return;
+    }
     setMatchCount(matches);
     void captureClientEvent(POSTHOG_EVENTS.matchFormScopeChanged, {
       fixture_id: fixtureId,
@@ -59,7 +66,9 @@ export function FormCard({
           >
             <TabsList>
               <TabsTrigger value="5">Last 5</TabsTrigger>
-              <TabsTrigger value="10">Last 10</TabsTrigger>
+              <TabsTrigger value="10" disabled={!premiumAnalytics}>
+                Last 10{premiumAnalytics ? "" : " · Premium"}
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>

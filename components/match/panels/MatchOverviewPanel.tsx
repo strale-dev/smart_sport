@@ -24,6 +24,7 @@ type MatchOverviewPanelProps = {
   fixture: Fixture;
   liveSnapshot?: MatchLiveSnapshot;
   returnTo: string;
+  premiumAnalytics: boolean;
 };
 
 function emptyH2hSummary(fixture: Fixture): H2HSummary {
@@ -39,6 +40,7 @@ function emptyH2hSummary(fixture: Fixture): H2HSummary {
 export async function MatchOverviewPanel({
   fixture,
   returnTo,
+  premiumAnalytics,
 }: MatchOverviewPanelProps) {
   const fixtureId = fixture.externalId;
   const renderMode = getMatchOverviewRenderMode(fixture.status);
@@ -108,6 +110,7 @@ export async function MatchOverviewPanel({
       <MatchOverviewLiveClient
         fixture={fixture}
         returnTo={returnTo}
+        premiumAnalytics={premiumAnalytics}
         initialEvents={events}
         initialStatistics={stats}
         homeForm3={homeForm3}
@@ -130,6 +133,7 @@ export async function MatchOverviewPanel({
       fixture={fixture}
       renderMode={renderMode}
       returnTo={returnTo}
+      premiumAnalytics={premiumAnalytics}
       events={events}
       momentumBuckets={momentumBuckets}
       homeForm3={homeForm3}

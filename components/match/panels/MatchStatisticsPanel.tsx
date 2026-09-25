@@ -4,6 +4,8 @@ import { MatchStatisticsLiveClient } from "@/components/match/MatchStatisticsLiv
 import { buildMatchHref } from "@/lib/fixtures/match-url";
 import { getMatchOverviewRenderMode } from "@/lib/fixtures/overview-layout";
 import { aggregatePlayerDerivedStats } from "@/lib/match/build-match-statistics-view-model";
+import { TeamComparisonCardLazy } from "@/components/match/overview-chart-cards";
+import { computeRecentForm } from "@/lib/services/analyticsService";
 import {
   getFixturePlayers,
   getFixtureStatistics,
@@ -12,10 +14,12 @@ import type { Fixture } from "@/types/domain";
 
 type MatchStatisticsPanelProps = {
   fixture: Fixture;
+  premiumAnalytics: boolean;
 };
 
 export async function MatchStatisticsPanel({
   fixture,
+  premiumAnalytics,
 }: MatchStatisticsPanelProps) {
   const renderMode = getMatchOverviewRenderMode(fixture.status);
 
@@ -64,12 +68,32 @@ export async function MatchStatisticsPanel({
     );
   }
 
+  const [homeForm, awayForm] = await Promise.all([
+    computeRecentForm(fixture.homeTeam.externalId, {
+      matches: 5,
+      scope: "ALL",
+    }),
+    computeRecentForm(fixture.awayTeam.externalId, {
+      matches: 5,
+      scope: "ALL",
+    }),
+  ]);
+
   return (
-    <MatchStatisticsCard
-      fixture={fixture}
-      stats={stats}
-      playerDerived={playerDerived}
-      renderMode={renderMode}
-    />
+    <div className="space-y-3">
+      <MatchStatisticsCard
+        fixture={fixture}
+        stats={stats}
+        playerDerived={playerDerived}
+        renderMode={renderMode}
+      />
+      <TeamComparisonCardLazy
+        fixture={fixture}
+        stats={stats}
+        homeForm={homeForm}
+        awayForm={awayForm}
+        premiumAnalytics={premiumAnalytics}
+      />
+    </div>
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { BrowserPushSwitch } from "@/components/notifications/BrowserPushSwitch";
 import { NotificationPreferenceSwitches } from "@/components/profile/NotificationPreferenceSwitches";
 import { SoundPreferenceSwitches } from "@/components/profile/SoundPreferenceSwitches";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -240,6 +241,19 @@ export function PreferencesForm({
               notifyAiInsightRefreshed: preferences.notifyAiInsightRefreshed,
             }}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Browser push</CardTitle>
+          <CardDescription>
+            Background alerts on this device when the Scorence tab is not
+            active.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BrowserPushSwitch initialEnabled={preferences.notifyPush} />
         </CardContent>
       </Card>
 

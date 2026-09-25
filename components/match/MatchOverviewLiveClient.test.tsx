@@ -77,6 +77,7 @@ describe("MatchOverviewLiveClient", () => {
       <MatchOverviewLiveClient
         fixture={fixture}
         returnTo="/matches/1001"
+        premiumAnalytics
         initialEvents={events}
         initialStatistics={stats}
         homeForm3={emptyForm}

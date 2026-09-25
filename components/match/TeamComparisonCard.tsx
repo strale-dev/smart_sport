@@ -31,6 +31,7 @@ type TeamComparisonCardProps = {
   stats: FixtureTeamStatistics[];
   homeForm: FormSnapshot;
   awayForm: FormSnapshot;
+  premiumAnalytics?: boolean;
 };
 
 function findTeamStats(
@@ -45,6 +46,7 @@ export function TeamComparisonCard({
   stats,
   homeForm,
   awayForm,
+  premiumAnalytics = true,
 }: TeamComparisonCardProps) {
   const homeStats = findTeamStats(stats, fixture.homeTeam.externalId);
   const awayStats = findTeamStats(stats, fixture.awayTeam.externalId);
@@ -72,6 +74,8 @@ export function TeamComparisonCard({
     },
   ].filter((row) => row.home != null || row.away != null);
 
+  const visibleChartData = premiumAnalytics ? chartData : chartData.slice(0, 2);
+
   if (chartData.length === 0) {
     return (
       <MatchAnalyticsCard>
@@ -89,7 +93,7 @@ export function TeamComparisonCard({
     );
   }
 
-  const flatData = chartData.flatMap((row) => [
+  const flatData = visibleChartData.flatMap((row) => [
     {
       name: `${row.metric} (${fixture.homeTeam.name})`,
       value: row.home ?? 0,

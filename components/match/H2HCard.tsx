@@ -26,9 +26,15 @@ type H2HCardProps = {
   >;
   h2hAll: H2HSummary;
   h2hSameComp: H2HSummary;
+  premiumAnalytics?: boolean;
 };
 
-export function H2HCard({ fixture, h2hAll, h2hSameComp }: H2HCardProps) {
+export function H2HCard({
+  fixture,
+  h2hAll,
+  h2hSameComp,
+  premiumAnalytics = true,
+}: H2HCardProps) {
   const fixtureId = fixture.externalId;
   const homeTeamName = fixture.homeTeam.name;
   const awayTeamName = fixture.awayTeam.name;
@@ -43,6 +49,9 @@ export function H2HCard({ fixture, h2hAll, h2hSameComp }: H2HCardProps) {
 
   function handleScopeChange(value: string) {
     const nextScope = value as H2HScope;
+    if (nextScope === "SAME_COMP" && !premiumAnalytics) {
+      return;
+    }
     setScope(nextScope);
     void captureClientEvent(POSTHOG_EVENTS.matchH2hScopeChanged, {
       fixture_id: fixtureId,
@@ -58,7 +67,10 @@ export function H2HCard({ fixture, h2hAll, h2hSameComp }: H2HCardProps) {
           <Tabs value={scope} onValueChange={handleScopeChange}>
             <TabsList>
               <TabsTrigger value="ALL">All comps</TabsTrigger>
-              <TabsTrigger value="SAME_COMP">{h2hSameCompLabel}</TabsTrigger>
+              <TabsTrigger value="SAME_COMP" disabled={!premiumAnalytics}>
+                {h2hSameCompLabel}
+                {premiumAnalytics ? "" : " · Premium"}
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>

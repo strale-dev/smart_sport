@@ -1917,6 +1917,91 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_success_at: string | null
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_success_at?: string | null
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_success_at?: string | null
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_biographies: {
+        Row: {
+          excerpt: string | null
+          fetch_status: Database["public"]["Enums"]["player_bio_fetch_status"]
+          fetched_at: string
+          license_note: string
+          page_title: string | null
+          page_url: string | null
+          player_id: string
+          source: Database["public"]["Enums"]["player_bio_source"]
+          updated_at: string
+        }
+        Insert: {
+          excerpt?: string | null
+          fetch_status: Database["public"]["Enums"]["player_bio_fetch_status"]
+          fetched_at?: string
+          license_note?: string
+          page_title?: string | null
+          page_url?: string | null
+          player_id: string
+          source?: Database["public"]["Enums"]["player_bio_source"]
+          updated_at?: string
+        }
+        Update: {
+          excerpt?: string | null
+          fetch_status?: Database["public"]["Enums"]["player_bio_fetch_status"]
+          fetched_at?: string
+          license_note?: string
+          page_title?: string | null
+          page_url?: string | null
+          player_id?: string
+          source?: Database["public"]["Enums"]["player_bio_source"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_biographies_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_preferences: {
         Row: {
           email_marketing_optin: boolean
@@ -1925,6 +2010,8 @@ export type Database = {
           notify_goal: boolean
           notify_lineup_confirmed: boolean
           notify_prediction_shift: boolean
+          notify_push: boolean
+          push_prompt_dismissed_at: string | null
           sound_full_time_enabled: boolean
           sound_goal_enabled: boolean
           updated_at: string
@@ -1937,6 +2024,8 @@ export type Database = {
           notify_goal?: boolean
           notify_lineup_confirmed?: boolean
           notify_prediction_shift?: boolean
+          notify_push?: boolean
+          push_prompt_dismissed_at?: string | null
           sound_full_time_enabled?: boolean
           sound_goal_enabled?: boolean
           updated_at?: string
@@ -1949,6 +2038,8 @@ export type Database = {
           notify_goal?: boolean
           notify_lineup_confirmed?: boolean
           notify_prediction_shift?: boolean
+          notify_push?: boolean
+          push_prompt_dismissed_at?: string | null
           sound_full_time_enabled?: boolean
           sound_goal_enabled?: boolean
           updated_at?: string
@@ -2224,6 +2315,8 @@ export type Database = {
         | "TRIAL_ENDING"
         | "PAYMENT_SUCCESS"
         | "PAYMENT_FAILED"
+      player_bio_fetch_status: "OK" | "NOT_FOUND" | "AMBIGUOUS" | "ERROR"
+      player_bio_source: "WIKIPEDIA"
       player_foot: "LEFT" | "RIGHT" | "BOTH" | "UNKNOWN"
       player_position: "GK" | "DF" | "MF" | "FW"
       prediction_type: "PREMATCH" | "LIVE"
@@ -2405,6 +2498,8 @@ export const Constants = {
         "PAYMENT_SUCCESS",
         "PAYMENT_FAILED",
       ],
+      player_bio_fetch_status: ["OK", "NOT_FOUND", "AMBIGUOUS", "ERROR"],
+      player_bio_source: ["WIKIPEDIA"],
       player_foot: ["LEFT", "RIGHT", "BOTH", "UNKNOWN"],
       player_position: ["GK", "DF", "MF", "FW"],
       prediction_type: ["PREMATCH", "LIVE"],
