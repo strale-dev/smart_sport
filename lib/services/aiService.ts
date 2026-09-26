@@ -38,7 +38,7 @@ import type {
   PrematchInsightResponse,
 } from "@/lib/ai/schemas";
 import { validateAIInsightPayload } from "@/lib/ai/schemas";
-import { isFixtureSpecificPrematchModel } from "@/lib/ai/prematch-availability";
+import { canGeneratePrematchNarrative } from "@/lib/ai/prematch-availability";
 import {
   canBackfillMissingPrematchInsight,
   canGeneratePrematchInsight,
@@ -347,12 +347,12 @@ export async function generatePrematchInsight(
   }
 
   const snapshot = prediction.inputSnapshot;
-  if (!snapshot || !isFixtureSpecificPrematchModel(snapshot, prediction)) {
+  if (!snapshot || !canGeneratePrematchNarrative(snapshot, prediction)) {
     reportPrematchInsightOutcome("unavailable", fixtureExternalId, {
       reason: "GENERATION_NOT_ALLOWED",
       trigger: options.trigger,
       fixtureStatus: fixture.status,
-      detail: "generic_baseline_model",
+      detail: snapshot ? "insufficient_model_signal" : "missing_input_snapshot",
     });
     return {
       status: "UNAVAILABLE",

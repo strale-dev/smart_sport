@@ -11,6 +11,7 @@ on:
     - cron: "*/5 * * * *"
     - cron: "*/15 * * * *"
     - cron: "0 */6 * * *"
+    - cron: "0 3 * * *"
   workflow_dispatch:
     inputs:
       target:
@@ -42,11 +43,13 @@ jobs:
           const rows = [
             { id: "lineups", path: "/api/cron/sync-lineups", schedule: "*/15 * * * *" },
             { id: "warm-ai-prematch", path: "/api/cron/warm-ai-prematch?scope=imminent", schedule: "*/15 * * * *" },
+            { id: "warm-ai-prematch-daily", path: "/api/cron/warm-ai-prematch?scope=daily", schedule: "0 */6 * * *" },
             { id: "sync-live-center", path: "/api/cron/sync-live-center", schedule: "*/15 * * * *" },
             { id: "sync-fixtures-today", path: "/api/cron/sync-fixtures-today", schedule: "*/15 * * * *" },
             { id: "reap-stale-locks", path: "/api/cron/reap-stale-locks", schedule: "*/5 * * * *" },
             { id: "reconcile-ai-usage", path: "/api/cron/reconcile-ai-usage", schedule: "*/5 * * * *" },
             { id: "standings", path: "/api/cron/sync-standings", schedule: "0 */6 * * *" },
+            { id: "sync-fixtures-future", path: "/api/cron/sync-fixtures-future", schedule: "0 3 * * *" },
           ];
           const liveIds = new Set([
             "sync-live-center",

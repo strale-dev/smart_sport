@@ -10,6 +10,10 @@ import {
 import { getMatchOverviewRenderMode } from "@/lib/fixtures/overview-layout";
 import { getIngestionConfig } from "@/lib/ingestion/config";
 import { PINNED_MATCH_QA_FIXTURES } from "@/lib/qa/pinned-fixture-ids";
+import {
+  readTeamFixtureCoverageFromDb,
+  type TeamFixtureCoverage,
+} from "@/lib/ingestion/db-read";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FixtureStatus } from "@/types/domain";
 
@@ -86,6 +90,7 @@ export type IngestionDiagnosis = {
   fixturesTodayUtc: FixturesTodayUtc;
   pinnedReports: FixtureIngestionReport[];
   extraFixtureReport: FixtureIngestionReport | null;
+  teamCoverage: TeamFixtureCoverage | null;
   gaps: IngestionGap[];
   recommendedCommands: string[];
   strictWouldFail: boolean;
@@ -457,6 +462,7 @@ const PINNED_LABELS: Record<number, string> = {
 
 export async function runIngestionDiagnosis(options?: {
   extraFixtureId?: number;
+  teamProviderId?: number;
   envSource?: Record<string, string | undefined>;
   ingestDevQaForce?: boolean;
   ingestDevQaSkipStatic?: boolean;
@@ -511,6 +517,14 @@ export async function runIngestionDiagnosis(options?: {
     );
   }
 
+  let teamCoverage: TeamFixtureCoverage | null = null;
+  if (
+    options?.teamProviderId != null &&
+    Number.isFinite(options.teamProviderId)
+  ) {
+    teamCoverage = await readTeamFixtureCoverageFromDb(options.teamProviderId);
+  }
+
   const gaps = deriveIngestionGaps({
     env,
     globalCounts,
@@ -540,6 +554,7 @@ export async function runIngestionDiagnosis(options?: {
     fixturesTodayUtc,
     pinnedReports,
     extraFixtureReport,
+    teamCoverage,
     gaps,
     recommendedCommands,
     strictWouldFail,

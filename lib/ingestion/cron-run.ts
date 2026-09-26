@@ -9,6 +9,7 @@ export type CronJobResult = {
   ok: boolean;
   job: string;
   skipped?: boolean;
+  degraded?: boolean;
   reason?: string;
   stats?: Record<string, unknown>;
 };

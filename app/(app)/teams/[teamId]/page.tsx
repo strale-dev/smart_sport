@@ -16,6 +16,11 @@ import {
   getTeamSquad,
   listSeasonsByLeague,
 } from "@/lib/services/footballService";
+import { readTeamFixtureCoverageFromDb } from "@/lib/ingestion/db-read";
+import {
+  collectLeagueOptionsFromFixtures,
+  collectSeasonYearsFromFixtures,
+} from "@/lib/teams/fixture-meta";
 import {
   buildTeamPrimaryContext,
   resolvePrimaryLeagueFromFixtures,
@@ -80,15 +85,23 @@ export default async function TeamPage({ params }: TeamPageProps) {
     notFound();
   }
 
-  const [{ data: team }, { data: fixtures }, user] = await Promise.all([
-    getTeamById(id),
-    getFixturesForTeam(id),
-    getCurrentUser(),
-  ]);
+  const [{ data: team }, { data: fixtures }, coverage, user] =
+    await Promise.all([
+      getTeamById(id),
+      getFixturesForTeam(id, { limit: 50, temporal: "all" }),
+      readTeamFixtureCoverageFromDb(id).catch(() => null),
+      getCurrentUser(),
+    ]);
 
   if (!team) {
     notFound();
   }
+
+  const fixtureSeasonOptions =
+    (coverage?.seasonYears.length ?? 0) > 0
+      ? coverage!.seasonYears
+      : collectSeasonYearsFromFixtures(fixtures);
+  const fixtureLeagueOptions = collectLeagueOptionsFromFixtures(fixtures);
 
   const primaryLeague = resolvePrimaryLeagueFromFixtures(fixtures);
   const seasonsResult = primaryLeague
@@ -194,6 +207,8 @@ export default async function TeamPage({ params }: TeamPageProps) {
       <TeamDetailsTabsSection
         team={team}
         fixtures={fixtures}
+        fixtureSeasonOptions={fixtureSeasonOptions}
+        fixtureLeagueOptions={fixtureLeagueOptions}
         primaryContext={primaryContext}
         standings={standingsResult.data}
         squad={squadResult.data}

@@ -37,8 +37,8 @@ export async function MatchMatchesPanel({
       windowSize: 10,
       scope: "ALL",
     }),
-    getFixturesForTeam(fixture.homeTeam.externalId),
-    getFixturesForTeam(fixture.awayTeam.externalId),
+    getFixturesForTeam(fixture.homeTeam.externalId, { limit: 150 }),
+    getFixturesForTeam(fixture.awayTeam.externalId, { limit: 150 }),
   ]);
 
   const [homeForm10, awayForm10, h2hSameComp] = await Promise.all([

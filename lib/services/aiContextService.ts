@@ -14,6 +14,10 @@ import {
   readFixtureSidelinedFromDb,
   readLineupsFromDb,
 } from "@/lib/ingestion/db-read";
+import {
+  computeTeamHistoricalAggregates,
+  type TeamHistoricalAggregates,
+} from "@/lib/analytics/team-aggregates";
 import { resolveMatchFixtureContext } from "@/lib/match/fixture-context";
 import { getH2H, getRecentForm } from "@/lib/services/analyticsService";
 import type {
@@ -48,6 +52,22 @@ function resolveLineupsState(
   }
 
   return "PREDICTED";
+}
+
+function historicalContextFromAggregates(
+  aggregates: TeamHistoricalAggregates
+): NonNullable<PrematchAiContext["historicalContext"]>["home"] {
+  return {
+    sampleSize: aggregates.finishedSampleSize,
+    last20Ppg: aggregates.last20All.ppg,
+    seasonPpg: aggregates.seasonToDate?.ppg ?? null,
+    previousSeasonPpg: aggregates.previousSeason?.ppg ?? null,
+    topCompetitions: aggregates.byCompetition.slice(0, 5).map((entry) => ({
+      leagueName: entry.leagueName,
+      matches: entry.matches,
+      ppg: entry.ppg,
+    })),
+  };
 }
 
 function formSliceFromSnapshot(
@@ -108,6 +128,8 @@ async function buildPrematchContextUncached(
     lineups,
     sidelined,
     standings,
+    homeHistorical,
+    awayHistorical,
   ] = await Promise.all([
     getRecentForm(fixture.homeTeam.externalId, { matches: 5, scope: "ALL" }),
     getRecentForm(fixture.awayTeam.externalId, { matches: 5, scope: "ALL" }),
@@ -128,6 +150,14 @@ async function buildPrematchContextUncached(
           awayTeamExternalId: fixture.awayTeam.externalId,
         })
       : Promise.resolve({ home: null, away: null }),
+    computeTeamHistoricalAggregates(fixture.homeTeam.externalId, {
+      asOf: fixture.kickoffAt,
+      seasonYear: fixture.seasonYear,
+    }),
+    computeTeamHistoricalAggregates(fixture.awayTeam.externalId, {
+      asOf: fixture.kickoffAt,
+      seasonYear: fixture.seasonYear,
+    }),
   ]);
 
   const lineupsState = resolveLineupsState(lineups);
@@ -250,6 +280,10 @@ async function buildPrematchContextUncached(
                 : null,
           }
         : null,
+    historicalContext: {
+      home: historicalContextFromAggregates(homeHistorical),
+      away: historicalContextFromAggregates(awayHistorical),
+    },
     dataQuality: resolveDisplayDataQuality({
       dataMissing,
       predictionDataQuality: prediction.inputSnapshot.dataQuality,

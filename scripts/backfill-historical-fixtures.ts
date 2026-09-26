@@ -1,115 +1,16 @@
-import pRetry from "p-retry";
-
-import { listSeasonsByLeague } from "@/lib/api-football/endpoints/leagues";
-import { INGESTION_LEAGUE_PROVIDER_IDS } from "@/lib/ingestion/config";
-import { throttleProviderRequest } from "@/lib/ingestion/throttle";
-import { ingestFixtureFromRaw } from "@/lib/ingestion/upsert";
+import { backfillHistoricalFixtures } from "@/lib/ingestion/backfill-historical-fixtures";
 import { hasApiFootballConfig } from "@/lib/env";
-import { createAdminClient } from "@/lib/supabase/admin";
-import type { RawApiFootballFixture } from "@/lib/api-football/types";
 
-const TERMINAL_STATUSES = new Set(["FT", "AET", "PEN"]);
-const MAX_SEASONS = 3;
-
-async function fetchRawFixturesByLeagueSeason(
-  leagueId: number,
-  season: number
-): Promise<RawApiFootballFixture[]> {
-  const { apiFootballFetchResponse } =
-    await import("@/lib/api-football/client");
-  return apiFootballFetchResponse<RawApiFootballFixture>("/fixtures", {
-    league: leagueId,
-    season,
-  });
-}
-
-function isTransientIngestError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  const message = error.message.toLowerCase();
-  return (
-    message.includes("fetch failed") ||
-    message.includes("network") ||
-    message.includes("timeout") ||
-    message.includes("econnreset") ||
-    message.includes("503") ||
-    message.includes("502")
-  );
-}
-
-async function ingestFixtureWithRetry(
-  client: ReturnType<typeof createAdminClient>,
-  raw: RawApiFootballFixture
-): Promise<void> {
-  await pRetry(() => ingestFixtureFromRaw(client, raw), {
-    retries: 3,
-    minTimeout: 2_000,
-    maxTimeout: 10_000,
-    shouldRetry: ({ error }) => isTransientIngestError(error),
-  });
-}
-
-export async function backfillHistoricalFixtures(): Promise<{
-  leaguesProcessed: number;
-  apiRequests: number;
-  fixturesUpserted: number;
-  terminalFixtures: number;
-  ingestErrors: number;
-}> {
-  const client = createAdminClient();
-  let apiRequests = 0;
-  let fixturesUpserted = 0;
-  let terminalFixtures = 0;
-  let ingestErrors = 0;
-
-  for (const leagueProviderId of INGESTION_LEAGUE_PROVIDER_IDS) {
-    const seasons = await listSeasonsByLeague(leagueProviderId);
-    apiRequests += 1;
-    await throttleProviderRequest();
-
-    const targetSeasons = seasons
-      .sort((left, right) => right.year - left.year)
-      .slice(0, MAX_SEASONS);
-
-    for (const season of targetSeasons) {
-      if (apiRequests > 0) {
-        await throttleProviderRequest();
-      }
-
-      const rawFixtures = await fetchRawFixturesByLeagueSeason(
-        leagueProviderId,
-        season.year
-      );
-      apiRequests += 1;
-
-      for (const raw of rawFixtures) {
-        if (!TERMINAL_STATUSES.has(raw.fixture.status.short)) {
-          continue;
-        }
-
-        try {
-          await ingestFixtureWithRetry(client, raw);
-          fixturesUpserted += 1;
-          terminalFixtures += 1;
-        } catch (error) {
-          ingestErrors += 1;
-          console.error(
-            `[backfill] fixture ${raw.fixture.id} (${leagueProviderId}/${season.year}):`,
-            error
-          );
-        }
-      }
-    }
-  }
+function parseArgs(argv: string[]) {
+  const tierArg = argv.find((arg) => arg.startsWith("--tier="));
+  const tierRaw = tierArg?.slice("--tier=".length) ?? "1";
+  const tier = tierRaw === "2" ? 2 : 1;
 
   return {
-    leaguesProcessed: INGESTION_LEAGUE_PROVIDER_IDS.length,
-    apiRequests,
-    fixturesUpserted,
-    terminalFixtures,
-    ingestErrors,
+    tier: tier as 1 | 2,
+    resume: argv.includes("--resume"),
+    dryRun: argv.includes("--dry-run"),
+    noGapFill: argv.includes("--no-gap-fill"),
   };
 }
 
@@ -119,13 +20,24 @@ async function main() {
     process.exit(1);
   }
 
-  console.log("Backfilling historical fixtures for allowlist leagues...");
-  const result = await backfillHistoricalFixtures();
+  const { tier, resume, dryRun, noGapFill } = parseArgs(process.argv.slice(2));
+
+  console.log(
+    `Backfilling historical fixtures (tier=${tier}, resume=${resume}, dryRun=${dryRun})...`
+  );
+
+  const result = await backfillHistoricalFixtures({
+    tier,
+    resume,
+    dryRun,
+    gapFillTeams: !noGapFill,
+  });
+
   console.log(JSON.stringify(result, null, 2));
 
   if (result.ingestErrors > 0) {
     console.warn(
-      `Backfill finished with ${result.ingestErrors} fixture ingest error(s). Re-run to retry idempotently.`
+      `Backfill finished with ${result.ingestErrors} fixture ingest error(s). Re-run with --resume.`
     );
     process.exit(1);
   }

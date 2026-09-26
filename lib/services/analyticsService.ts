@@ -124,7 +124,7 @@ async function queryTeamFixtures(
 
 export async function computeRecentForm(
   teamProviderId: number,
-  options: { matches: 3 | 5 | 10; scope?: FormScope }
+  options: { matches: 3 | 5 | 10 | 20; scope?: FormScope }
 ): Promise<FormSnapshot> {
   const scope = options.scope ?? "ALL";
   const teamUuid = await getTeamUuid(teamProviderId);
@@ -269,7 +269,7 @@ export async function computeH2H(
 
 export async function getRecentForm(
   teamProviderId: number,
-  options: { matches: 3 | 5 | 10; scope?: FormScope }
+  options: { matches: 3 | 5 | 10 | 20; scope?: FormScope }
 ): Promise<FormSnapshot> {
   const scope = options.scope ?? "ALL";
   const result = await cached({
@@ -315,7 +315,7 @@ export async function refreshAnalyticsForUpcomingFixtures(): Promise<{
 }> {
   const client = createAdminClient();
   const from = new Date(Date.now() - 7 * 86_400_000).toISOString();
-  const to = new Date(Date.now() + 7 * 86_400_000).toISOString();
+  const to = new Date(Date.now() + 30 * 86_400_000).toISOString();
 
   const { data: fixtures, error } = await client
     .from("fixtures")
@@ -364,6 +364,7 @@ export async function refreshAnalyticsForUpcomingFixtures(): Promise<{
   for (const teamId of teamIds) {
     await computeRecentForm(teamId, { matches: 5, scope: "ALL" });
     await computeRecentForm(teamId, { matches: 10, scope: "ALL" });
+    await computeRecentForm(teamId, { matches: 20, scope: "ALL" });
     formsRefreshed += 1;
   }
 

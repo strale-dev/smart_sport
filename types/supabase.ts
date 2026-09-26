@@ -533,6 +533,8 @@ export type Database = {
           pen_home: number | null
           period_first_start_at: string | null
           period_second_start_at: string | null
+          prematch_readiness: Json
+          prematch_readiness_updated_at: string | null
           provider_id: number
           provider_payload: Json | null
           referee: string | null
@@ -566,6 +568,8 @@ export type Database = {
           pen_home?: number | null
           period_first_start_at?: string | null
           period_second_start_at?: string | null
+          prematch_readiness?: Json
+          prematch_readiness_updated_at?: string | null
           provider_id: number
           provider_payload?: Json | null
           referee?: string | null
@@ -599,6 +603,8 @@ export type Database = {
           pen_home?: number | null
           period_first_start_at?: string | null
           period_second_start_at?: string | null
+          prematch_readiness?: Json
+          prematch_readiness_updated_at?: string | null
           provider_id?: number
           provider_payload?: Json | null
           referee?: string | null
@@ -839,6 +845,96 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ingestion_league_season_state: {
+        Row: {
+          api_requests: number
+          error_message: string | null
+          fixtures_upserted: number
+          last_sync_at: string | null
+          league_provider_id: number
+          season_year: number
+          status: string
+        }
+        Insert: {
+          api_requests?: number
+          error_message?: string | null
+          fixtures_upserted?: number
+          last_sync_at?: string | null
+          league_provider_id: number
+          season_year: number
+          status?: string
+        }
+        Update: {
+          api_requests?: number
+          error_message?: string | null
+          fixtures_upserted?: number
+          last_sync_at?: string | null
+          league_provider_id?: number
+          season_year?: number
+          status?: string
+        }
+        Relationships: []
+      }
+      ingestion_sync_runs: {
+        Row: {
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          job_name: string
+          started_at: string
+          stats: Json
+          status: string
+          tier: number | null
+        }
+        Insert: {
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          job_name: string
+          started_at?: string
+          stats?: Json
+          status?: string
+          tier?: number | null
+        }
+        Update: {
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          job_name?: string
+          started_at?: string
+          stats?: Json
+          status?: string
+          tier?: number | null
+        }
+        Relationships: []
+      }
+      ingestion_team_sync_state: {
+        Row: {
+          finished_count: number
+          last_gap_fill_at: string | null
+          seasons_covered: number
+          team_provider_id: number
+          upcoming_count: number
+          updated_at: string
+        }
+        Insert: {
+          finished_count?: number
+          last_gap_fill_at?: string | null
+          seasons_covered?: number
+          team_provider_id: number
+          upcoming_count?: number
+          updated_at?: string
+        }
+        Update: {
+          finished_count?: number
+          last_gap_fill_at?: string | null
+          seasons_covered?: number
+          team_provider_id?: number
+          upcoming_count?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       leagues: {
         Row: {
@@ -1119,6 +1215,50 @@ export type Database = {
           id?: number
         }
         Relationships: []
+      }
+      player_biographies: {
+        Row: {
+          excerpt: string | null
+          fetch_status: Database["public"]["Enums"]["player_bio_fetch_status"]
+          fetched_at: string
+          license_note: string
+          page_title: string | null
+          page_url: string | null
+          player_id: string
+          source: Database["public"]["Enums"]["player_bio_source"]
+          updated_at: string
+        }
+        Insert: {
+          excerpt?: string | null
+          fetch_status: Database["public"]["Enums"]["player_bio_fetch_status"]
+          fetched_at?: string
+          license_note?: string
+          page_title?: string | null
+          page_url?: string | null
+          player_id: string
+          source?: Database["public"]["Enums"]["player_bio_source"]
+          updated_at?: string
+        }
+        Update: {
+          excerpt?: string | null
+          fetch_status?: Database["public"]["Enums"]["player_bio_fetch_status"]
+          fetched_at?: string
+          license_note?: string
+          page_title?: string | null
+          page_url?: string | null
+          player_id?: string
+          source?: Database["public"]["Enums"]["player_bio_source"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_biographies_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_match_performances: {
         Row: {
@@ -1624,6 +1764,47 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_success_at: string | null
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_success_at?: string | null
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_success_at?: string | null
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seasons: {
         Row: {
           created_at: string
@@ -1913,91 +2094,6 @@ export type Database = {
             columns: ["venue_id"]
             isOneToOne: false
             referencedRelation: "venues"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      push_subscriptions: {
-        Row: {
-          auth: string
-          created_at: string
-          endpoint: string
-          id: string
-          last_success_at: string | null
-          p256dh: string
-          user_agent: string | null
-          user_id: string
-        }
-        Insert: {
-          auth: string
-          created_at?: string
-          endpoint: string
-          id?: string
-          last_success_at?: string | null
-          p256dh: string
-          user_agent?: string | null
-          user_id: string
-        }
-        Update: {
-          auth?: string
-          created_at?: string
-          endpoint?: string
-          id?: string
-          last_success_at?: string | null
-          p256dh?: string
-          user_agent?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "push_subscriptions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      player_biographies: {
-        Row: {
-          excerpt: string | null
-          fetch_status: Database["public"]["Enums"]["player_bio_fetch_status"]
-          fetched_at: string
-          license_note: string
-          page_title: string | null
-          page_url: string | null
-          player_id: string
-          source: Database["public"]["Enums"]["player_bio_source"]
-          updated_at: string
-        }
-        Insert: {
-          excerpt?: string | null
-          fetch_status: Database["public"]["Enums"]["player_bio_fetch_status"]
-          fetched_at?: string
-          license_note?: string
-          page_title?: string | null
-          page_url?: string | null
-          player_id: string
-          source?: Database["public"]["Enums"]["player_bio_source"]
-          updated_at?: string
-        }
-        Update: {
-          excerpt?: string | null
-          fetch_status?: Database["public"]["Enums"]["player_bio_fetch_status"]
-          fetched_at?: string
-          license_note?: string
-          page_title?: string | null
-          page_url?: string | null
-          player_id?: string
-          source?: Database["public"]["Enums"]["player_bio_source"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "player_biographies_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: true
-            referencedRelation: "players"
             referencedColumns: ["id"]
           },
         ]

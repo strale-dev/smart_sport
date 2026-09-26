@@ -15,6 +15,8 @@ import type {
 type TeamDetailsTabsSectionProps = {
   team: Team;
   fixtures: Fixture[];
+  fixtureSeasonOptions: number[];
+  fixtureLeagueOptions: Array<{ providerId: number; name: string }>;
   primaryContext: TeamPrimaryContext | null;
   standings: StandingsGroup[];
   squad: SquadPlayer[];

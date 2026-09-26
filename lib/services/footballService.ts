@@ -57,6 +57,7 @@ import {
   readFixtureStatisticsFromDb,
   readFixturesForDateFromDb,
   readFixturesForLeagueSeasonFromDb,
+  readFixturesForTeamFromDb,
   readFixturesForTeamsInRangeFromDb,
   readFixturesInRangeFromDb,
   readLeagueDetailFromDb,
@@ -102,12 +103,17 @@ import {
   providerSeasonsKey,
   providerStandingsKey,
   providerTeamFixturesKey,
+  providerTeamFixturesQueryKey,
   providerTeamKey,
   providerTeamSquadKey,
   providerTeamStatisticsKey,
 } from "@/lib/redis/keys";
 import { isAuthoritativeLivePresentation } from "@/lib/live/live-presentation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  teamFixturesQueryCacheKey,
+  type TeamFixturesApiParams,
+} from "@/lib/teams/fixtures-query";
 import {
   TEAM_MATCHES_FUTURE_DAYS,
   TEAM_MATCHES_PAST_DAYS,
@@ -576,7 +582,44 @@ export function buildTeamFixturesWindow(now = new Date()): {
   };
 }
 
+export type GetFixturesForTeamOptions = Partial<TeamFixturesApiParams>;
+
 export async function getFixturesForTeam(
+  teamProviderId: number,
+  options: GetFixturesForTeamOptions = {},
+  now = new Date()
+): Promise<ServiceResult<Fixture[]>> {
+  const params: TeamFixturesApiParams = {
+    limit: options.limit ?? 200,
+    offset: options.offset ?? 0,
+    seasonYear: options.seasonYear,
+    league: options.league,
+    temporal: options.temporal ?? "all",
+  };
+
+  const result = await cached({
+    key: providerTeamFixturesQueryKey(
+      teamProviderId,
+      teamFixturesQueryCacheKey(params)
+    ),
+    freshTtlSeconds: CACHE_TTL.fixturesDateFresh,
+    staleTtlSeconds: CACHE_TTL.fixturesDateStale,
+    fn: () =>
+      readFixturesForTeamFromDb(teamProviderId, {
+        limit: params.limit,
+        offset: params.offset,
+        seasonYear: params.seasonYear,
+        leagueProviderId: params.league,
+        temporal: params.temporal,
+        now,
+      }),
+  });
+
+  return toServiceResult(result);
+}
+
+/** Narrow date window for dashboard widgets that only need near-term fixtures. */
+export async function getFixturesForTeamNearTerm(
   teamProviderId: number,
   now = new Date()
 ): Promise<ServiceResult<Fixture[]>> {

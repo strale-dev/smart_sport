@@ -62,6 +62,17 @@ for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
 
     if (response.ok) {
       console.log(body || "(empty body, HTTP 2xx)");
+      try {
+        const payload = body ? JSON.parse(body) : null;
+        if (payload && payload.ok === false && !payload.skipped) {
+          console.error(
+            `::error::Cron ${cronPath} returned HTTP 200 but ok:false (degraded=${payload.degraded ?? "n/a"})`
+          );
+          process.exit(1);
+        }
+      } catch {
+        // Non-JSON success body — treat as success.
+      }
       process.exit(0);
     }
 

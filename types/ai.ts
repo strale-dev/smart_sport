@@ -88,6 +88,31 @@ export type PrematchAiContext = {
     awayWins: number;
     avgGoals: number | null;
   } | null;
+  /** Compact historical aggregates (not raw fixture lists). */
+  historicalContext?: {
+    home: {
+      sampleSize: number;
+      last20Ppg: number | null;
+      seasonPpg: number | null;
+      previousSeasonPpg: number | null;
+      topCompetitions: Array<{
+        leagueName: string;
+        matches: number;
+        ppg: number | null;
+      }>;
+    };
+    away: {
+      sampleSize: number;
+      last20Ppg: number | null;
+      seasonPpg: number | null;
+      previousSeasonPpg: number | null;
+      topCompetitions: Array<{
+        leagueName: string;
+        matches: number;
+        ppg: number | null;
+      }>;
+    };
+  };
   dataQuality: "COMPLETE" | "PARTIAL" | "STALE";
   dataTimestamp: string;
 };

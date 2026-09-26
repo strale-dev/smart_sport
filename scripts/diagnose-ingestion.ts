@@ -8,6 +8,7 @@ import {
 
 function parseArgs(argv: string[]) {
   const fixtureIdArg = argv.find((arg) => arg.startsWith("--fixture-id="));
+  const teamIdArg = argv.find((arg) => arg.startsWith("--team-id="));
   const json = argv.includes("--json");
   const strict = argv.includes("--strict");
 
@@ -15,8 +16,15 @@ function parseArgs(argv: string[]) {
     ? Number.parseInt(fixtureIdArg.slice("--fixture-id=".length), 10)
     : undefined;
 
+  const teamProviderId = teamIdArg
+    ? Number.parseInt(teamIdArg.slice("--team-id=".length), 10)
+    : undefined;
+
   return {
     fixtureId: Number.isFinite(fixtureId) ? fixtureId : undefined,
+    teamProviderId: Number.isFinite(teamProviderId)
+      ? teamProviderId
+      : undefined,
     json,
     strict,
   };
@@ -107,6 +115,25 @@ function printHumanReport(
     console.log("\n6) Extra fixture: (none — pass --fixture-id=...)");
   }
 
+  if (diagnosis.teamCoverage) {
+    const row = diagnosis.teamCoverage;
+    console.log("\n6b) Team fixture coverage (--team-id)");
+    console.log(
+      [
+        `  ${row.teamName ?? "Team"} (provider ${row.teamProviderId})`,
+        `  historical (finished): ${row.finishedCount}`,
+        `  upcoming: ${row.upcomingCount}`,
+        `  total: ${row.totalCount}`,
+        `  seasons: ${row.seasonYears.join(", ") || "(none)"}`,
+        `  competitions: ${row.leagueProviderIds.length}`,
+        `  kickoff range: ${row.minKickoff ?? "?"} → ${row.maxKickoff ?? "?"}`,
+        `  last league-season sync: ${row.lastLeagueSeasonSync ?? "unknown"}`,
+      ].join("\n")
+    );
+  } else {
+    console.log("\n6b) Team coverage: (none — pass --team-id=...)");
+  }
+
   console.log("\n7) API quota");
   console.log(formatApiProbe(apiProbe));
 
@@ -130,10 +157,15 @@ function printHumanReport(
 }
 
 async function main() {
-  const { fixtureId, json, strict } = parseArgs(process.argv.slice(2));
+  const { fixtureId, teamProviderId, json, strict } = parseArgs(
+    process.argv.slice(2)
+  );
 
   const [diagnosis, apiProbe] = await Promise.all([
-    runIngestionDiagnosis({ extraFixtureId: fixtureId }),
+    runIngestionDiagnosis({
+      extraFixtureId: fixtureId,
+      teamProviderId,
+    }),
     probeApiFootballQuota(),
   ]);
 

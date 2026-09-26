@@ -33,6 +33,7 @@ export const GITHUB_ACTIONS_INGESTION_PATHS = [
   "/api/cron/sync-standings",
   "/api/cron/sync-live-center",
   "/api/cron/sync-fixtures-today",
+  "/api/cron/sync-fixtures-future",
   "/api/cron/reap-stale-locks",
   "/api/cron/reconcile-ai-usage",
 ] as const;

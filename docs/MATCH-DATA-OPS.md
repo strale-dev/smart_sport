@@ -45,13 +45,13 @@ Match Details reads **Postgres only** in development when `API_FOOTBALL_INGEST_O
 
 ## Why lineups / timeline are still empty
 
-| Symptom                             | Cause                                       | Fix                                                                                |
-| ----------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Overview empty on **FT**            | No `fixture_events` / stats in DB           | `match:qa-sync` or `bootstrap:match-details`                                       |
-| Overview empty on **NS**            | Pre-match: stats/timeline not published yet | Normal; use Form/H2H tabs; lineups via lineups sync near kickoff                   |
-| **Lineups** tab empty on upcoming   | Provider has no lineup yet, or sync not run | Pro + `API_FOOTBALL_LINEUPS_SYNC_ENABLED=true` + `sync-lineups` (see INGESTION.md) |
-| Form/H2H empty                      | Not enough historical fixtures in DB        | `backfill:historical-fixtures` (P8-DATA-9)                                         |
-| Random match from `/fixtures` empty | Never ingested for that `provider_id`       | `bootstrap:match-details --fixture-ids=<id>` or production crons (P8-DATA-8)       |
+| Symptom                             | Cause                                       | Fix                                                                                     |
+| ----------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Overview empty on **FT**            | No `fixture_events` / stats in DB           | `match:qa-sync` or `bootstrap:match-details`                                            |
+| Overview empty on **NS**            | Pre-match: stats/timeline not published yet | Normal; use Form/H2H tabs; lineups via lineups sync near kickoff                        |
+| **Lineups** tab empty on upcoming   | Provider has no lineup yet, or sync not run | Pro + `API_FOOTBALL_LINEUPS_SYNC_ENABLED=true` + `sync-lineups` (see INGESTION.md)      |
+| Form/H2H empty                      | Not enough historical fixtures in DB        | `backfill:historical-fixtures --tier=1 --resume`; check `diagnose:ingestion --team-id=` |
+| Random match from `/fixtures` empty | Never ingested for that `provider_id`       | `bootstrap:match-details --fixture-ids=<id>` or production crons (P8-DATA-8)            |
 
 ---
 

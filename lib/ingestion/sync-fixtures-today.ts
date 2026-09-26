@@ -1,4 +1,4 @@
-import { apiFootballFetchResponse } from "@/lib/api-football/client";
+import { apiFootballFetchAllPagesResponse } from "@/lib/api-football/client";
 import { ApiFootballError } from "@/lib/api-football/errors";
 import { formatApiFootballFailureReason } from "@/lib/api-football/safe-call";
 import type { RawApiFootballFixture } from "@/lib/api-football/types";
@@ -9,6 +9,8 @@ import {
   isTerminalFixtureStatus,
 } from "@/lib/ingestion/config";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
+import { refreshPrematchReadinessBatch } from "@/lib/ingestion/fixture-prematch-readiness";
+import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
 import { ingestFixtureFromRaw } from "@/lib/ingestion/upsert";
 import { getRedis } from "@/lib/redis/client";
 import { providerFixturesDateKey } from "@/lib/redis/keys";
@@ -19,6 +21,7 @@ export type SyncFixturesTodayResult = {
   ok: boolean;
   job: string;
   skipped?: boolean;
+  degraded?: boolean;
   reason?: string;
   stats: {
     date: string;
@@ -29,6 +32,7 @@ export type SyncFixturesTodayResult = {
     stoppedForTimeBudget?: boolean;
     fixtureErrors?: number;
     lastFixtureError?: string;
+    readinessRefreshed?: number;
   };
 };
 
@@ -65,7 +69,7 @@ export async function syncFixturesToday(
   let rawFixtures: RawApiFootballFixture[];
   try {
     await throttleProviderRequest();
-    rawFixtures = await apiFootballFetchResponse<RawApiFootballFixture>(
+    rawFixtures = await apiFootballFetchAllPagesResponse<RawApiFootballFixture>(
       "/fixtures",
       { date }
     );
@@ -138,17 +142,40 @@ export async function syncFixturesToday(
     }
   }
 
-  const ok =
-    allowlisted.length === 0 || fixturesUpserted > 0 || stoppedForTimeBudget;
+  let readinessRefreshed = 0;
+  if (domainFixtures.length > 0) {
+    readinessRefreshed = await refreshPrematchReadinessBatch(
+      domainFixtures.map((fixture) => fixture.externalId)
+    );
+  }
+
+  const outcome = resolveCronOutcome({
+    failedCount: fixtureErrors,
+    partialForTimeBudget:
+      stoppedForTimeBudget && fixtureErrors === 0 && fixturesUpserted > 0,
+  });
+
+  let ok = outcome.ok;
+  let degraded = outcome.degraded;
+  if (
+    stoppedForTimeBudget &&
+    fixturesUpserted === 0 &&
+    allowlisted.length > 0
+  ) {
+    ok = false;
+    degraded = true;
+  }
 
   return {
     ok,
+    degraded,
     job: "sync-fixtures-today",
     stats: {
       date,
       apiRequests: 1,
       fixturesUpserted,
       fixturesFilteredOut,
+      readinessRefreshed,
       ...(stoppedForTimeBudget
         ? {
             fixturesRemaining: allowlisted.length - fixturesUpserted,

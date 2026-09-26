@@ -25,6 +25,16 @@ export type ApiFootballFetchOptions = {
   fetchImpl?: typeof fetch;
 };
 
+export type ApiFootballFetchAllPagesOptions = ApiFootballFetchOptions & {
+  /** Safety cap (default 100 pages). */
+  maxPages?: number;
+  /** Called after each page (e.g. ingestion throttle). */
+  onAfterPage?: (info: {
+    page: number;
+    totalPages: number;
+  }) => void | Promise<void>;
+};
+
 function normalizeProviderErrors(
   errors: ApiFootballEnvelope<unknown>["errors"]
 ): Record<string, string> | undefined {
@@ -213,4 +223,67 @@ export async function apiFootballFetchResponse<T>(
 ): Promise<T[]> {
   const envelope = await apiFootballFetch<T[]>(path, params, options);
   return envelope.response ?? [];
+}
+
+/** API-Football v3 rejects `page` on /fixtures; use round/status/from-to splits instead. */
+export function apiFootballPathSupportsPageParam(path: string): boolean {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return normalized !== "/fixtures";
+}
+
+export async function apiFootballFetchAllPages<T>(
+  path: string,
+  params: Record<string, string | number | boolean | undefined> = {},
+  options: ApiFootballFetchAllPagesOptions = {}
+): Promise<T[]> {
+  if (!apiFootballPathSupportsPageParam(path)) {
+    const rows = await apiFootballFetchResponse<T>(path, params, options);
+    if (options.onAfterPage) {
+      await options.onAfterPage({ page: 1, totalPages: 1 });
+    }
+    return rows;
+  }
+
+  const maxPages = options.maxPages ?? 100;
+  const merged: T[] = [];
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= totalPages && page <= maxPages) {
+    const envelope = await apiFootballFetch<T[]>(
+      path,
+      { ...params, page },
+      options
+    );
+    const chunk = envelope.response ?? [];
+    merged.push(...chunk);
+
+    const reportedTotal = envelope.paging?.total;
+    totalPages =
+      reportedTotal != null && reportedTotal > 0
+        ? reportedTotal
+        : chunk.length === 0
+          ? page
+          : 1;
+
+    if (options.onAfterPage) {
+      await options.onAfterPage({ page, totalPages });
+    }
+
+    if (reportedTotal == null && chunk.length > 0) {
+      break;
+    }
+
+    page += 1;
+  }
+
+  return merged;
+}
+
+export async function apiFootballFetchAllPagesResponse<T>(
+  path: string,
+  params: Record<string, string | number | boolean | undefined> = {},
+  options: ApiFootballFetchAllPagesOptions = {}
+): Promise<T[]> {
+  return apiFootballFetchAllPages<T>(path, params, options);
 }

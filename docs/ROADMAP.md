@@ -872,7 +872,7 @@ A founder can open **typical allowlist fixtures** (FT, live, or NS near kickoff)
 - [ ] **P8-DATA-6** — `sync:standings` succeeds for current season; team/league standings tabs non-empty for ≥1 allowlist league.
 - [ ] **P8-DATA-7** — `API_FOOTBALL_LINEUPS_SYNC_ENABLED=true` in dev; `sync-lineups` ingests lineups for fixture ≤90 min pre-kickoff (real upcoming match).
 - [ ] **P8-DATA-8** — Production crons + `API_FOOTBALL_INGEST_ONLY=false` on Production (Vercel + GitHub schedule per ING-3).
-- [ ] **P8-DATA-9** — Historical depth: `backfill:historical-fixtures` (or extended bootstrap) so Form/H2H are not empty for top teams.
+- [x] **P8-DATA-9** — Historical depth: paginated league-season backfill, team gap-fill, future sync cron (`docs/FIXTURE-HISTORY-AUDIT.md`).
 - [ ] **P8-DATA-10** — Live: two-tab manual DoD from [LIVE_POLLING.md](./LIVE_POLLING.md).
 
 **Definition of Done (16.1):**

@@ -110,23 +110,19 @@ describe("footballService ingest-only mode", () => {
     Object.assign(process.env, baseEnv);
     process.env.API_FOOTBALL_INGEST_ONLY = "true";
 
-    const teamIdSpy = vi
-      .spyOn(dbRead, "readTeamIdByProviderIdFromDb")
-      .mockResolvedValue("team-uuid");
     const fixturesSpy = vi
-      .spyOn(dbRead, "readFixturesForTeamsInRangeFromDb")
+      .spyOn(dbRead, "readFixturesForTeamFromDb")
       .mockResolvedValue([]);
 
     await footballService.getFixturesForTeam(
       33,
+      { limit: 50 },
       new Date("2026-09-03T12:00:00.000Z")
     );
 
-    expect(teamIdSpy).toHaveBeenCalledWith(33);
     expect(fixturesSpy).toHaveBeenCalledWith(
-      ["team-uuid"],
-      "2026-08-04T00:00:00.000Z",
-      "2027-09-04T00:00:00.000Z"
+      33,
+      expect.objectContaining({ limit: 50, offset: 0, temporal: "all" })
     );
   });
 

@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { TeamDetailsFacts } from "@/components/team/TeamDetailsFacts";
 import { TeamFormCard } from "@/components/team/TeamFormCard";
-import { TeamGroupedMatchesList } from "@/components/team/TeamGroupedMatchesList";
+import { TeamFixturesExplorer } from "@/components/team/TeamFixturesExplorer";
 import { TeamSeasonSummaryCard } from "@/components/team/TeamSeasonSummaryCard";
 import { TeamSquadTab } from "@/components/team/TeamSquadTab";
 import { TeamStandingsTab } from "@/components/team/TeamStandingsTab";
@@ -12,7 +12,6 @@ import { TeamStatisticsTab } from "@/components/team/TeamStatisticsTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { TeamPrimaryContext } from "@/lib/teams/resolve-primary-league";
 import { parseTeamTab } from "@/lib/teams/url";
-import { splitFixturesByStatus } from "@/lib/teams/matches";
 import type {
   Fixture,
   FormSnapshot,
@@ -25,6 +24,8 @@ import type {
 type TeamDetailsTabsProps = {
   team: Team;
   fixtures: Fixture[];
+  fixtureSeasonOptions: number[];
+  fixtureLeagueOptions: Array<{ providerId: number; name: string }>;
   primaryContext: TeamPrimaryContext | null;
   standings: StandingsGroup[];
   squad: SquadPlayer[];
@@ -40,6 +41,8 @@ type TeamDetailsTabsProps = {
 export function TeamDetailsTabs({
   team,
   fixtures,
+  fixtureSeasonOptions,
+  fixtureLeagueOptions,
   primaryContext,
   standings,
   squad,
@@ -55,7 +58,6 @@ export function TeamDetailsTabs({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeTab = parseTeamTab(searchParams.get("tab") ?? undefined);
-  const groups = splitFixturesByStatus(fixtures);
 
   function handleTabChange(value: string) {
     if (value === activeTab) {
@@ -113,10 +115,11 @@ export function TeamDetailsTabs({
       </TabsContent>
 
       <TabsContent value="matches">
-        <TeamGroupedMatchesList
-          live={groups.live}
-          upcoming={groups.upcoming}
-          past={groups.past}
+        <TeamFixturesExplorer
+          teamProviderId={team.externalId}
+          initialFixtures={fixtures}
+          seasonOptions={fixtureSeasonOptions}
+          leagueOptions={fixtureLeagueOptions}
         />
       </TabsContent>
 

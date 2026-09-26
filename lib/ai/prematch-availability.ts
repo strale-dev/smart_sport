@@ -195,6 +195,25 @@ export function isFixtureSpecificPrematchModel(
   return !isGenericBaselineWinProbabilities(prediction.winProbabilities);
 }
 
+/**
+ * Shared pre-match LLM narrative: requires minimum model signal.
+ * Generic baseline probabilities alone do not block when signal exists (Phase 2 RCA).
+ */
+export function canGeneratePrematchNarrative(
+  features: PrematchFeatureVector,
+  prediction: Pick<PrematchPredictionResult, "winProbabilities">
+): boolean {
+  if (!hasMinimumModelSignal(features)) {
+    return false;
+  }
+
+  if (isGenericBaselineWinProbabilities(prediction.winProbabilities)) {
+    return true;
+  }
+
+  return isFixtureSpecificPrematchModel(features, prediction);
+}
+
 export function hasMinimumModelSignal(
   features: PrematchFeatureVector
 ): boolean {

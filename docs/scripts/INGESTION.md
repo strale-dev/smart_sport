@@ -59,7 +59,7 @@ npm.cmd run ingest:dev-qa -- --force
 | `sync:lineups`                 | NS/TBD fixtures kicking off within 90 min (cron-style); skips complete lineups outside the final 60 min | ~1 req per fixture synced                        |
 | `bootstrap:match-details`      | Pull stats/events/lineups for FT fixtures                                                               | ~3 req per fixture                               |
 | `api-football:smoke`           | Provider auth + sample fixture + quota                                                                  | 1–2 req                                          |
-| `backfill:historical-fixtures` | Historical fixture ingest                                                                               | Many req                                         |
+| `backfill:historical-fixtures` | Historical fixture ingest (`--tier=1                                                                    | 2`, `--resume`, `--dry-run`)                     | Many req |
 | `backfill:elo`                 | Elo from finished fixtures                                                                              | 0 provider                                       |
 
 Implementation entrypoints live under `scripts/` and `lib/ingestion/`.

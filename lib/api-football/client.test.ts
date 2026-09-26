@@ -10,6 +10,7 @@ vi.mock("p-retry", async (importOriginal) => {
 
 import {
   apiFootballFetch,
+  apiFootballFetchAllPagesResponse,
   apiFootballFetchResponse,
 } from "@/lib/api-football/client";
 import {
@@ -250,6 +251,66 @@ describe("apiFootballFetch", () => {
     expect(result.ok === false && result.reason).toContain(
       "This IP is not allowed to call the API"
     );
+  });
+
+  it("does not send page on /fixtures (provider rejects page param)", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      mockResponse(
+        {
+          get: "fixtures",
+          parameters: { league: 39, season: 2024 },
+          errors: [],
+          results: 1,
+          paging: { current: 1, total: 1 },
+          response: [{ fixture: { id: 1000 } }],
+        },
+        {
+          headers: {
+            "x-ratelimit-requests-remaining": "5000",
+          },
+        }
+      )
+    );
+
+    const rows = await apiFootballFetchAllPagesResponse<{
+      fixture: { id: number };
+    }>("/fixtures", { league: 39, season: 2024 }, { fetchImpl });
+
+    expect(rows).toHaveLength(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const url = String(fetchImpl.mock.calls[0]?.[0] ?? "");
+    expect(url).not.toMatch(/[?&]page=/);
+  });
+
+  it("fetches all pages when paging.total > 1 on pageable endpoints", async () => {
+    const fetchImpl = vi.fn().mockImplementation((_url: string) => {
+      const callIndex = fetchImpl.mock.calls.length;
+      const page = callIndex;
+      return Promise.resolve(
+        mockResponse(
+          {
+            get: "players",
+            parameters: { league: 39, season: 2024, page },
+            errors: [],
+            results: 1,
+            paging: { current: page, total: 2 },
+            response: [{ player: { id: page * 1000 } }],
+          },
+          {
+            headers: {
+              "x-ratelimit-requests-remaining": "5000",
+            },
+          }
+        )
+      );
+    });
+
+    const rows = await apiFootballFetchAllPagesResponse<{
+      player: { id: number };
+    }>("/players", { league: 39, season: 2024 }, { fetchImpl });
+
+    expect(rows).toHaveLength(2);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
   it("maps exhausted 429 retries to ApiFootballQuotaError", async () => {

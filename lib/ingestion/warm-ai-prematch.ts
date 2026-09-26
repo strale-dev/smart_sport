@@ -2,12 +2,13 @@ import * as Sentry from "@sentry/nextjs";
 
 import { generatePrematchInsight } from "@/lib/services/aiService";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
 
 export type WarmAiPrematchScope = "daily" | "imminent";
 
 const RUN_BUDGET_MS = 45_000;
-const DAILY_MAX_FIXTURES = 30;
-const IMMINENT_MAX_FIXTURES = 20;
+const DAILY_MAX_FIXTURES = 40;
+const IMMINENT_MAX_FIXTURES = 25;
 
 export function warmWindowBoundsForScope(
   scope: WarmAiPrematchScope,
@@ -29,6 +30,25 @@ export function warmWindowBoundsForScope(
   };
 }
 
+type WarmFixtureRow = {
+  provider_id: number;
+  prematch_readiness: { aiEligible?: boolean } | null;
+  kickoff_at: string;
+};
+
+function sortWarmCandidates(rows: WarmFixtureRow[]): WarmFixtureRow[] {
+  return [...rows].sort((left, right) => {
+    const leftEligible = left.prematch_readiness?.aiEligible === true ? 1 : 0;
+    const rightEligible = right.prematch_readiness?.aiEligible === true ? 1 : 0;
+    if (leftEligible !== rightEligible) {
+      return rightEligible - leftEligible;
+    }
+    return (
+      new Date(left.kickoff_at).getTime() - new Date(right.kickoff_at).getTime()
+    );
+  });
+}
+
 async function loadFixturesInScope(
   scope: WarmAiPrematchScope
 ): Promise<number[]> {
@@ -39,12 +59,12 @@ async function loadFixturesInScope(
 
   const { data, error } = await client
     .from("fixtures")
-    .select("provider_id")
+    .select("provider_id, kickoff_at, prematch_readiness")
     .in("status", ["NS", "TBD"])
     .gte("kickoff_at", from)
     .lte("kickoff_at", to)
     .order("kickoff_at", { ascending: true })
-    .limit(limit);
+    .limit(limit * 2);
 
   if (error) {
     throw new Error(
@@ -52,7 +72,8 @@ async function loadFixturesInScope(
     );
   }
 
-  return (data ?? []).map((row) => row.provider_id);
+  const sorted = sortWarmCandidates((data ?? []) as WarmFixtureRow[]);
+  return sorted.slice(0, limit).map((row) => row.provider_id);
 }
 
 export async function warmAiPrematchInsights(
@@ -60,6 +81,7 @@ export async function warmAiPrematchInsights(
 ): Promise<{
   ok: boolean;
   job: string;
+  degraded?: boolean;
   stats: {
     scope: WarmAiPrematchScope;
     candidates: number;
@@ -68,6 +90,7 @@ export async function warmAiPrematchInsights(
     generated: number;
     cached: number;
     fallback: number;
+    unavailable: number;
     errors: number;
   };
 }> {
@@ -76,6 +99,7 @@ export async function warmAiPrematchInsights(
   let generated = 0;
   let cached = 0;
   let fallback = 0;
+  let unavailable = 0;
   let errors = 0;
   let processed = 0;
   const startedAt = Date.now();
@@ -99,6 +123,8 @@ export async function warmAiPrematchInsights(
         generated += 1;
       } else if (result.status === "FALLBACK") {
         fallback += 1;
+      } else if (result.status === "UNAVAILABLE") {
+        unavailable += 1;
       }
     } catch (error) {
       errors += 1;
@@ -114,17 +140,25 @@ export async function warmAiPrematchInsights(
     generated,
     cached,
     fallback,
+    unavailable,
     errors,
   };
 
   Sentry.addBreadcrumb({
     category: "ai.warm",
     message: "warm_ai_prematch_completed",
-    level: fallback > 0 || errors > 0 ? "warning" : "info",
+    level: fallback > 0 || errors > 0 || unavailable > 0 ? "warning" : "info",
     data: stats,
   });
 
-  if (fallback > 0 || errors > 0) {
+  const failedUnits = fallback + errors;
+  const outcome = resolveCronOutcome({
+    failedCount: failedUnits,
+    partialForTimeBudget:
+      stoppedEarly && failedUnits === 0 && generated + cached > 0,
+  });
+
+  if (outcome.degraded) {
     Sentry.captureMessage("warm_ai_prematch_degraded", {
       level: "warning",
       extra: stats,
@@ -132,7 +166,8 @@ export async function warmAiPrematchInsights(
   }
 
   return {
-    ok: true,
+    ok: outcome.ok,
+    degraded: outcome.degraded,
     job: "warm-ai-prematch",
     stats,
   };

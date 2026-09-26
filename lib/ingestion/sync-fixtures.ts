@@ -1,4 +1,4 @@
-import { apiFootballFetchResponse } from "@/lib/api-football/client";
+import { apiFootballFetchAllPagesResponse } from "@/lib/api-football/client";
 import type { RawApiFootballFixture } from "@/lib/api-football/types";
 import {
   competitionSupportsFixtureEvents,
@@ -98,10 +98,11 @@ export async function syncFixtures(
       await throttleProviderRequest();
     }
 
-    const rawFixtures = await apiFootballFetchResponse<RawApiFootballFixture>(
-      "/fixtures",
-      { date }
-    );
+    const rawFixtures =
+      await apiFootballFetchAllPagesResponse<RawApiFootballFixture>(
+        "/fixtures",
+        { date }
+      );
     apiRequests += 1;
 
     const allowlisted = rawFixtures.filter((raw) =>

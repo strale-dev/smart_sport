@@ -452,6 +452,264 @@ export async function readFixturesForTeamsInRangeFromDb(
   return ((data ?? []) as FixtureRow[]).map(mapFixtureRow);
 }
 
+export type TeamFixturesDbQuery = {
+  limit?: number;
+  offset?: number;
+  seasonYear?: number;
+  leagueProviderId?: number;
+  /** Finished vs not-yet-played vs all (default all). */
+  temporal?: "all" | "past" | "upcoming";
+  now?: Date;
+};
+
+const TERMINAL_FIXTURE_STATUSES_DB = ["FT", "AET", "PEN"] as const;
+
+export async function readFixturesForTeamFromDb(
+  teamProviderId: number,
+  query: TeamFixturesDbQuery = {}
+): Promise<Fixture[]> {
+  const client = createAdminClient();
+  const config = getIngestionConfig();
+  const limit = query.limit ?? 200;
+  const offset = query.offset ?? 0;
+  const now = query.now ?? new Date();
+  const nowIso = now.toISOString();
+
+  const { data: team, error: teamError } = await client
+    .from("teams")
+    .select("id")
+    .eq("provider_id", teamProviderId)
+    .maybeSingle();
+
+  if (teamError) {
+    throw new Error(
+      `Failed to resolve team ${teamProviderId}: ${teamError.message}`
+    );
+  }
+
+  if (!team) {
+    return [];
+  }
+
+  const { data: leagues } = await client
+    .from("leagues")
+    .select("id, provider_id")
+    .in("provider_id", [...config.leagueProviderIds]);
+
+  if (!leagues?.length) {
+    return [];
+  }
+
+  let leagueIds = leagues.map((league) => league.id);
+
+  if (query.leagueProviderId != null) {
+    const match = leagues.find(
+      (league) => league.provider_id === query.leagueProviderId
+    );
+    if (!match) {
+      return [];
+    }
+    leagueIds = [match.id];
+  }
+
+  let seasonId: string | null = null;
+  if (query.seasonYear != null) {
+    const { data: seasonRows } = await client
+      .from("seasons")
+      .select("id, league_id")
+      .eq("year", query.seasonYear)
+      .in("league_id", leagueIds);
+
+    if (!seasonRows?.length) {
+      return [];
+    }
+
+    if (query.leagueProviderId != null) {
+      seasonId = seasonRows[0]?.id ?? null;
+    }
+  }
+
+  const teamScope = `home_team_id.eq.${team.id},away_team_id.eq.${team.id}`;
+  let dbQuery = client
+    .from("fixtures")
+    .select(FIXTURE_SELECT)
+    .in("league_id", leagueIds)
+    .or(teamScope);
+
+  if (seasonId) {
+    dbQuery = dbQuery.eq("season_id", seasonId);
+  } else if (query.seasonYear != null) {
+    const seasonIds = (
+      await client
+        .from("seasons")
+        .select("id")
+        .eq("year", query.seasonYear)
+        .in("league_id", leagueIds)
+    ).data?.map((row) => row.id);
+
+    if (!seasonIds?.length) {
+      return [];
+    }
+    dbQuery = dbQuery.in("season_id", seasonIds);
+  }
+
+  const temporal = query.temporal ?? "all";
+  if (temporal === "past") {
+    dbQuery = dbQuery
+      .lte("kickoff_at", nowIso)
+      .in("status", [...TERMINAL_FIXTURE_STATUSES_DB]);
+  } else if (temporal === "upcoming") {
+    dbQuery = dbQuery.gt("kickoff_at", nowIso);
+  }
+
+  const { data, error } = await dbQuery
+    .order("kickoff_at", {
+      ascending: temporal === "upcoming" || temporal === "all",
+    })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    throw new Error(
+      `Failed to read fixtures for team ${teamProviderId}: ${error.message}`
+    );
+  }
+
+  return ((data ?? []) as FixtureRow[]).map(mapFixtureRow);
+}
+
+export type TeamFixtureCoverage = {
+  teamProviderId: number;
+  teamName: string | null;
+  finishedCount: number;
+  upcomingCount: number;
+  totalCount: number;
+  seasonYears: number[];
+  leagueProviderIds: number[];
+  minKickoff: string | null;
+  maxKickoff: string | null;
+  lastLeagueSeasonSync: string | null;
+};
+
+export async function readTeamFixtureCoverageFromDb(
+  teamProviderId: number,
+  now = new Date()
+): Promise<TeamFixtureCoverage | null> {
+  const client = createAdminClient();
+  const nowIso = now.toISOString();
+
+  const { data: team, error: teamError } = await client
+    .from("teams")
+    .select("id, name")
+    .eq("provider_id", teamProviderId)
+    .maybeSingle();
+
+  if (teamError) {
+    throw new Error(
+      `Failed to resolve team ${teamProviderId}: ${teamError.message}`
+    );
+  }
+
+  if (!team) {
+    return null;
+  }
+
+  const { count: totalCount, error: totalError } = await client
+    .from("fixtures")
+    .select("*", { count: "exact", head: true })
+    .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`);
+
+  if (totalError) {
+    throw new Error(`Failed to count team fixtures: ${totalError.message}`);
+  }
+
+  const { count: finishedCount, error: finishedError } = await client
+    .from("fixtures")
+    .select("*", { count: "exact", head: true })
+    .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+    .in("status", [...TERMINAL_FIXTURE_STATUSES_DB]);
+
+  if (finishedError) {
+    throw new Error(
+      `Failed to count finished team fixtures: ${finishedError.message}`
+    );
+  }
+
+  const { count: upcomingCount, error: upcomingError } = await client
+    .from("fixtures")
+    .select("*", { count: "exact", head: true })
+    .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+    .gt("kickoff_at", nowIso);
+
+  if (upcomingError) {
+    throw new Error(
+      `Failed to count upcoming team fixtures: ${upcomingError.message}`
+    );
+  }
+
+  const { data: fixtureSample, error: sampleError } = await client
+    .from("fixtures")
+    .select(
+      `
+      kickoff_at,
+      league:leagues (provider_id),
+      season:seasons (year)
+    `
+    )
+    .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+    .order("kickoff_at", { ascending: true })
+    .limit(5000);
+
+  if (sampleError) {
+    throw new Error(
+      `Failed to sample team fixtures for coverage: ${sampleError.message}`
+    );
+  }
+
+  const seasonYears = new Set<number>();
+  const leagueProviderIds = new Set<number>();
+  let minKickoff: string | null = null;
+  let maxKickoff: string | null = null;
+
+  for (const row of fixtureSample ?? []) {
+    const kickoff = row.kickoff_at as string;
+    if (!minKickoff || kickoff < minKickoff) {
+      minKickoff = kickoff;
+    }
+    if (!maxKickoff || kickoff > maxKickoff) {
+      maxKickoff = kickoff;
+    }
+
+    const league = Array.isArray(row.league) ? row.league[0] : row.league;
+    const season = Array.isArray(row.season) ? row.season[0] : row.season;
+    if (league?.provider_id != null) {
+      leagueProviderIds.add(league.provider_id);
+    }
+    if (season?.year != null) {
+      seasonYears.add(season.year);
+    }
+  }
+
+  const { data: syncRow } = await client
+    .from("ingestion_league_season_state")
+    .select("last_sync_at")
+    .order("last_sync_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return {
+    teamProviderId,
+    teamName: team.name,
+    finishedCount: finishedCount ?? 0,
+    upcomingCount: upcomingCount ?? 0,
+    totalCount: totalCount ?? 0,
+    seasonYears: [...seasonYears].sort((a, b) => b - a),
+    leagueProviderIds: [...leagueProviderIds].sort((a, b) => a - b),
+    minKickoff,
+    maxKickoff,
+    lastLeagueSeasonSync: syncRow?.last_sync_at ?? null,
+  };
+}
+
 export async function readFixtureByProviderIdFromDb(
   providerId: number
 ): Promise<Fixture | null> {

@@ -5,7 +5,10 @@ import {
   mapFixtureStatistics,
   mapLineup,
 } from "@/lib/api-football/adapter";
-import { apiFootballFetchResponse } from "@/lib/api-football/client";
+import {
+  apiFootballFetchAllPagesResponse,
+  apiFootballFetchResponse,
+} from "@/lib/api-football/client";
 import type {
   RawApiFootballEvent,
   RawApiFootballFixture,
@@ -31,10 +34,10 @@ export async function getFixtureById(id: number): Promise<Fixture | null> {
 }
 
 export async function listFixturesByDate(date: string): Promise<Fixture[]> {
-  const response = await apiFootballFetchResponse<RawApiFootballFixture>(
-    "/fixtures",
-    { date }
-  );
+  const response =
+    await apiFootballFetchAllPagesResponse<RawApiFootballFixture>("/fixtures", {
+      date,
+    });
   return response.map(mapFixture);
 }
 
@@ -100,11 +103,32 @@ export async function listFixturesByLeagueSeason(
   leagueId: number,
   season: number
 ): Promise<Fixture[]> {
-  const response = await apiFootballFetchResponse<RawApiFootballFixture>(
-    "/fixtures",
-    { league: leagueId, season }
-  );
+  const response =
+    await apiFootballFetchAllPagesResponse<RawApiFootballFixture>("/fixtures", {
+      league: leagueId,
+      season,
+    });
 
+  return response
+    .map(mapFixture)
+    .sort((left, right) => left.kickoffAt.localeCompare(right.kickoffAt));
+}
+
+export async function listFixturesByTeamSeasonRaw(
+  teamId: number,
+  season: number
+): Promise<RawApiFootballFixture[]> {
+  return apiFootballFetchAllPagesResponse<RawApiFootballFixture>("/fixtures", {
+    team: teamId,
+    season,
+  });
+}
+
+export async function listFixturesByTeamSeason(
+  teamId: number,
+  season: number
+): Promise<Fixture[]> {
+  const response = await listFixturesByTeamSeasonRaw(teamId, season);
   return response
     .map(mapFixture)
     .sort((left, right) => left.kickoffAt.localeCompare(right.kickoffAt));

@@ -105,6 +105,13 @@ export function providerTeamFixturesKey(
   return `provider:team:${teamId}:fixtures:${fromDate}:${toDateExclusive}`;
 }
 
+export function providerTeamFixturesQueryKey(
+  teamId: number,
+  queryKey: string
+): string {
+  return `provider:team:${teamId}:fixtures:q:${queryKey}`;
+}
+
 export function providerTeamSquadKey(teamId: number): string {
   return `provider:team:${teamId}:squad`;
 }

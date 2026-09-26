@@ -27,8 +27,12 @@ import {
   buildPrematchFeatures,
   scorePrematchFromFeatures,
 } from "@/lib/models/features";
-import { PREMATCH_SCHEDULED_LEAD_MS } from "@/lib/ai/prematch-availability";
+import {
+  hasMinimumModelSignal,
+  PREMATCH_SCHEDULED_LEAD_MS,
+} from "@/lib/ai/prematch-availability";
 import { computePrematchFeatureFingerprint } from "@/lib/models/prematch-feature-fingerprint";
+import { isGenericBaselineWinProbabilities } from "@/lib/models/prematch-model-signal";
 import type { PrematchFeatureVector } from "@/types/prediction";
 
 const PREMATCH_STATUSES = new Set(["NS", "TBD"]);
@@ -177,12 +181,21 @@ async function readFreshPrematch(
     return null;
   }
 
-  return mapPredictionRowToResult(
+  const mapped = mapPredictionRowToResult(
     latest,
     fixtureExternalId,
     modelVersion ?? "1.0.0",
     true
   );
+
+  if (
+    isGenericBaselineWinProbabilities(mapped.winProbabilities) &&
+    hasMinimumModelSignal(snapshot)
+  ) {
+    return null;
+  }
+
+  return mapped;
 }
 
 async function waitForConcurrentPrediction(
