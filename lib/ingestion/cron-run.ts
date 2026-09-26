@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 
 import { ApiFootballError } from "@/lib/api-football/errors";
 import { verifyCronRequest } from "@/lib/ingestion/cron-auth";
+import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
+import { captureIngestionCronCompleted } from "@/lib/posthog/server";
 import { acquireLock, releaseLock } from "@/lib/redis/lock";
 
 export type CronJobResult = {
@@ -48,6 +50,14 @@ export async function runCronRoute(
   const acquired = await acquireLock(lockKey, lockTtlSeconds);
 
   if (!acquired) {
+    logIngestionEvent({
+      job_name: options.jobName,
+      stage: "lock",
+      skipped: true,
+      ok: true,
+      error_type: "lock_not_acquired",
+      reason: "Another cron instance is already running.",
+    });
     return NextResponse.json({
       ok: true,
       job: options.jobName,
@@ -58,9 +68,32 @@ export async function runCronRoute(
 
   try {
     const result = await options.run();
+    logIngestionEvent({
+      job_name: options.jobName,
+      stage: "complete",
+      ok: result.ok,
+      degraded: result.degraded,
+      skipped: result.skipped,
+      reason: result.reason,
+      detail: result.stats ? { stats: result.stats } : undefined,
+    });
+    void captureIngestionCronCompleted({
+      jobName: options.jobName,
+      ok: result.ok,
+      degraded: result.degraded,
+      skipped: result.skipped,
+      stats: result.stats,
+    }).catch(() => {});
     return NextResponse.json(result, { status: cronJobHttpStatus(result) });
   } catch (error) {
     console.error(`[cron/${options.jobName}]`, error);
+    logIngestionEvent({
+      job_name: options.jobName,
+      stage: "exception",
+      ok: false,
+      error_type: "cron_exception",
+      reason: error instanceof Error ? error.message : "Unknown cron error",
+    });
     const payload: Record<string, unknown> = {
       ok: false,
       job: options.jobName,

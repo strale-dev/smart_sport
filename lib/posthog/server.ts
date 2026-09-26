@@ -153,6 +153,41 @@ export async function capturePushLifecycleEvent(
   await posthog.shutdown();
 }
 
+export type IngestionCronCompletedEventInput = {
+  jobName: string;
+  ok: boolean;
+  degraded?: boolean;
+  skipped?: boolean;
+  stats?: Record<string, unknown>;
+};
+
+export async function captureIngestionCronCompleted(
+  input: IngestionCronCompletedEventInput
+): Promise<void> {
+  const posthogKey = getServerEnv().NEXT_PUBLIC_POSTHOG_KEY;
+
+  if (!isPostHogProjectKey(posthogKey)) {
+    return;
+  }
+
+  const posthog = getPostHog();
+
+  posthog.capture({
+    distinctId: "ingestion-cron",
+    event: "ingestion_cron_completed",
+    properties: {
+      job_name: input.jobName,
+      ok: input.ok,
+      degraded: input.degraded ?? false,
+      skipped: input.skipped ?? false,
+      stats: input.stats ?? null,
+      app_env: env.NEXT_PUBLIC_APP_ENV,
+    },
+  });
+
+  await posthog.shutdown();
+}
+
 export async function captureBillingLifecycleEvent(
   input: BillingLifecycleEventInput
 ): Promise<void> {

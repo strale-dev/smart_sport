@@ -8,6 +8,7 @@ import {
   getIngestionConfig,
   isLeagueInAllowlist,
 } from "@/lib/ingestion/config";
+import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import { ingestFixtureFromRaw } from "@/lib/ingestion/upsert";
 import {
@@ -41,6 +42,14 @@ export type IngestLiveCenterTickResult = {
 
 export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult> {
   if (!isLivePollingEnabled()) {
+    logIngestionEvent({
+      job_name: "sync-live-center",
+      stage: "gate",
+      skipped: true,
+      ok: true,
+      error_type: "live_polling_disabled",
+      reason: "live_polling_disabled",
+    });
     return {
       ok: true,
       skipped: true,

@@ -10,7 +10,7 @@ export type PrematchReadinessSnapshot = {
   evaluatedAt: string;
 };
 
-function buildReadinessFromFeatures(
+export function buildReadinessFromFeatures(
   features: Awaited<ReturnType<typeof buildPrematchFeatures>>
 ): PrematchReadinessSnapshot {
   const evaluatedAt = new Date().toISOString();

@@ -39,6 +39,7 @@ import type {
 } from "@/lib/ai/schemas";
 import { validateAIInsightPayload } from "@/lib/ai/schemas";
 import { canGeneratePrematchNarrative } from "@/lib/ai/prematch-availability";
+import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
 import {
   canBackfillMissingPrematchInsight,
   canGeneratePrematchInsight,
@@ -82,6 +83,16 @@ function reportPrematchInsightOutcome(
   fixtureExternalId: number,
   extra: Record<string, unknown>
 ): void {
+  const errorType =
+    outcome === "fallback" ? "llm_fallback" : "generation_not_allowed";
+  logIngestionEvent({
+    job_name: "prematch-insight",
+    stage: outcome,
+    fixture_id: fixtureExternalId,
+    error_type: errorType,
+    ok: outcome !== "fallback",
+    detail: extra,
+  });
   Sentry.captureMessage(`prematch_insight_${outcome}`, {
     level: outcome === "fallback" ? "warning" : "info",
     extra: {

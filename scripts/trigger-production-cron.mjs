@@ -9,6 +9,32 @@ const REQUEST_TIMEOUT_MS = 58_000;
 const MAX_ATTEMPTS = 3;
 const RETRYABLE_HTTP = new Set([408, 429, 500, 502, 503, 504]);
 
+/** Keep in sync with lib/ingestion/gha-cron-trigger.ts (unit-tested). */
+function parseCronTriggerJsonBody(body) {
+  if (!body.trim()) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(body);
+    if (parsed && typeof parsed === "object") {
+      return parsed;
+    }
+  } catch {
+    // Non-JSON success body — treat as success.
+  }
+  return null;
+}
+
+function isGhaCronTriggerFailure(httpOk, payload) {
+  if (!httpOk) {
+    return true;
+  }
+  if (payload && payload.ok === false && !payload.skipped) {
+    return true;
+  }
+  return false;
+}
+
 function normalizeSiteUrl(raw) {
   const trimmed = (raw ?? DEFAULT_SITE_URL).trim();
   if (!trimmed) {
@@ -62,16 +88,12 @@ for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
 
     if (response.ok) {
       console.log(body || "(empty body, HTTP 2xx)");
-      try {
-        const payload = body ? JSON.parse(body) : null;
-        if (payload && payload.ok === false && !payload.skipped) {
-          console.error(
-            `::error::Cron ${cronPath} returned HTTP 200 but ok:false (degraded=${payload.degraded ?? "n/a"})`
-          );
-          process.exit(1);
-        }
-      } catch {
-        // Non-JSON success body — treat as success.
+      const payload = parseCronTriggerJsonBody(body);
+      if (isGhaCronTriggerFailure(true, payload)) {
+        console.error(
+          `::error::Cron ${cronPath} returned HTTP 200 but ok:false (degraded=${payload?.degraded ?? "n/a"})`
+        );
+        process.exit(1);
       }
       process.exit(0);
     }

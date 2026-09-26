@@ -74,6 +74,16 @@ Product events used for DAU/retention: [`lib/posthog/product-events.ts`](../lib/
 
 ---
 
+## RCA Phase 3 — Ingestion & cron ops
+
+Structured **console** logs use `[ingestion]` JSON lines with `job_name`, `stage`, optional `fixture_id`, and `error_type` (`lib/ingestion/ingestion-observability.ts`). Use Vercel / GHA log search on those fields.
+
+| Event                      | Trigger                                    | Properties                                                  | Source                                         | Funnel        |
+| -------------------------- | ------------------------------------------ | ----------------------------------------------------------- | ---------------------------------------------- | ------------- |
+| `ingestion_cron_completed` | Any `/api/cron/*` route finishes a job run | `job_name`, `ok`, `degraded`, `skipped`, `stats`, `app_env` | `lib/ingestion/cron-run.ts` via server PostHog | Ingestion SLO |
+
+---
+
 ## Phase 0–1 (reference)
 
 | Event                    | Trigger                          | Source                  |

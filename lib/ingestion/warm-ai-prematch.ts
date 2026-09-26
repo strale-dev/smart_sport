@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { generatePrematchInsight } from "@/lib/services/aiService";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
+import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
 
 export type WarmAiPrematchScope = "daily" | "imminent";
 
@@ -123,12 +124,40 @@ export async function warmAiPrematchInsights(
         generated += 1;
       } else if (result.status === "FALLBACK") {
         fallback += 1;
+        logIngestionEvent({
+          job_name: "warm-ai-prematch",
+          stage: "fixture_unit",
+          fixture_id: fixtureId,
+          ok: false,
+          error_type: "llm_fallback",
+          detail: { scope, status: result.status },
+        });
       } else if (result.status === "UNAVAILABLE") {
         unavailable += 1;
+        logIngestionEvent({
+          job_name: "warm-ai-prematch",
+          stage: "fixture_unit",
+          fixture_id: fixtureId,
+          ok: true,
+          error_type: "generation_not_allowed",
+          detail: {
+            scope,
+            status: result.status,
+            reason: "reason" in result ? result.reason : undefined,
+          },
+        });
       }
     } catch (error) {
       errors += 1;
       console.error(`[warm-ai-prematch] fixture ${fixtureId}`, error);
+      logIngestionEvent({
+        job_name: "warm-ai-prematch",
+        stage: "fixture_unit",
+        fixture_id: fixtureId,
+        ok: false,
+        error_type: "unknown",
+        reason: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   }
 

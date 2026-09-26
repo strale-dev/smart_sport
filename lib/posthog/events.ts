@@ -34,6 +34,7 @@ export const POSTHOG_EVENTS = {
   trialConverted: "trial_converted",
   subscriptionCancelled: "subscription_cancelled",
   predictionsCenterViewed: "predictions_center_viewed",
+  ingestionCronCompleted: "ingestion_cron_completed",
 } as const;
 
 export type PostHogEventName =
