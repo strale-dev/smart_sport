@@ -10,7 +10,8 @@ import {
 } from "@/lib/fixtures/grouping";
 import { providerFixturesRangeKey } from "@/lib/redis/keys";
 import { buildFixturesHref, parseFixturesParams } from "@/lib/fixtures/url";
-import { buildFixturesWindow } from "@/lib/fixtures/window";
+import { FIXTURES_WINDOW_DAYS } from "@/lib/fixtures/constants";
+import { addUtcDays, buildFixturesWindow } from "@/lib/fixtures/window";
 import type { Fixture } from "@/types/domain";
 
 function makeFixture(overrides: Partial<Fixture> = {}): Fixture {
@@ -82,11 +83,12 @@ describe("buildFixturesHref", () => {
 });
 
 describe("buildFixturesWindow", () => {
-  it("uses UTC midnight boundaries for a 7-day window", () => {
+  it("uses UTC midnight boundaries for the fixtures window", () => {
     const now = new Date("2026-09-02T14:30:00.000Z");
+    const fromDate = "2026-09-02";
     expect(buildFixturesWindow(now)).toEqual({
-      fromDate: "2026-09-02",
-      toDateExclusive: "2026-09-10",
+      fromDate,
+      toDateExclusive: addUtcDays(fromDate, FIXTURES_WINDOW_DAYS + 1),
     });
   });
 });
@@ -99,8 +101,12 @@ describe("buildFixturesRangeCacheKey", () => {
     expect(buildFixturesRangeCacheKey(morning)).toBe(
       buildFixturesRangeCacheKey(evening)
     );
+    const fromDate = "2026-09-02";
     expect(buildFixturesRangeCacheKey(morning)).toBe(
-      providerFixturesRangeKey("2026-09-02", "2026-09-10")
+      providerFixturesRangeKey(
+        fromDate,
+        addUtcDays(fromDate, FIXTURES_WINDOW_DAYS + 1)
+      )
     );
   });
 
