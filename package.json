@@ -39,6 +39,8 @@
     "build:competition-registry": "tsx --import ./scripts/preload-env.ts ./scripts/build-competition-registry.ts",
     "probe:competition-capabilities": "tsx --import ./scripts/preload-env.ts ./scripts/probe-competition-capabilities.ts",
     "sync:fixtures": "tsx --import ./scripts/preload-env.ts ./scripts/run-sync-fixtures.ts",
+    "sync:fixtures-today": "tsx --import ./scripts/preload-env.ts ./scripts/run-sync-fixtures-today.ts",
+    "sync:warm-ai-prematch": "tsx --import ./scripts/preload-env.ts ./scripts/run-warm-ai-prematch.ts",
     "sync:standings": "tsx --import ./scripts/preload-env.ts ./scripts/run-sync-standings.ts",
     "sync:match-details": "tsx --import ./scripts/preload-env.ts ./scripts/run-sync-match-details.ts",
     "repair:fixture-event-players": "tsx --import ./scripts/preload-env.ts ./scripts/repair-fixture-event-players.ts",

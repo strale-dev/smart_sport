@@ -1,6 +1,6 @@
 # RCA Phase 4 — Production verification report
 
-**Verified at:** 2026-09-26T13:34:53.560Z
+**Verified at:** 2026-09-26T13:45:09.183Z
 **Production URL:** https://scorence.app
 
 ## Coverage (Postgres)
@@ -8,8 +8,8 @@
 | Metric                         | Value |
 | ------------------------------ | ----: |
 | Upcoming fixtures (7d, NS/TBD) |   201 |
-| aiEligible upcoming            |     0 |
-| Upcoming with PREMATCH insight |     1 |
+| aiEligible upcoming            |    51 |
+| Upcoming with PREMATCH insight |     7 |
 | Stuck sync runs (>2h running)  |     0 |
 
 ## Cron route probes (no auth)
@@ -25,15 +25,11 @@
 
 | Bucket  | Provider ID | Status | aiEligible | Insight | Prediction |
 | ------- | ----------: | ------ | ---------- | ------- | ---------- |
-| working |     1606668 | FT     | false      | true    | true       |
 | working |     1555720 | FT     | false      | true    | true       |
-| broken  |     1564327 | NS     | false      | false   | false      |
-| broken  |     1638170 | NS     | false      | false   | false      |
+| working |     1606673 | FT     | false      | true    | true       |
+| broken  |     1638170 | NS     | true       | false   | false      |
+| broken  |     1641135 | NS     | true       | false   | false      |
 
 ## Result
 
 **PASS** (no blocking failures)
-
-### Warnings
-
-- No upcoming fixtures marked aiEligible — run sync-fixtures-today / readiness refresh on production

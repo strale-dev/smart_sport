@@ -54,6 +54,9 @@ npm.cmd run ingest:dev-qa -- --force
 | `verify:ingestion`             | **Phase 1 gate**: counts + fixtures UTC today (exit 1 if empty)                                         | 0                                                |
 | `bootstrap:static-data`        | Leagues + current seasons (idempotent)                                                                  | ~7+ req                                          |
 | `sync:fixtures`                | Allowlisted leagues, dev window today ±1 day                                                            | ~3 req                                           |
+| `sync:fixtures-today`          | Today’s allowlist + **prematch readiness** refresh (cron parity)                                        | ~1+ req                                          |
+| `sync:warm-ai-prematch`        | Warm shared PREMATCH insights; `--scope=daily` or `imminent`                                            | OpenAI + DB                                      |
+| `rca:phase4:verify`            | RCA prod route probes + DB coverage report                                                              | 0 DB; 4 HTTP probes                              |
 | `sync:standings`               | Standings for allowlist                                                                                 | ~7 req (Free plan may block current season)      |
 | `sync:match-details`           | FT fixtures in recent window (cron-style)                                                               | High — batch                                     |
 | `sync:lineups`                 | NS/TBD fixtures kicking off within 90 min (cron-style); skips complete lineups outside the final 60 min | ~1 req per fixture synced                        |
