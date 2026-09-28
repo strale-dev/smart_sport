@@ -41,6 +41,8 @@ type AIHeroCardProps = {
   awayTeam: Pick<TeamRef, "name" | "code">;
   liveWinProbabilities?: WinProbabilities | null;
   supplementalMessage?: string | null;
+  contextStale?: boolean;
+  isRefreshing?: boolean;
 };
 
 export function AIHeroCard({
@@ -51,8 +53,11 @@ export function AIHeroCard({
   awayTeam,
   liveWinProbabilities = null,
   supplementalMessage = null,
+  contextStale = false,
+  isRefreshing = false,
 }: AIHeroCardProps) {
   const metrics = resolveInsightDisplayMetrics(insight, prediction);
+  const showModelStripe = prediction != null;
 
   return (
     <AIHeroShell variant="default">
@@ -77,6 +82,9 @@ export function AIHeroCard({
             insightMode={insightMode}
             insightId={insight.id}
           />
+          {contextStale && isRefreshing ? (
+            <Badge variant="outline">Updating for latest match data…</Badge>
+          ) : null}
         </div>
         <AIHeroMotionSection motionKey={insight.id}>
           <CardDescription className="text-foreground/90 max-w-3xl text-base">
@@ -89,14 +97,16 @@ export function AIHeroCard({
       </CardHeader>
 
       <CardContent className="space-y-5">
-        <AIHeroMotionSection motionKey={`${insight.id}-probs`}>
-          <WinProbabilitiesBar
-            probabilities={metrics.winProbabilities}
-            winOutcome={metrics.winOutcome}
-            homeTeam={homeTeam}
-            awayTeam={awayTeam}
-          />
-        </AIHeroMotionSection>
+        {showModelStripe ? (
+          <AIHeroMotionSection motionKey={`${insight.id}-probs`}>
+            <WinProbabilitiesBar
+              probabilities={metrics.winProbabilities}
+              winOutcome={metrics.winOutcome}
+              homeTeam={homeTeam}
+              awayTeam={awayTeam}
+            />
+          </AIHeroMotionSection>
+        ) : null}
 
         {liveWinProbabilities && insightMode === "historical" ? (
           <div className="border-border/60 space-y-2 border-t pt-4">
@@ -116,27 +126,29 @@ export function AIHeroCard({
           <p className="text-muted-foreground text-sm">{supplementalMessage}</p>
         ) : null}
 
-        <div className="text-muted-foreground grid gap-2 text-sm sm:grid-cols-3">
-          <p>
-            Expected goals:{" "}
-            {formatExpectedGoalsRange(metrics.expectedGoalsRange)}
-            {metrics.expectedGoalsTotal != null
-              ? ` (μ ${metrics.expectedGoalsTotal.toFixed(1)})`
-              : null}
-          </p>
-          {metrics.over2Prob != null ? (
-            <p>Over 2.5: {formatWinProbability(metrics.over2Prob)}</p>
-          ) : null}
-          {metrics.over3Prob != null ? (
-            <p>Over 3.5: {formatWinProbability(metrics.over3Prob)}</p>
-          ) : null}
-          {metrics.weakerTeamScoringChance != null ? (
+        {showModelStripe ? (
+          <div className="text-muted-foreground grid gap-2 text-sm sm:grid-cols-3">
             <p>
-              Underdog threat:{" "}
-              {formatWinProbability(metrics.weakerTeamScoringChance)}
+              Expected goals:{" "}
+              {formatExpectedGoalsRange(metrics.expectedGoalsRange)}
+              {metrics.expectedGoalsTotal != null
+                ? ` (μ ${metrics.expectedGoalsTotal.toFixed(1)})`
+                : null}
             </p>
-          ) : null}
-        </div>
+            {metrics.over2Prob != null ? (
+              <p>Over 2.5: {formatWinProbability(metrics.over2Prob)}</p>
+            ) : null}
+            {metrics.over3Prob != null ? (
+              <p>Over 3.5: {formatWinProbability(metrics.over3Prob)}</p>
+            ) : null}
+            {metrics.weakerTeamScoringChance != null ? (
+              <p>
+                Underdog threat:{" "}
+                {formatWinProbability(metrics.weakerTeamScoringChance)}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <AnalysisDataCoverage
           coverage={insight.dataCoverage}

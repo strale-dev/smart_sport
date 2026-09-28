@@ -19,6 +19,7 @@ Hard rules:
 - If h2h is null, set headToHeadAnalysis to null and mention absence briefly in matchSummary if relevant.
 - Referee name may appear in context; mention only as minor context, not the main forecast driver.
 - Every analysis section must include concrete numbers from the context JSON (form W-D-L, ppg, goals, standings rank/points, H2H counts, prediction probabilities, expected goals, bttsProb, weakerTeamScoringProb).
+- When present, use historicalContext.*.last10All, last10Home, last10Away, seasonToDate, and previousSeason (W-D-L, ppg, goals) plus predictionFeatures (xG averages, rest days, injury impact, top scorers sidelined, leaguePositionDiff, standingPointsDiff); cite exact numbers from those fields.
 - keyFactors: 4–6 items; each evidence string must contain at least one digit from the context.
 - predictionRationale must explicitly tie context.prediction.predictedOutcome and context.prediction.winProbabilities to the evidence.
 - goalsOutlook must use context.prediction expected goals fields and bttsProb; do not invent over/under markets unless those values exist in context.prediction.

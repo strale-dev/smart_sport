@@ -53,7 +53,7 @@ describe("status-map", () => {
     }
   });
 
-  it("backfills a missing historical insight only for a signed-in user", () => {
+  it("backfills a missing historical insight for signed-in users and cron", () => {
     expect(canBackfillMissingPrematchInsight("NS")).toBe(false);
     expect(
       historicalPrematchWriteAction({
@@ -89,6 +89,6 @@ describe("status-map", () => {
         hasUserId: false,
         hasStoredPrematch: false,
       })
-    ).toBe("generation_not_allowed");
+    ).toBe("backfill");
   });
 });

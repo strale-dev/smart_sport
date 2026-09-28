@@ -95,6 +95,7 @@ export function AIInsightProvider({
   );
   const ensureAttemptedRef = useRef(false);
   const ensureInFlightRef = useRef(false);
+  const prevShouldAutoGenerateRef = useRef(false);
 
   const liveInsightQuery = useQuery({
     queryKey: liveKeys.liveInsight(fixtureId),
@@ -309,6 +310,15 @@ export function AIInsightProvider({
   );
 
   useEffect(() => {
+    const prev = prevShouldAutoGenerateRef.current;
+    const next = displayExperience.shouldAutoGenerateNarrative;
+    prevShouldAutoGenerateRef.current = next;
+    if (!prev && next) {
+      ensureAttemptedRef.current = false;
+    }
+  }, [displayExperience.shouldAutoGenerateNarrative]);
+
+  useEffect(() => {
     if (!prematchQueryEnabled) {
       return;
     }
@@ -325,6 +335,38 @@ export function AIInsightProvider({
 
     const timer = window.setTimeout(() => {
       void ensurePrematchInsight(data.prediction);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    canEnsurePrematch,
+    displayExperience.shouldAutoGenerateNarrative,
+    ensurePrematchInsight,
+    prematchInsightQuery.data,
+    prematchQueryEnabled,
+  ]);
+
+  useEffect(() => {
+    if (!prematchQueryEnabled) {
+      return;
+    }
+
+    const data = prematchInsightQuery.data;
+    if (
+      !data ||
+      data.status !== "OK" ||
+      !data.contextStale ||
+      !canEnsurePrematch ||
+      !displayExperience.shouldAutoGenerateNarrative
+    ) {
+      return;
+    }
+
+    ensureAttemptedRef.current = false;
+    const timer = window.setTimeout(() => {
+      void ensurePrematchInsight(data.prediction ?? undefined);
     }, 0);
 
     return () => {

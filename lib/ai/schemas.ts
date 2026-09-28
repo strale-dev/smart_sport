@@ -261,9 +261,11 @@ export type PrematchInsightResponse =
   | {
       status: "OK";
       insight: StoredAIInsight;
-      prediction: import("@/types/prediction").PrematchPredictionResult;
+      prediction: import("@/types/prediction").PrematchPredictionResult | null;
       cached: boolean;
       insightMode: PrematchInsightMode;
+      /** True when a newer context_hash exists but an older stored narrative is shown. */
+      contextStale?: boolean;
     }
   | {
       status: "MISS";

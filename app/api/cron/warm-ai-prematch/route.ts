@@ -11,7 +11,13 @@ export const maxDuration = 60;
 
 function parseWarmScope(request: NextRequest): WarmAiPrematchScope {
   const raw = request.nextUrl.searchParams.get("scope");
-  return raw === "imminent" ? "imminent" : "daily";
+  if (raw === "imminent") {
+    return "imminent";
+  }
+  if (raw === "backfill") {
+    return "backfill";
+  }
+  return "daily";
 }
 
 export async function GET(request: NextRequest) {

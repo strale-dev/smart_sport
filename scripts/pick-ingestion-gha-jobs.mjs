@@ -50,6 +50,11 @@ const WARM_ROWS = [
     path: "/api/cron/warm-ai-prematch?scope=daily",
     schedule: "0 */6 * * *",
   },
+  {
+    id: "warm-ai-prematch-backfill",
+    path: "/api/cron/warm-ai-prematch?scope=backfill",
+    schedule: "0 */6 * * *",
+  },
 ];
 
 const LIVE_IDS = new Set([

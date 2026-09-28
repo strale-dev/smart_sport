@@ -1,16 +1,25 @@
 import * as Sentry from "@sentry/nextjs";
 
+import { FINISHED_STATUSES, LIVE_STATUSES } from "@/lib/ai/status-map";
+import type { FixtureStatus } from "@/types/domain";
 import { generatePrematchInsight } from "@/lib/services/aiService";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
 import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
 
-export type WarmAiPrematchScope = "daily" | "imminent";
+export type WarmAiPrematchScope = "daily" | "imminent" | "backfill";
 
 /** Leave headroom under route maxDuration (60s) and GHA trigger timeout (58s). */
 const RUN_BUDGET_MS = 52_000;
 const DAILY_MAX_FIXTURES = 40;
 const IMMINENT_MAX_FIXTURES = 25;
+const BACKFILL_MAX_FIXTURES = 30;
+const BACKFILL_LOOKBACK_MS = 7 * 86_400_000;
+
+const BACKFILL_STATUSES: FixtureStatus[] = [
+  ...LIVE_STATUSES,
+  ...FINISHED_STATUSES,
+];
 
 export function warmWindowBoundsForScope(
   scope: WarmAiPrematchScope,
@@ -23,6 +32,13 @@ export function warmWindowBoundsForScope(
     return {
       from: new Date(now).toISOString(),
       to: new Date(now + 90 * 60_000).toISOString(),
+    };
+  }
+
+  if (scope === "backfill") {
+    return {
+      from: new Date(now - BACKFILL_LOOKBACK_MS).toISOString(),
+      to: new Date(now).toISOString(),
     };
   }
 
@@ -51,9 +67,62 @@ function sortWarmCandidates(rows: WarmFixtureRow[]): WarmFixtureRow[] {
   });
 }
 
+async function loadBackfillFixturesWithoutInsight(
+  limit: number
+): Promise<number[]> {
+  const client = createAdminClient();
+  const { from, to } = warmWindowBoundsForScope("backfill");
+
+  const { data: fixtures, error } = await client
+    .from("fixtures")
+    .select("id, provider_id, kickoff_at")
+    .in("status", BACKFILL_STATUSES)
+    .gte("kickoff_at", from)
+    .lte("kickoff_at", to)
+    .order("kickoff_at", { ascending: false })
+    .limit(limit * 4);
+
+  if (error) {
+    throw new Error(`Failed to load backfill fixtures: ${error.message}`);
+  }
+
+  const rows = fixtures ?? [];
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const fixtureUuids = rows.map((row) => row.id);
+  const { data: insightRows, error: insightError } = await client
+    .from("ai_insights")
+    .select("fixture_id")
+    .eq("type", "PREMATCH")
+    .in("fixture_id", fixtureUuids);
+
+  if (insightError) {
+    throw new Error(
+      `Failed to load backfill insight coverage: ${insightError.message}`
+    );
+  }
+
+  const withInsight = new Set(
+    (insightRows ?? [])
+      .map((row) => row.fixture_id)
+      .filter((id): id is string => id != null)
+  );
+
+  return rows
+    .filter((row) => !withInsight.has(row.id))
+    .slice(0, limit)
+    .map((row) => row.provider_id);
+}
+
 async function loadFixturesInScope(
   scope: WarmAiPrematchScope
 ): Promise<number[]> {
+  if (scope === "backfill") {
+    return loadBackfillFixturesWithoutInsight(BACKFILL_MAX_FIXTURES);
+  }
+
   const client = createAdminClient();
   const { from, to } = warmWindowBoundsForScope(scope);
   const limit =
