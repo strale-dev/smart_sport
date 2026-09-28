@@ -249,6 +249,15 @@ Fixture (fixtures.status ∈ NS/TBD/LIVE/FT/…)
 
 **Smoke (dev DB):** fixture `provider_id` **1611380** (`d41b4c5a-…`) ima **4** distinct PREMATCH `context_hash` — RC-6 stale fallback ciljano pokriva ovaj obrazac posle deploy-a.
 
+### 2.6 Otvorene stavke (post-implementacija Faze 2)
+
+| ID                      | Stavka                                                                          | Status                                 | Napomena                                                                                                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **RC-7 (follow-up)**    | Insight postoji, `prediction` je `null`                                         | **Otvoreno**                           | Faza 2 rešila samo **read-path** i **UI toleranciju** (`OK` + sakriven model stripe). **Izvor nije rešen** (retention, official prematch row, backfill bez prediction). |
+| **RC-9**                | Warm cap **40 / 25** vs. coverage gap                                           | **Odloženo — čeka odluku operatora**   | Cap nije podignut niti uveden queue u Fazi 2. Backfill (30 / 6h) delimično ublažava FT backlog.                                                                         |
+| **POST prematch abuse** | Nema **per-user** rate limita na `POST /api/ai/prematch/[fixtureId]`            | **Otvoreno**                           | Authenticated abuse troši **OpenAI projektni ključ** (prematch generisanje ne gate-uje free-tier `assertCanGenerateAi`). Auth + lock po fixture-u, bez IP cap-a.        |
+| **context_hash churn**  | Hash se menja **2–6×** pre utakmice (lineups, standings, prediction refresh, …) | **Otvoreno — prati stvarnu potrošnju** | Svaka promena hash-a = potencijalno **novi LLM poziv** (novi red po `(fixture_id, type, context_hash)`). RC-6 smanjuje prazan UI, ne sprečava novi hash.                |
+
 ## Faza 3 — AI Prediction Correctness
 
 (popuniti)
