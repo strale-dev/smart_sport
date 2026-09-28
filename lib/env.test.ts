@@ -43,6 +43,19 @@ describe("publicEnvSchema", () => {
     );
     expect(() => parsePublicEnv(incomplete)).toThrow(/NEXT_PUBLIC_SITE_URL/);
   });
+
+  it("derives site URL and app env from Vercel when unset", () => {
+    const parsed = parsePublicEnv({
+      ...validPublicEnv,
+      NEXT_PUBLIC_SITE_URL: undefined,
+      NEXT_PUBLIC_APP_ENV: undefined,
+      VERCEL_URL: "my-preview.vercel.app",
+      VERCEL_ENV: "preview",
+    });
+
+    expect(parsed.NEXT_PUBLIC_SITE_URL).toBe("https://my-preview.vercel.app");
+    expect(parsed.NEXT_PUBLIC_APP_ENV).toBe("development");
+  });
 });
 
 describe("serverEnvSchema", () => {

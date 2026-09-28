@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+import { getVercelPublicEnvDefaults } from "./lib/env/vercel-public-defaults";
+
+const vercelPublicEnv = getVercelPublicEnvDefaults(
+  process.env as Record<string, string | undefined>
+);
+
 const nextConfig: NextConfig = {
+  env: vercelPublicEnv as Record<string, string>,
   images: {
     remotePatterns: [
       {
