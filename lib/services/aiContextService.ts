@@ -16,8 +16,10 @@ import {
 } from "@/lib/ingestion/db-read";
 import {
   computeTeamHistoricalAggregates,
+  formSnapshotToPrematchSlice,
   type TeamHistoricalAggregates,
 } from "@/lib/analytics/team-aggregates";
+import type { HistoricalTeamContextSlice } from "@/types/ai";
 import { resolveMatchFixtureContext } from "@/lib/match/fixture-context";
 import { getH2H, getRecentForm } from "@/lib/services/analyticsService";
 import type {
@@ -56,12 +58,19 @@ function resolveLineupsState(
 
 function historicalContextFromAggregates(
   aggregates: TeamHistoricalAggregates
-): NonNullable<PrematchAiContext["historicalContext"]>["home"] {
+): HistoricalTeamContextSlice {
   return {
     sampleSize: aggregates.finishedSampleSize,
     last20Ppg: aggregates.last20All.ppg,
-    seasonPpg: aggregates.seasonToDate?.ppg ?? null,
-    previousSeasonPpg: aggregates.previousSeason?.ppg ?? null,
+    last10All: formSnapshotToPrematchSlice(aggregates.last10All),
+    last10Home: formSnapshotToPrematchSlice(aggregates.last10Home),
+    last10Away: formSnapshotToPrematchSlice(aggregates.last10Away),
+    seasonToDate: aggregates.seasonToDate
+      ? formSnapshotToPrematchSlice(aggregates.seasonToDate)
+      : null,
+    previousSeason: aggregates.previousSeason
+      ? formSnapshotToPrematchSlice(aggregates.previousSeason)
+      : null,
     topCompetitions: aggregates.byCompetition.slice(0, 5).map((entry) => ({
       leagueName: entry.leagueName,
       matches: entry.matches,
@@ -284,6 +293,20 @@ async function buildPrematchContextUncached(
       home: historicalContextFromAggregates(homeHistorical),
       away: historicalContextFromAggregates(awayHistorical),
     },
+    predictionFeatures: {
+      homeXgForAvg: prediction.inputSnapshot.homeXgForAvg,
+      awayXgForAvg: prediction.inputSnapshot.awayXgForAvg,
+      homeXgAgainstAvg: prediction.inputSnapshot.homeXgAgainstAvg,
+      awayXgAgainstAvg: prediction.inputSnapshot.awayXgAgainstAvg,
+      homeRestDays: prediction.inputSnapshot.homeRestDays,
+      awayRestDays: prediction.inputSnapshot.awayRestDays,
+      homeInjuryImpact: prediction.inputSnapshot.homeInjuryImpact,
+      awayInjuryImpact: prediction.inputSnapshot.awayInjuryImpact,
+      homeTopScorersSidelined: prediction.inputSnapshot.homeTopScorersSidelined,
+      awayTopScorersSidelined: prediction.inputSnapshot.awayTopScorersSidelined,
+      leaguePositionDiff: prediction.inputSnapshot.leaguePositionDiff,
+      standingPointsDiff: prediction.inputSnapshot.standingPointsDiff,
+    },
     dataQuality: resolveDisplayDataQuality({
       dataMissing,
       predictionDataQuality: prediction.inputSnapshot.dataQuality,
@@ -317,6 +340,8 @@ async function buildPrematchContextUncached(
     dataMissing: context.dataMissing,
     referee: context.referee,
     round: context.round,
+    historicalContext: context.historicalContext,
+    predictionFeatures: context.predictionFeatures,
   });
 
   return { context, contextHash };

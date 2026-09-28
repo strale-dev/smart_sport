@@ -51,6 +51,7 @@ export function AIHeroSection({
     refetch,
     isGenerating,
     displayExperience,
+    contextStale,
   } = usePrematchInsight();
 
   const prematch = prematchPrediction(prediction);
@@ -137,6 +138,8 @@ export function AIHeroSection({
         awayTeam={awayTeam}
         liveWinProbabilities={liveWinProbabilities}
         supplementalMessage={fallbackMessage}
+        contextStale={contextStale}
+        isRefreshing={isGenerating}
       />
     );
   }
