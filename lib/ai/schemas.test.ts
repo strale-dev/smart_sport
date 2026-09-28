@@ -30,26 +30,30 @@ describe("AIInsightSchema", () => {
     expect(parsed.winOutcome).toBe("1");
   });
 
-  it("rejects probabilities below 1% floor", () => {
-    expect(() =>
-      AIInsightSchema.parse(
-        mergeNarrativeWithPrediction(narrative, {
-          ...predictionInput,
-          winProbabilities: { home: 0.98, draw: 0.01, away: 0.005 },
-        })
-      )
-    ).toThrow();
+  it("normalizes raw probabilities below 1% floor before validation", () => {
+    const parsed = AIInsightSchema.parse(
+      mergeNarrativeWithPrediction(narrative, {
+        ...predictionInput,
+        winProbabilities: { home: 0.98, draw: 0.01, away: 0.005 },
+      })
+    );
+    expect(parsed.winProbabilities.home).toBeGreaterThanOrEqual(0.01);
+    expect(parsed.winProbabilities.draw).toBeGreaterThanOrEqual(0.01);
+    expect(parsed.winProbabilities.away).toBeGreaterThanOrEqual(0.01);
   });
 
-  it("rejects probabilities that do not sum to 1", () => {
-    expect(() =>
-      AIInsightSchema.parse(
-        mergeNarrativeWithPrediction(narrative, {
-          ...predictionInput,
-          winProbabilities: { home: 0.2, draw: 0.2, away: 0.2 },
-        })
-      )
-    ).toThrow();
+  it("rebalances probabilities that do not sum to 1", () => {
+    const parsed = AIInsightSchema.parse(
+      mergeNarrativeWithPrediction(narrative, {
+        ...predictionInput,
+        winProbabilities: { home: 0.2, draw: 0.2, away: 0.2 },
+      })
+    );
+    const sum =
+      parsed.winProbabilities.home +
+      parsed.winProbabilities.draw +
+      parsed.winProbabilities.away;
+    expect(sum).toBeCloseTo(1, 2);
   });
 
   it("narrative OpenAI schema has no numeric forecast fields", () => {

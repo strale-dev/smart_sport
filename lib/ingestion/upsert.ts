@@ -13,6 +13,7 @@ import {
   teamRefToInsert,
   venueRefToInsert,
 } from "@/lib/api-football/to-db";
+import { FIXTURE_INGEST_MARKS_SEASON_CURRENT } from "@/lib/ingestion/season-current-policy";
 import { isFinishedFixtureStatus } from "@/lib/fixtures/display";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
@@ -124,6 +125,16 @@ export async function upsertSeason(
   rawPayload: unknown = null
 ): Promise<string> {
   const row = seasonToInsert(season, rawPayload);
+
+  if (row.is_current) {
+    const { error: clearError } = await client
+      .from("seasons")
+      .update({ is_current: false })
+      .eq("league_id", leagueId)
+      .eq("is_current", true);
+
+    throwIfError(clearError, "Failed to clear current seasons for league");
+  }
 
   const { data, error } = await client
     .from("seasons")
@@ -434,7 +445,7 @@ export async function ingestFixtureFromRaw(
       year: domain.seasonYear,
       startDate: null,
       endDate: null,
-      isCurrent: true,
+      isCurrent: FIXTURE_INGEST_MARKS_SEASON_CURRENT,
     });
   }
 

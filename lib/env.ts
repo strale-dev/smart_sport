@@ -84,6 +84,7 @@ function formatZodError(error: z.ZodError): string {
 }
 
 import { normalizeEnvValue } from "@/lib/env/normalize-env-value";
+import { applyVercelPublicEnvDefaults } from "@/lib/env/vercel-public-defaults";
 
 function emptyToUndefined(value: string | undefined): string | undefined {
   if (value === "" || value === undefined) {
@@ -178,7 +179,9 @@ function readServerEnvSource(
 export function parsePublicEnv(
   source: Record<string, string | undefined> = process.env
 ): PublicEnv {
-  const result = publicEnvSchema.safeParse(readPublicEnvSource(source));
+  const result = publicEnvSchema.safeParse(
+    readPublicEnvSource(applyVercelPublicEnvDefaults(source))
+  );
 
   if (!result.success) {
     throw new Error(
@@ -192,7 +195,9 @@ export function parsePublicEnv(
 export function parseServerEnv(
   source: Record<string, string | undefined> = process.env
 ): ServerEnv {
-  const result = serverEnvSchema.safeParse(readServerEnvSource(source));
+  const result = serverEnvSchema.safeParse(
+    readServerEnvSource(applyVercelPublicEnvDefaults(source))
+  );
 
   if (!result.success) {
     throw new Error(

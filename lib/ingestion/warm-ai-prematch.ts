@@ -7,7 +7,8 @@ import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
 
 export type WarmAiPrematchScope = "daily" | "imminent";
 
-const RUN_BUDGET_MS = 45_000;
+/** Leave headroom under route maxDuration (60s) and GHA trigger timeout (58s). */
+const RUN_BUDGET_MS = 52_000;
 const DAILY_MAX_FIXTURES = 40;
 const IMMINENT_MAX_FIXTURES = 25;
 
