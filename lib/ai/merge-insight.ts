@@ -1,5 +1,6 @@
 import { resolveDisplayDataQuality } from "@/lib/ai/data-coverage";
 import { predictedOutcomeFromProbabilities } from "@/lib/models/confidence";
+import { normalizeWinProbabilitiesWithFloor } from "@/lib/models/normalize-probabilities";
 import type {
   AIInsightNarrativePayload,
   AIInsightPayload,
@@ -26,10 +27,10 @@ export function mergeNarrativeWithPrediction(
   prediction: MergePredictionInput,
   coverage?: MergeInsightCoverage
 ): AIInsightPayload {
-  const winProbabilities = prediction.winProbabilities;
-  const winOutcome =
-    prediction.predictedOutcome ??
-    predictedOutcomeFromProbabilities(winProbabilities);
+  const winProbabilities = normalizeWinProbabilitiesWithFloor(
+    prediction.winProbabilities
+  );
+  const winOutcome = predictedOutcomeFromProbabilities(winProbabilities);
 
   return {
     summary: narrative.summary,

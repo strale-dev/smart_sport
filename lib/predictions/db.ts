@@ -1,4 +1,6 @@
+import { predictedOutcomeFromProbabilities } from "@/lib/models/confidence";
 import { parseModelCoefficients } from "@/lib/models/coefficients";
+import { normalizeWinProbabilitiesWithFloor } from "@/lib/models/normalize-probabilities";
 import {
   buildTotalGoalsDistribution,
   computeGoalMarketProbs,
@@ -249,23 +251,13 @@ export function mapPredictionRowToResult(
   modelVersion: string,
   fromCache: boolean
 ): PrematchPredictionResult {
-  const winProbabilities = {
+  const winProbabilities = normalizeWinProbabilitiesWithFloor({
     home: Number(row.home_win_prob),
     draw: Number(row.draw_prob),
     away: Number(row.away_win_prob),
-  };
+  });
 
-  const maxProb = Math.max(
-    winProbabilities.home,
-    winProbabilities.draw,
-    winProbabilities.away
-  );
-  const predictedOutcome =
-    winProbabilities.home === maxProb
-      ? "1"
-      : winProbabilities.draw === maxProb
-        ? "X"
-        : "2";
+  const predictedOutcome = predictedOutcomeFromProbabilities(winProbabilities);
 
   const goalMarkets = resolveGoalMarketsFromRow(row);
 
