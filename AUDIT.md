@@ -54,21 +54,120 @@ gh run list --workflow=ingestion-schedule.yml --limit 25
 - `*/5` maintenance cron-i (`reap-stale-locks`, `reconcile-ai-usage`) — success u pregledanom uzorku.
 - U `*/15` tikovima: **lineups / live-center / sync-fixtures-today** su često **success** čak i kada warm padne (RC-4).
 
-### 1.5 Implementacija (grana `fix/system-audit`, 2026-09-27)
+### 1.5 Implementacija (grana `fix/system-audit`)
 
-| RC       | Status                  | Promene                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| -------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **RC-3** | Kod + migracija u repou | [`supabase/migrations/20260927180000_0036_seasons_single_current.sql`](supabase/migrations/20260927180000_0036_seasons_single_current.sql); [`lib/ingestion/upsert.ts`](lib/ingestion/upsert.ts) (`upsertSeason` clear-current, fixture ingest ne markira current); [`lib/ingestion/season-current-policy.ts`](lib/ingestion/season-current-policy.ts). **Dev/prod DB:** primeni migraciju na Supabase projekte (MCP apply nije prošao u agent sesiji — ručno `supabase db push` ili dashboard). |
-| **RC-1** | Kod                     | [`lib/ai/merge-insight.ts`](lib/ai/merge-insight.ts) + [`lib/predictions/db.ts`](lib/predictions/db.ts) — `normalizeWinProbabilitiesWithFloor` pre Zod; test [`lib/ai/schemas.test.ts`](lib/ai/schemas.test.ts). Phase 2 strogi warm contract **zadržan**.                                                                                                                                                                                                                                       |
-| **RC-2** | Kod                     | Isti AI fix kao RC-1; [`lib/ingestion/warm-ai-prematch.ts`](lib/ingestion/warm-ai-prematch.ts) `RUN_BUDGET_MS` 45s → 52s.                                                                                                                                                                                                                                                                                                                                                                        |
-| **RC-4** | Kod                     | [`ingestion-ai-warm.yml`](.github/workflows/ingestion-ai-warm.yml) odvojen od [`ingestion-schedule.yml`](.github/workflows/ingestion-schedule.yml); [`scripts/pick-ingestion-gha-jobs.mjs`](scripts/pick-ingestion-gha-jobs.mjs).                                                                                                                                                                                                                                                                |
+| RC       | Status implementacije                                 | Verifikacija (2026-09-28)                                                                                                                                                                                                  | Promene                                                                                                                                                                                                                              |
+| -------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **RC-3** | Kod + migracija u repou; **dev DB primenjeno**        | Dev SQL: nema `league_id` sa `count(is_current=true) > 1`; index `seasons_one_current_per_league_idx` postoji. **Prod: čeka operatora** (checklist §1.7).                                                                  | [`20260927180000_0036_seasons_single_current.sql`](supabase/migrations/20260927180000_0036_seasons_single_current.sql); [`upsert.ts`](lib/ingestion/upsert.ts); [`season-current-policy.ts`](lib/ingestion/season-current-policy.ts) |
+| **RC-1** | Kod (Zod floor); **nije dokazano rešenje na prod**    | GHA [`36321199335`](https://github.com/strale-dev/smart_sport/actions/runs/36321199335): agregat `fallback:1`, `unavailable:7` — **bez per-fixture razloga u logu**. Posle merge+deploy: `ingestion-ai-warm.yml` + Sentry. | [`merge-insight.ts`](lib/ai/merge-insight.ts), [`predictions/db.ts`](lib/predictions/db.ts), [`schemas.test.ts`](lib/ai/schemas.test.ts)                                                                                             |
+| **RC-2** | Kod (isti AI fix + budget); **nije dokazano na prod** | GHA [`36316207882`](https://github.com/strale-dev/smart_sport/actions/runs/36316207882): `fallback:3`, `stoppedEarly:true` — **bez per-fixture razloga**.                                                                  | [`warm-ai-prematch.ts`](lib/ingestion/warm-ai-prematch.ts) `RUN_BUDGET_MS` 52s                                                                                                                                                       |
+| **RC-4** | Kod                                                   | PR [#1](https://github.com/strale-dev/smart_sport/pull/1); GitHub **ci** pass; warm izdvojen u [`ingestion-ai-warm.yml`](.github/workflows/ingestion-ai-warm.yml).                                                         | [`pick-ingestion-gha-jobs.mjs`](scripts/pick-ingestion-gha-jobs.mjs)                                                                                                                                                                 |
 
-**Posle deploy-a:** `gh run list --workflow=ingestion-schedule.yml` vs `ingestion-ai-warm.yml`; potvrdi RC-3 na **prod** Supabase pre očekivanja zelenog standings job-a.
+**PR:** https://github.com/strale-dev/smart_sport/pull/1 (`fix/system-audit` → `main`). **Obavezno pre deploy-a aplikacije na prod:** migracija 0036 na prod Supabase.
 
-### 1.6 Otvoreno / za prod verifikaciju
+**Lokalno (sesija 2026-09-28):** `npm run typecheck` OK; pre-push hook vitest **684/684**; working tree clean posle `git clean -fd` — nema missing importa (`openai-config`, `utils/supabase` nisu referencirani; Supabase preko `@/lib/supabase/*`).
 
-- Tačan **API-Football quota** i Vercel cron execution history — **nema pristupa u ovoj sesiji** (Vercel dashboard); **pretpostavka na osnovu dev okruženja — treba potvrda iz prod**.
-- Da li **dnevni** Vercel `sync-standings` (`30 4 * * *`) takođe pada sa RC-3 — **verovatno da** (isti kod + prod DB), ali **nije u GHA uzorku**; proveriti Vercel cron log.
+**Git repack:** obrisana ref `fix/production-stability-audit - Copy`. Geometric repack i dalje prijavljuje **`refs/heads/main - Copy`** (broken name) pri commit hook-u — commit ipak prolazi; ručno: `git update-ref -d "refs/heads/main - Copy"` ako ref postoji u `.git/refs/heads/`.
+
+### 1.6 RC-1 / RC-2 — šta GHA logovi **jesu** i **nisu** dokazali
+
+GHA `trigger-production-cron.mjs` ispisuje samo **JSON agregat** sa produkcije, ne Vercel function log po utakmici.
+
+| Run         | Job           | Telo odgovora (suština)                                                | Zašto HTTP 500                                                                                                           |
+| ----------- | ------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 36321199335 | warm imminent | 12 processed; cached 4; **fallback 1**; **unavailable 7**; generated 0 | `failedCount = fallback + errors` → 1 ≥ 1 → `ok: false` (`cron-outcome.ts`). `unavailable` **ne** ulazi u `failedCount`. |
+| 36316207882 | warm daily    | 22 processed; cached 15; generated 4; **fallback 3**; stoppedEarly     | Isto: 3 fallback → 500; `partialForTimeBudget` ne pomaže dok ima fallback.                                               |
+
+**Per-fixture uzrok iz ovih logova: nije moguće.** Kod mapiranja (`warm-ai-prematch.ts` + `generatePrematchInsight`):
+
+- **FALLBACK** — izuzetak u LLM/validate/merge putu (`catch` u `aiService.ts` → `buildFallbackResponse`); tipično Zod, timeout, OpenAI greška (ne piše se u GHA body).
+- **UNAVAILABLE** — poslovna blokada: `FIXTURE_NOT_ANALYZABLE`, `GENERATION_NOT_ALLOWED`, nedostaje `inputSnapshot` / `canGeneratePrematchNarrative` (`aiService.ts`); warm loguje `logIngestionEvent` sa `reason` **samo u prod telemetry**, ne u GHA.
+
+**Zaključak:** RC-1/RC-2 fix u grani **smanjuje verovatnoću** Zod fallback-a i daje više vremena daily warm-u; **nisu verifikovani rešeni** dok posle deploy-a `ingestion-ai-warm` i Sentry/PostHog (`prematch_insight_fallback`, `prematch_insight_unavailable`, `warm_ai_prematch` fixture_unit) ne pokažu pad.
+
+**Predlog istraživanja posle deploy-a:**
+
+1. Sentry issue grupe K/H/J iz [`docs/rca/AI-INGESTION-RCA.md`](docs/rca/AI-INGESTION-RCA.md) filtrirati na `trigger:cron` i vremenski prozor warm run-a.
+2. PostHog / ingestion eventi: `job_name=warm-ai-prematch`, `stage=fixture_unit`, polja `error_type`, `detail.reason`.
+3. Za `unavailable:7` na imminent — uzorak fixture ID-jeva iz telemetry; proveriti prematch readiness / `inputSnapshot` na prod DB.
+
+### 1.7 Prod checklist — migracija 0036 (operator)
+
+**Pre migracije (read-only):**
+
+```sql
+-- A) Koliko liga ima više od jedne "current" sezone?
+SELECT league_id, count(*) AS n
+FROM public.seasons
+WHERE is_current = true
+GROUP BY league_id
+HAVING count(*) > 1
+ORDER BY n DESC;
+
+-- B) Pregled po ligi (provider_id za ljudski read)
+SELECT l.provider_id AS league_provider_id, l.name, s.year, s.is_current
+FROM public.seasons s
+JOIN public.leagues l ON l.id = s.league_id
+WHERE s.is_current = true
+ORDER BY l.provider_id, s.year DESC;
+
+-- C) Da li index već postoji?
+SELECT indexname, indexdef
+FROM pg_indexes
+WHERE schemaname = 'public'
+  AND tablename = 'seasons'
+  AND indexname = 'seasons_one_current_per_league_idx';
+```
+
+**Šta proveriti pre RUN:**
+
+| Rezultat A      | Akcija                                                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Prazno          | Data već konzistentna; migracija i dalje bezbedna (idempotent repair + `IF NOT EXISTS` index).                                       |
+| Redovi          | Očekivano pre fix-a; migracija normalizuje na **max(year)** po `league_id`. Proveri B da nema očigledno pogrešne `year` za top lige. |
+| C index postoji | `CREATE UNIQUE INDEX IF NOT EXISTS` preskače kreiranje.                                                                              |
+
+**Migracija (sadržaj 0036 — pokrenuti kao jedna transakcija u SQL editoru):**
+
+```sql
+update public.seasons
+set is_current = false
+where is_current = true;
+
+update public.seasons s
+set is_current = true
+from (
+  select league_id, max(year) as max_year
+  from public.seasons
+  group by league_id
+) canonical
+where s.league_id = canonical.league_id
+  and s.year = canonical.max_year;
+
+create unique index if not exists seasons_one_current_per_league_idx
+  on public.seasons (league_id)
+  where is_current = true;
+```
+
+**Posle migracije:**
+
+```sql
+SELECT league_id, count(*) AS n
+FROM public.seasons
+WHERE is_current = true
+GROUP BY league_id
+HAVING count(*) > 1;
+-- mora biti prazno
+```
+
+**Redosled operacija:** (1) prod SQL migracija → (2) merge PR → (3) deploy app → (4) GHA standings tick / ručni `sync-standings` cron.
+
+### 1.8 Otvoreno / doc drift / CI
+
+- **Doc drift ING-3 vs `vercel.json`:** runbook/Tech očekuju `sync-standings` na `0 */6 * * *` (Pro); repo [`vercel.json`](vercel.json) i dalje **`30 4 * * *`** (Hobby dnevno). Sub-daily standings ostaje na GHA — namerno do Pro cutover-a; uskladiti config ili dokumentaciju u posebnoj odluci.
+- **API-Football quota / Vercel cron history** — nema dashboard pristupa u audit sesiji.
+- **PR CI (2026-09-28):** GitHub Actions **ci** pass (~1m42s); **Vercel** preview deploy fail — vidi Vercel log (`dpl_5r7dcdgJokxD4kpCZ7UWJez1gXVX`); nije blokirajuće za merge ako je poznati env/integracioni problem (ne menjan kod bez odobrenja).
+- **Faza 2+** — ne počinjati dok prod migracija 0036 nije primenjena i PR nije merge-ovan.
 
 ---
 
