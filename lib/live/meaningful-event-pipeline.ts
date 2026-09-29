@@ -26,15 +26,11 @@ import {
 import { buildLiveFeaturesFromSnapshot } from "@/lib/models/live-features";
 import { scoreLiveFromFeatures } from "@/lib/models/liveProbability";
 import { generateLiveInsight } from "@/lib/services/aiService";
-import { updateLiveProbability } from "@/lib/services/predictionService";
 import {
-  getActiveModelVersion,
-  mapLivePredictionRowToResult,
-  mapPredictionRowToResult,
-  readLatestLivePrediction,
-  readLatestPrematchPrediction,
-  resolveFixtureUuidByExternalId,
-} from "@/lib/predictions/db";
+  resolveLiveAnchorWinProbabilities,
+  updateLiveProbability,
+} from "@/lib/services/predictionService";
+import { resolveFixtureUuidByExternalId } from "@/lib/predictions/db";
 import type { FixtureStatus } from "@/types/domain";
 import type { WinProbabilities } from "@/types/prediction";
 
@@ -71,31 +67,10 @@ export function buildLiveStatsFromSnapshot(snapshot: LiveDetectorSnapshot) {
 }
 
 async function resolveBaselineProbabilities(
-  fixtureUuid: string,
+  _fixtureUuid: string,
   fixtureExternalId: number
 ): Promise<WinProbabilities | null> {
-  const modelVersion = await getActiveModelVersion();
-  const latestLive = await readLatestLivePrediction(fixtureUuid);
-  if (latestLive) {
-    return mapLivePredictionRowToResult(
-      latestLive,
-      fixtureExternalId,
-      modelVersion.version,
-      true
-    ).winProbabilities;
-  }
-
-  const prematch = await readLatestPrematchPrediction(fixtureUuid);
-  if (!prematch) {
-    return null;
-  }
-
-  return mapPredictionRowToResult(
-    prematch,
-    fixtureExternalId,
-    modelVersion.version,
-    true
-  ).winProbabilities;
+  return resolveLiveAnchorWinProbabilities(fixtureExternalId);
 }
 
 function appendProbabilityShiftEvent(

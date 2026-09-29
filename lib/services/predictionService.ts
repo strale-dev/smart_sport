@@ -355,37 +355,17 @@ export async function getOfficialPrematch(
   );
 }
 
-async function resolvePriorWinProbabilities(
-  fixtureUuid: string,
+/** Fixed pre-kickoff anchor for live scoring — never the latest LIVE row (RC-12). */
+export async function resolveLiveAnchorWinProbabilities(
   fixtureExternalId: number
 ): Promise<WinProbabilities | null> {
-  const modelVersion = await getActiveModelVersion();
-  const latestLive = await readLatestLivePrediction(fixtureUuid);
-  if (latestLive) {
-    return mapLivePredictionRowToResult(
-      latestLive,
-      fixtureExternalId,
-      modelVersion.version,
-      true
-    ).winProbabilities;
+  const official = await getOfficialPrematch(fixtureExternalId);
+  if (official) {
+    return official.winProbabilities;
   }
 
-  const fixture = await resolveFixtureUuidByExternalId(fixtureExternalId);
-  if (!fixture) {
-    return null;
-  }
-
-  const prematchRow = await readPrematchRowForFixture(fixture);
-  if (!prematchRow) {
-    return null;
-  }
-
-  return mapPredictionRowToResult(
-    prematchRow,
-    fixtureExternalId,
-    modelVersion.version,
-    true
-  ).winProbabilities;
+  const prematch = await getOrComputePrematch(fixtureExternalId);
+  return prematch?.winProbabilities ?? null;
 }
 
 export async function updateLiveProbability(input: {
@@ -397,16 +377,10 @@ export async function updateLiveProbability(input: {
     return null;
   }
 
-  let prior = await resolvePriorWinProbabilities(
-    fixture.id,
+  const anchor = await resolveLiveAnchorWinProbabilities(
     input.fixtureExternalId
   );
-  if (!prior) {
-    const prematch = await getOrComputePrematch(input.fixtureExternalId);
-    prior = prematch?.winProbabilities ?? null;
-  }
-
-  if (!prior) {
+  if (!anchor) {
     return null;
   }
 
@@ -419,21 +393,16 @@ export async function updateLiveProbability(input: {
       LOCK_RENEW_INTERVAL_MS,
       async () => {
         const modelVersion = await getActiveModelVersion();
-        let priorInsideLock = await resolvePriorWinProbabilities(
-          fixture.id,
+        const anchorInsideLock = await resolveLiveAnchorWinProbabilities(
           input.fixtureExternalId
         );
-        if (!priorInsideLock) {
-          const backfill = await getOrComputePrematch(input.fixtureExternalId);
-          priorInsideLock = backfill?.winProbabilities ?? null;
-        }
-        if (!priorInsideLock) {
+        if (!anchorInsideLock) {
           return null;
         }
 
         const features = buildLiveFeaturesFromSnapshot(
           input.snapshot,
-          priorInsideLock
+          anchorInsideLock
         );
         const output = scoreLiveFromFeatures(features);
 

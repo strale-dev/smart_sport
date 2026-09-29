@@ -4,6 +4,7 @@ import type { LiveDetectorSnapshot } from "@/lib/live/event-detector-types";
 
 const mocks = vi.hoisted(() => ({
   updateLiveProbability: vi.fn(),
+  resolveLiveAnchorWinProbabilities: vi.fn(),
   generateLiveInsight: vi.fn(),
   resolveFixtureUuidByExternalId: vi.fn(),
   readLatestLivePrediction: vi.fn(),
@@ -17,6 +18,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/services/predictionService", () => ({
   updateLiveProbability: mocks.updateLiveProbability,
+  resolveLiveAnchorWinProbabilities: mocks.resolveLiveAnchorWinProbabilities,
 }));
 
 vi.mock("@/lib/services/aiService", () => ({
@@ -121,6 +123,11 @@ describe("runMeaningfulEventPipeline", () => {
     isLiveInsightGenerationInBackoff.mockResolvedValue(false);
     readStoredLiveInsightContext.mockResolvedValue(null);
     shouldRunPeriodicLiveInsight.mockReturnValue(false);
+    mocks.resolveLiveAnchorWinProbabilities.mockResolvedValue({
+      home: 0.55,
+      draw: 0.25,
+      away: 0.2,
+    });
     updateLiveProbability.mockResolvedValue({
       predictionId: "live-1",
       modelVersion: "1.0.0",
@@ -134,6 +141,11 @@ describe("runMeaningfulEventPipeline", () => {
   });
 
   it("skips persistence when no discrete events and no probability shift", async () => {
+    mocks.resolveLiveAnchorWinProbabilities.mockResolvedValue({
+      home: 0.45,
+      draw: 0.3,
+      away: 0.25,
+    });
     readLatestPrematchPrediction.mockResolvedValue({
       id: "pred-1",
       fixture_id: "fixture-uuid",
