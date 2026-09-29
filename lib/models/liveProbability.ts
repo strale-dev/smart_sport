@@ -2,6 +2,11 @@ import {
   bucketConfidence,
   predictedOutcomeFromProbabilities,
 } from "@/lib/models/confidence";
+import {
+  LIVE_SCORE_LOGIT_DRAW_PENALTY_PER_GOAL,
+  LIVE_SCORE_LOGIT_LEAD_PER_GOAL,
+  LIVE_SCORE_LOGIT_TRAIL_PENALTY_PER_GOAL,
+} from "@/lib/models/live-score-logits";
 import { normalizeWinProbabilitiesWithFloor } from "@/lib/models/normalize-probabilities";
 import {
   buildTotalGoalsDistribution,
@@ -47,28 +52,33 @@ function clampMinute(minute: number | null): number {
 }
 
 /**
- * Combines pre-match (or last live) priors with in-match evidence.
- * Keeps adjustments modest so probabilities do not swing without real state change.
+ * Combines official pre-match anchor with in-match evidence (score, cards, xG).
+ * Anchor is fixed for the fixture — not chained from prior live rows (RC-12).
  */
 export function scoreLiveFromFeatures(
   features: LiveFeatureVector
 ): PrematchModelOutput {
-  const prior = features.priorWinProbabilities;
-  const logits = priorLogits(prior);
+  const anchor =
+    features.anchorWinProbabilities ?? features.priorWinProbabilities;
+  const logits = priorLogits(anchor);
 
   const minute = clampMinute(features.minute);
   const timeWeight = minute / 90;
   const goalDiff = features.scoreHome - features.scoreAway;
 
   if (goalDiff > 0) {
-    logits.home += goalDiff * 0.42 * timeWeight;
-    logits.draw -= goalDiff * 0.18 * timeWeight;
-    logits.away -= goalDiff * 0.28 * timeWeight;
+    logits.home += goalDiff * LIVE_SCORE_LOGIT_LEAD_PER_GOAL * timeWeight;
+    logits.draw -=
+      goalDiff * LIVE_SCORE_LOGIT_DRAW_PENALTY_PER_GOAL * timeWeight;
+    logits.away -=
+      goalDiff * LIVE_SCORE_LOGIT_TRAIL_PENALTY_PER_GOAL * timeWeight;
   } else if (goalDiff < 0) {
     const awayLead = Math.abs(goalDiff);
-    logits.away += awayLead * 0.42 * timeWeight;
-    logits.draw -= awayLead * 0.18 * timeWeight;
-    logits.home -= awayLead * 0.28 * timeWeight;
+    logits.away += awayLead * LIVE_SCORE_LOGIT_LEAD_PER_GOAL * timeWeight;
+    logits.draw -=
+      awayLead * LIVE_SCORE_LOGIT_DRAW_PENALTY_PER_GOAL * timeWeight;
+    logits.home -=
+      awayLead * LIVE_SCORE_LOGIT_TRAIL_PENALTY_PER_GOAL * timeWeight;
   }
 
   const redDiff = features.redCardsHome - features.redCardsAway;

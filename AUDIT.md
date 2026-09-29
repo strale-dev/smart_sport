@@ -262,7 +262,102 @@ Fixture (fixtures.status ∈ NS/TBD/LIVE/FT/…)
 
 ## Faza 3 — AI Prediction Correctness
 
-(popuniti)
+**Datum:** 2026-09-29  
+**Izvori:** kod pod `lib/models/*`, `lib/services/predictionService.ts`, `lib/live/meaningful-event-pipeline.ts`, `lib/momentum/computeMatchMomentum.ts`, `lib/services/aiContextService.ts`; dev Supabase SQL; deterministički tsx repro.
+
+### 3.1 Kako se računa (prematch vs live)
+
+| Komponenta                      | Put                                                                                             | Napomena                                                                            |
+| ------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Home/draw/away (prematch)**   | `buildPrematchFeatures` → `computeLogisticProbabilities` → `normalizeWinProbabilitiesWithFloor` | Elo, forma, H2H, rang, xG proseci, injury u features; poseban Poisson za xG/tržišta |
+| **Expected goals (prematch)**   | `computePoissonOutput`                                                                          | Nezavisno od logistic softmax-a                                                     |
+| **Confidence**                  | `bucketConfidence(max prob)`                                                                    | HIGH &gt;60%, MEDIUM ≥40%, else LOW                                                 |
+| **Live win prob**               | `buildLiveFeaturesFromSnapshot` → `scoreLiveFromFeatures`                                       | Log-prior + score×timeWeight + red cards + xG diff (ako postoji) → softmax → floor  |
+| **Live prior (trenutno — bug)** | `resolvePriorWinProbabilities`                                                                  | **Poslednji LIVE red** ako postoji, inače prematch — lančanje zasićenja             |
+| **Momentum**                    | `computeMatchMomentum`                                                                          | **Samo UI chart** — ne ulazi u `scoreLiveFromFeatures`                              |
+| **AI analiza (tekst)**          | LLM + `mergeNarrativeWithPrediction`                                                            | Win prob u UI **uvek iz prediction engine-a**, ne iz LLM JSON-a                     |
+
+**Live model — šta koristi danas**
+
+| Signal                          | U modelu                      | U AI live context                 |
+| ------------------------------- | ----------------------------- | --------------------------------- |
+| Rezultat, minut (uz gol diff)   | da / delimično                | da                                |
+| Crvene                          | da                            | da                                |
+| xG live                         | kod da, **DB 0/175**          | da                                |
+| SOT, posed, šutevi              | **ne** (`live-features` null) | da (`buildLiveStatsFromSnapshot`) |
+| Žute, big chances, korneri, sub | ne u modelu                   | sub → trigger; ostalo ne          |
+| Prematch snaga                  | kroz **prior**                | forma, H2H, standings, …          |
+| Momentum                        | ne                            | prompt                            |
+
+### 3.2 Testovi logičnosti (discovery)
+
+| Test                           | Rezultat                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| 0-0 @10' vs 2-0 @75'           | **PASS** — jasno različite prob (~45% vs ~73% home uz reprezentativan prior/xG)      |
+| 0-0 @10' vs 0-0 @75' (isti xG) | **FAIL (P2)** — identične win prob; minut ne utiče kad je nizak                      |
+| Gubitnik 0-2 ~90% win          | **FAIL** — DB `91a9eed4…` home **90.82%** @77' (0-2); repro sa prior `{home:0.9379}` |
+| home+draw+away ≈ 100%          | **PASS** — normalizacija; 0 PREMATCH sa \|sum−1\|&gt;0.02 / 530                      |
+| Negativne / absurdne sume      | **PASS** u bazi; floor 1% → max favorit ~98%                                         |
+
+**Dev baseline:** `contradictory_live` **39 / 175** (~22%) — max prob protiv trenutnog rezultata (npr. away vodi, home &gt;90%). **175/175** LIVE `input_snapshot` bez xG. ~**216/530** prematch u generic baseline opsegu (~57/25/18).
+
+**Generičnost analize (PREMATCH):** 229 insight-a, 229 distinct `key_factors` md5 — nema masovnog copy-paste skeletona; i dalje mogu slični šabloni pri slabom context-u (Faza 2 RC-8).
+
+### 3.3 Root cause tabela
+
+| Problem                                | Root cause                                                                                             | Dokaz                     | Uticaj                           | Fix                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------- | -------------------------------- | ------------------------------------------------- |
+| **RC-12** Lančani live prior           | `readLatestLivePrediction` kao prior u `resolvePriorWinProbabilities` i `resolveBaselineProbabilities` | SQL + tsx repro 0-2 @77'  | Prob u suprotnosti sa rezultatom | **PR A:** fiksni **official prematch** anchor     |
+| **RC-13** 0-0 kasni = rani prob        | `minute` samo u grani `goalDiff ≠ 0`                                                                   | tsx 0-0 min 10 vs 75      | Stale live osećaj                | **P2** (draw/time decay)                          |
+| **RC-14** SOT/posed ignored            | `live-features.ts` hardcode null                                                                       | kod vs pipeline           | Model ≠ feed                     | **PR B**                                          |
+| **RC-15** xG null u LIVE DB            | ingestion/snapshot                                                                                     | 175/175 null              | xG term mrtav                    | **PR C**                                          |
+| **RC-16** Slab score term vs jak prior | logit koef 0.42×timeWeight                                                                             | 0-2 i dalje 91% sa lancom | Favorit “ne gubi”                | **PR A:** jači score-term (heuristika, ne Markov) |
+| **RC-17** 1% floor                     | `normalizeWinProbabilitiesWithFloor`                                                                   | max ~98%                  | Vizuelno ekstremno               | P2 / posle metrike                                |
+| **RC-18** Momentum ≠ win %             | chart only                                                                                             | `computeMatchMomentum`    | UX očekivanja                    | P2 docs                                           |
+| **RC-19** Generic baseline             | intercept-only prematch                                                                                | 216/530                   | Slične prob                      | P2 UX                                             |
+| **RC-20** Generička analiza            | delimično odbačeno                                                                                     | distinct key_factors      | —                                | prati context quality                             |
+
+### 3.4 Odluke operatora (2026-09-29)
+
+1. **Model:** heuristika (anchor + jači score) sada; **ne** pun Markov/Poisson dok posle deploy-a `contradictory_live/live_total` ne pokaže potrebu.
+2. **UI:** kad `dataQuality=PARTIAL` ili xG null — prikazati win prob sa **manjom preciznošću** / indikator „ograničeni podaci” (**PR D**).
+3. **Reset:** sa **fiksnim anchor-om** nema lanca za reset; **HT reset ne**. Gol i dalje okida live pipeline.
+
+### 3.5 Plan implementacije (posebni PR-ovi)
+
+| PR     | Scope                                                                                                  | RC              |
+| ------ | ------------------------------------------------------------------------------------------------------ | --------------- |
+| **A**  | Official prematch anchor, `anchorWinProbabilities`, jači score-term, unit testovi (0-2 @75', 0-1 @17') | RC-12, RC-16    |
+| **B**  | `live-features` = `buildLiveStatsFromSnapshot`; SOT/posed logits                                       | RC-14           |
+| **C**  | xG ingestion do baze; alert ako null posle 30'                                                         | RC-15           |
+| **D**  | Degraded live win prob UI (Q2)                                                                         | —               |
+| **P2** | draw @ 0-0, baseline UX, momentum docs                                                                 | RC-13, RC-17–19 |
+
+**Gate:** posle deploy-a PR A–C — SQL `contradictory_live/live_total` (cilj **&lt;5%**; baseline **22%**). Jedan PR = jedna grana/commit. **PR A implementacija:** čeka eksplicitnu potvrdu posle ovog upisa.
+
+### 3.6 PR A — test plan (pre kodiranja)
+
+| Scenario      | Anchor prior          | State    | Assertion                                                                         |
+| ------------- | --------------------- | -------- | --------------------------------------------------------------------------------- |
+| Audit repro   | 0.938 / 0.052 / 0.010 | 0-2 @77' | home **&lt;20%**, away **&gt; home**                                              |
+| Rani gol      | 0.45 / 0.28 / 0.27    | 0-1 @17' | **home &lt; away**                                                                |
+| Kasni vođstvo | 0.40 / 0.30 / 0.30    | 2-0 @75' | **home − anchor ≥ +0.25** (npr. ≥0.65), **home ≥ 85%**, away **&lt;** anchor away |
+| Normalizacija | —                     | —        | sum ≈ 1                                                                           |
+
+### 3.7 Rizici / testiranje
+
+- Stari LIVE redovi u DB ostaju; metrika na **novim** insertima posle deploy-a.
+- Jači score-term → više `PROBABILITY_SHIFT` (prihvatljivo).
+- Prod xG null udeo — potvrditi SQL-om (nema prod MCP u audit sesiji).
+
+### 3.8 Status
+
+| Stavka      | Status                                                                     |
+| ----------- | -------------------------------------------------------------------------- |
+| Discovery   | **Završeno**                                                               |
+| AUDIT.md §3 | **Upisano 2026-09-29**                                                     |
+| PR A        | **Implementirano na grani** `fix/live-prediction-anchor` (bez commit/push) |
+| PR B/C/D    | Planirano                                                                  |
 
 ## Faza 4 — Expected Goals
 
