@@ -301,7 +301,7 @@
       "capabilities": {
         "fixtures": true,
         "standings": false,
-        "lineups": false,
+        "lineups": true,
         "fixtureStatistics": false,
         "fixtureEvents": true,
         "teamSeasonStatistics": false,

@@ -142,7 +142,8 @@ export async function ingestLiveCenterTick(): Promise<IngestLiveCenterTickResult
     allowlisted.length === 0 || fixturesUpserted > 0 || stoppedForTimeBudget;
 
   const reconcileResult = await reconcileStaleLiveFixtures({
-    activeLiveProviderIds,
+    activeLiveProviderIds:
+      activeLiveProviderIds.length > 0 ? activeLiveProviderIds : undefined,
     source: "sync-live-center",
   });
 

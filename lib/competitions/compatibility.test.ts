@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  findCompetition,
   getCompetitionTier,
   getEnabledProviderIds,
   getPrimaryLeagueTabs,
@@ -33,6 +34,10 @@ describe("competition registry compatibility", () => {
       }
       expect(getCompetitionTier(providerId)).toBe(1);
     }
+  });
+
+  it("keeps Friendlies lineups enabled despite probe false-negative", () => {
+    expect(findCompetition(10)?.capabilities.lineups).toBe(true);
   });
 
   it("enables a bounded sane registry size", () => {

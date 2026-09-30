@@ -1,0 +1,18 @@
+# Daily + backfill warm run sequentially (see scripts/trigger-warm-six-hour-batch.mjs).
+name: Ingestion AI warm (6 h)
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trigger warm daily then backfill
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          PRODUCTION_SITE_URL: ${{ vars.PRODUCTION_SITE_URL }}
+        run: node scripts/trigger-warm-six-hour-batch.mjs

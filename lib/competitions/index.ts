@@ -1,3 +1,4 @@
+import { applyCompetitionOverride } from "@/lib/competitions/build-registry";
 import generated from "@/lib/competitions/registry.generated.json";
 import {
   MORE_TAB_PROVIDER_IDS,
@@ -34,7 +35,11 @@ export function getCompetitionRegistry(): readonly CompetitionDefinition[] {
 export function findCompetition(
   providerId: number
 ): CompetitionDefinition | undefined {
-  return byProviderId.get(providerId);
+  const competition = byProviderId.get(providerId);
+  if (!competition) {
+    return undefined;
+  }
+  return applyCompetitionOverride(competition);
 }
 
 export function getEnabledProviderIds(): number[] {

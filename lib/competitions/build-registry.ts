@@ -21,7 +21,7 @@ function normalizeProviderType(type: string): "League" | "Cup" | null {
   return null;
 }
 
-function applyOverrides(
+export function applyCompetitionOverride(
   competition: CompetitionDefinition
 ): CompetitionDefinition {
   const override = COMPETITION_OVERRIDES.find(
@@ -58,7 +58,7 @@ function buildFromSeed(
 
   const capabilities = defaultCapabilitiesFor(providerType, seed.category);
 
-  return applyOverrides({
+  return applyCompetitionOverride({
     providerId: entry.league.id,
     name: entry.league.name,
     countryName: entry.country.name,
@@ -109,6 +109,20 @@ export function buildCompetitionRegistry(
     generatedAt,
     source: "api-football/leagues",
     totalFromApi: apiEntries.length,
+    enabledCount: competitions.length,
+    competitions,
+  };
+}
+
+/** Re-apply manual overrides after capability probe merges (probe can false-negative lineups). */
+export function applyCompetitionOverridesToRegistry(
+  registry: CompetitionRegistryFile
+): CompetitionRegistryFile {
+  const competitions = registry.competitions.map((item) =>
+    applyCompetitionOverride(item)
+  );
+  return {
+    ...registry,
     enabledCount: competitions.length,
     competitions,
   };

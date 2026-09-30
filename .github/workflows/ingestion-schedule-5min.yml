@@ -1,20 +1,10 @@
-# Manual-only entry point. Scheduled runs use:
-# - ingestion-ai-warm-15min.yml
-# - ingestion-ai-warm-6h.yml (sequential daily + backfill)
-name: Ingestion AI warm
+# One cron expression per workflow — GitHub Actions delays multi-cron workflows by hours.
+name: Ingestion schedule (5 min)
 
 on:
+  schedule:
+    - cron: "*/5 * * * *"
   workflow_dispatch:
-    inputs:
-      target:
-        description: Which warm cron route to trigger
-        type: choice
-        required: true
-        default: warm-ai-prematch
-        options:
-          - warm-ai-prematch
-          - warm-ai-prematch-daily
-          - both
 
 jobs:
   select:
@@ -25,10 +15,9 @@ jobs:
       - uses: actions/checkout@v4
       - id: pick
         env:
-          JOB_SET: warm
+          JOB_SET: ingestion
           EVENT_NAME: ${{ github.event_name }}
           EVENT_SCHEDULE: ${{ github.event.schedule }}
-          TARGET: ${{ github.event.inputs.target }}
         run: node scripts/pick-ingestion-gha-jobs.mjs
 
   trigger:

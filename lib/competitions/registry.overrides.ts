@@ -18,7 +18,8 @@ export const COMPETITION_OVERRIDES: CompetitionOverride[] = [
   {
     providerId: 10,
     category: "national_team",
-    capabilities: { standings: false },
+    // Probe sample fixture can lack XI; Friendlies still publish lineups near kickoff.
+    capabilities: { standings: false, lineups: true },
   },
   {
     providerId: 32,

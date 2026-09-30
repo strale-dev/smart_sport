@@ -1,7 +1,7 @@
 # System Audit Log
 
 **Grana:** `fix/system-audit`  
-**Okruženje za DB/code review:** dev Supabase (`user-supabasei`, ref `zovobemlpqoclyjhvkpw`)  
+**Supabase (smart_sport / Scorence):** MCP **`user-supabasei`** only (ref `zovobemlpqoclyjhvkpw`). Ne koristiti `user-supabase` — drugi projekat.  
 **GHA trigger target:** produkcija `https://scorence.app` (vidi `docs/ING-3-pro-cutover.md`)
 
 ---
@@ -174,6 +174,15 @@ HAVING count(*) > 1;
 ## Faza 2 — AI Analysis Lifecycle
 
 (popuniti)
+
+### 2.7 Prod incident (2026-09-30) — dijagnoza, nije nova Phase 2 regresija
+
+| Signal                       | Zaključak                                                                                                                                                                                                                                                                                                                               |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GHA posle deploy-a `5088f69` | **Zelen** (`ingestion-schedule` / `ingestion-ai-warm` success); poslednji failure pre PR #2 stack-a (`36416509310`, 2026-09-28).                                                                                                                                                                                                        |
+| Phase 2 u prod               | **Da** — PR #2 + deploy `5088f69` (Sentry release).                                                                                                                                                                                                                                                                                     |
+| Uzrok simptoma               | **Stari ops obrazac:** multi-cron GHA kasni satima → `sync-lineups` / warm imminent promašuju 90-min prozor; Friendlies (`providerId` 10) imao probe `lineups: false`; live reconcile finalizovao DB live kad je provider tick vratio 0 allowlisted live; warm daily lock TTL 600s + paralelni 6h job-ovi.                              |
+| Fix (2026-09-30)             | Split GHA workflow-i + `ingestion-cadence-watchdog.yml`; override/probe `lineups: true` za liga 10; runtime `applyCompetitionOverride` u `findCompetition`; reconcile ne tretira prazan active live set kao „nema live”; warm lock TTL 90s (60s maxDuration + 30s buffer); 6h warm sequential batch script; reconcile FT scenario test. |
 
 ## Faza 3 — AI Prediction Correctness
 

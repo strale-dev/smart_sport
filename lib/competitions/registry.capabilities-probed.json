@@ -99,7 +99,7 @@
         "standings": false,
         "fixtureEvents": true,
         "fixtureStatistics": false,
-        "lineups": false
+        "lineups": true
       }
     },
     {

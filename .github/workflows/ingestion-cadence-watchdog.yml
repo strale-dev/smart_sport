@@ -1,0 +1,18 @@
+# Off-phase */15 recovery when GitHub schedule delay skips the primary 15 min workflows.
+name: Ingestion cadence watchdog
+
+on:
+  schedule:
+    - cron: "2,17,32,47 * * * *"
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trigger 15 min ingestion + warm batch
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          PRODUCTION_SITE_URL: ${{ vars.PRODUCTION_SITE_URL }}
+        run: node scripts/trigger-fifteen-minute-cron-batch.mjs
