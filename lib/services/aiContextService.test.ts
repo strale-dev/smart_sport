@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { sanitizeProviderText } from "@/lib/ai/sanitize";
+import { MAX_COMPACT_CONTEXT_BYTES } from "@/lib/analytics/history-feature-types";
 import {
   buildLiveUserPrompt,
   buildPrematchUserPrompt,
@@ -75,6 +76,9 @@ describe("aiContextService", () => {
     expect(prompt).toContain('"fixtureExternalId": 1552754');
     expect(prompt).not.toContain("provider_payload");
     expect(prompt).not.toContain("<script>");
+    expect(Buffer.byteLength(prompt, "utf8")).toBeLessThan(
+      MAX_COMPACT_CONTEXT_BYTES * 4
+    );
   });
 
   it("keeps sanitized injection-like team names as JSON literal data", () => {

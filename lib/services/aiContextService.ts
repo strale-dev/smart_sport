@@ -15,9 +15,12 @@ import {
   readLineupsFromDb,
 } from "@/lib/ingestion/db-read";
 import {
-  computeTeamHistoricalAggregates,
-  type TeamHistoricalAggregates,
-} from "@/lib/analytics/team-aggregates";
+  assertCompactContextWithinLimit,
+  buildCompactPrematchAnalyticsContext,
+  formSliceFromTeamFeatures,
+} from "@/lib/analytics/compact-ai-context";
+import { buildFixtureHistoryFeatures } from "@/lib/analytics/fixture-history-features";
+import type { TeamHistoryFeatures } from "@/lib/analytics/history-feature-types";
 import { resolveMatchFixtureContext } from "@/lib/match/fixture-context";
 import { getH2H, getRecentForm } from "@/lib/services/analyticsService";
 import type {
@@ -54,35 +57,43 @@ function resolveLineupsState(
   return "PREDICTED";
 }
 
-function historicalContextFromAggregates(
-  aggregates: TeamHistoricalAggregates
+function metricValueOrNull(
+  m: { status: string; value: number | null } | undefined
+): number | null {
+  if (!m || m.status !== "available") {
+    return null;
+  }
+  return m.value;
+}
+
+function historicalContextFromFeatures(
+  team: TeamHistoryFeatures
 ): NonNullable<PrematchAiContext["historicalContext"]>["home"] {
+  const allScope = team.completenessByScope.find((c) => c.scope === "ALL");
+  const w20 = team.windows.ALL?.[20];
   return {
-    sampleSize: aggregates.finishedSampleSize,
-    last20Ppg: aggregates.last20All.ppg,
-    seasonPpg: aggregates.seasonToDate?.ppg ?? null,
-    previousSeasonPpg: aggregates.previousSeason?.ppg ?? null,
-    topCompetitions: aggregates.byCompetition.slice(0, 5).map((entry) => ({
-      leagueName: entry.leagueName,
-      matches: entry.matches,
-      ppg: entry.ppg,
-    })),
+    sampleSize: allScope?.validCount ?? 0,
+    last20Ppg: metricValueOrNull(w20?.ppg),
+    seasonPpg: null,
+    previousSeasonPpg: null,
+    topCompetitions: [],
   };
 }
 
 function formSliceFromSnapshot(
   snapshot: Awaited<ReturnType<typeof getRecentForm>>
 ): PrematchAiContext["form"]["homeLast5"] {
-  return snapshot.results.length > 0
-    ? {
-        wins: snapshot.wins,
-        draws: snapshot.draws,
-        losses: snapshot.losses,
-        ppg: snapshot.ppg ?? 0,
-        goalsFor: snapshot.goalsFor,
-        goalsAgainst: snapshot.goalsAgainst,
-      }
-    : null;
+  if (snapshot.results.length === 0 || snapshot.ppg == null) {
+    return null;
+  }
+  return {
+    wins: snapshot.wins,
+    draws: snapshot.draws,
+    losses: snapshot.losses,
+    ppg: snapshot.ppg,
+    goalsFor: snapshot.goalsFor,
+    goalsAgainst: snapshot.goalsAgainst,
+  };
 }
 
 export type PrematchContextResult = {
@@ -119,26 +130,9 @@ async function buildPrematchContextUncached(
     awayTeam: fixture.awayTeam,
   });
 
-  const [
-    homeForm,
-    awayForm,
-    homeFormHome,
-    awayFormAway,
-    h2h,
-    lineups,
-    sidelined,
-    standings,
-    homeHistorical,
-    awayHistorical,
-  ] = await Promise.all([
-    getRecentForm(fixture.homeTeam.externalId, { matches: 5, scope: "ALL" }),
-    getRecentForm(fixture.awayTeam.externalId, { matches: 5, scope: "ALL" }),
-    getRecentForm(fixture.homeTeam.externalId, { matches: 5, scope: "HOME" }),
-    getRecentForm(fixture.awayTeam.externalId, { matches: 5, scope: "AWAY" }),
-    getH2H(fixture.homeTeam.externalId, fixture.awayTeam.externalId, {
-      windowSize: 10,
-      scope: "ALL",
-      leagueProviderId: fixture.league.externalId,
+  const [historyFeatures, lineups, sidelined, standings] = await Promise.all([
+    buildFixtureHistoryFeatures(fixtureExternalId, {
+      asOf: fixture.kickoffAt,
     }),
     readLineupsFromDb(fixtureExternalId),
     readFixtureSidelinedFromDb(fixtureExternalId),
@@ -150,15 +144,50 @@ async function buildPrematchContextUncached(
           awayTeamExternalId: fixture.awayTeam.externalId,
         })
       : Promise.resolve({ home: null, away: null }),
-    computeTeamHistoricalAggregates(fixture.homeTeam.externalId, {
-      asOf: fixture.kickoffAt,
-      seasonYear: fixture.seasonYear,
-    }),
-    computeTeamHistoricalAggregates(fixture.awayTeam.externalId, {
-      asOf: fixture.kickoffAt,
-      seasonYear: fixture.seasonYear,
-    }),
   ]);
+
+  if (!historyFeatures) {
+    throw new Error(
+      `Fixture ${fixtureExternalId} history features unavailable for AI context`
+    );
+  }
+
+  const analyticsCompact =
+    buildCompactPrematchAnalyticsContext(historyFeatures);
+  assertCompactContextWithinLimit(analyticsCompact);
+
+  const homeFormSlice = formSliceFromTeamFeatures(historyFeatures.home);
+  const awayFormSlice = formSliceFromTeamFeatures(historyFeatures.away);
+  const fixVenueSlice = (
+    team: TeamHistoryFeatures,
+    scope: "HOME" | "AWAY"
+  ): PrematchAiContext["form"]["homeLast5Home"] => {
+    const w = team.windows[scope]?.[5];
+    if (
+      !w ||
+      w.played === 0 ||
+      w.ppg.status !== "available" ||
+      w.ppg.value == null
+    ) {
+      return null;
+    }
+    const gf =
+      w.goalsFor.value != null ? Math.round(w.goalsFor.value * w.played) : 0;
+    const ga =
+      w.goalsAgainst.value != null
+        ? Math.round(w.goalsAgainst.value * w.played)
+        : 0;
+    return {
+      wins: w.wins,
+      draws: w.draws,
+      losses: w.losses,
+      ppg: w.ppg.value,
+      goalsFor: gf,
+      goalsAgainst: ga,
+    };
+  };
+
+  const h2h = historyFeatures.h2h;
 
   const lineupsState = resolveLineupsState(lineups);
   const promptVersion = getAiPromptVersion();
@@ -178,12 +207,11 @@ async function buildPrematchContextUncached(
         }))
       : null;
 
-  const formSlice = formSliceFromSnapshot;
-
-  const hasFormAll = homeForm.results.length > 0 && awayForm.results.length > 0;
+  const hasFormAll = homeFormSlice != null && awayFormSlice != null;
   const hasFormHomeAway =
-    homeFormHome.results.length > 0 && awayFormAway.results.length > 0;
-  const hasH2h = h2h.meetings.length > 0;
+    fixVenueSlice(historyFeatures.home, "HOME") != null &&
+    fixVenueSlice(historyFeatures.away, "AWAY") != null;
+  const hasH2h = h2h.dataState === "available" && h2h.meetingsInWindow > 0;
   const hasStandings = standingsContext != null;
   const hasSidelined = sidelinedContext != null;
 
@@ -252,37 +280,29 @@ async function buildPrematchContextUncached(
       dataQuality: prediction.inputSnapshot.dataQuality,
     },
     form: {
-      homeLast5: formSlice(homeForm),
-      awayLast5: formSlice(awayForm),
-      homeLast5Home: formSlice(homeFormHome),
-      awayLast5Away: formSlice(awayFormAway),
+      homeLast5: homeFormSlice,
+      awayLast5: awayFormSlice,
+      homeLast5Home: fixVenueSlice(historyFeatures.home, "HOME"),
+      awayLast5Away: fixVenueSlice(historyFeatures.away, "AWAY"),
     },
+    analyticsCompact,
     standings: standingsContext,
     lineups: lineupsContext,
     sidelined: sidelinedContext,
     dataAvailable: dataAvailableForContext,
     dataMissing,
-    h2h:
-      h2h.meetings.length > 0
-        ? {
-            meetings: h2h.meetings.length,
-            homeWins: h2h.teamAWins,
-            draws: h2h.draws,
-            awayWins: h2h.teamBWins,
-            avgGoals:
-              h2h.meetings.length > 0
-                ? Number(
-                    (
-                      (h2h.teamAGoals + h2h.teamBGoals) /
-                      h2h.meetings.length
-                    ).toFixed(2)
-                  )
-                : null,
-          }
-        : null,
+    h2h: hasH2h
+      ? {
+          meetings: h2h.meetingsInWindow,
+          homeWins: h2h.homeWins,
+          draws: h2h.draws,
+          awayWins: h2h.awayWins,
+          avgGoals: metricValueOrNull(h2h.avgGoalsSimple),
+        }
+      : null,
     historicalContext: {
-      home: historicalContextFromAggregates(homeHistorical),
-      away: historicalContextFromAggregates(awayHistorical),
+      home: historicalContextFromFeatures(historyFeatures.home),
+      away: historicalContextFromFeatures(historyFeatures.away),
     },
     dataQuality: resolveDisplayDataQuality({
       dataMissing,
@@ -315,6 +335,7 @@ async function buildPrematchContextUncached(
     sidelined: context.sidelined,
     dataAvailable: context.dataAvailable,
     dataMissing: context.dataMissing,
+    analyticsCompact: context.analyticsCompact,
     referee: context.referee,
     round: context.round,
   });

@@ -41,11 +41,15 @@ function toPrematchSlice(snapshot: FormSnapshot): PrematchFormSlice {
     return null;
   }
 
+  if (snapshot.ppg == null) {
+    return null;
+  }
+
   return {
     wins: snapshot.wins,
     draws: snapshot.draws,
     losses: snapshot.losses,
-    ppg: snapshot.ppg ?? 0,
+    ppg: snapshot.ppg,
     goalsFor: snapshot.goalsFor,
     goalsAgainst: snapshot.goalsAgainst,
   };
