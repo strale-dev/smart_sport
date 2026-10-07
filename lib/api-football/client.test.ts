@@ -11,12 +11,15 @@ vi.mock("p-retry", async (importOriginal) => {
 import {
   apiFootballFetch,
   apiFootballFetchAllPagesResponse,
+  apiFootballFetchOutcome,
   apiFootballFetchResponse,
 } from "@/lib/api-football/client";
 import {
   ApiFootballError,
   ApiFootballQuotaError,
+  ApiFootballRateLimitError,
 } from "@/lib/api-football/errors";
+import { parseRetryAfterMs } from "@/lib/api-football/fetch-outcome";
 import { optionalProviderFetch } from "@/lib/api-football/safe-call";
 import { resetInFlightDedupForTests } from "@/lib/api-football/dedup";
 import {
@@ -313,9 +316,15 @@ describe("apiFootballFetch", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
-  it("maps exhausted 429 retries to ApiFootballQuotaError", async () => {
+  it("maps exhausted 429 retries to ApiFootballQuotaError when day quota is zero", async () => {
     vi.mocked(pRetry).mockImplementationOnce(async (fn) =>
       (fn as () => Promise<Response>)()
+    );
+
+    await recordQuotaFromHeaders(
+      new Headers({
+        "x-ratelimit-requests-remaining": "0",
+      })
     );
 
     const fetchImpl = vi
@@ -329,5 +338,143 @@ describe("apiFootballFetch", () => {
         { fetchImpl, priority: "critical" }
       )
     ).rejects.toBeInstanceOf(ApiFootballQuotaError);
+  });
+
+  it("maps exhausted 429 retries to ApiFootballRateLimitError when day quota remains", async () => {
+    vi.mocked(pRetry).mockImplementationOnce(async (fn) =>
+      (fn as () => Promise<Response>)()
+    );
+
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        mockResponse({}, { status: 429, headers: { "Retry-After": "2" } })
+      );
+
+    await expect(
+      apiFootballFetch(
+        "/fixtures",
+        { id: 1035037 },
+        { fetchImpl, priority: "critical" }
+      )
+    ).rejects.toBeInstanceOf(ApiFootballRateLimitError);
+  });
+
+  it("accepts HTTP 200 with valid empty results", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      mockResponse(
+        {
+          get: "fixtures/events",
+          parameters: { fixture: 1 },
+          errors: [],
+          results: 0,
+          paging: { current: 1, total: 1 },
+          response: [],
+        },
+        {
+          headers: {
+            "x-ratelimit-requests-remaining": "5000",
+          },
+        }
+      )
+    );
+
+    const outcome = await apiFootballFetchOutcome(
+      "/fixtures/events",
+      { fixture: 1 },
+      { fetchImpl }
+    );
+
+    expect(outcome.kind).toBe("empty");
+    expect(
+      outcome.kind === "empty" || outcome.kind === "success"
+        ? outcome.data.response
+        : null
+    ).toEqual([]);
+  });
+
+  it("rejects malformed JSON bodies as permanent failures", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      new Response("not-json", {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "x-ratelimit-requests-remaining": "5000",
+        },
+      })
+    );
+
+    await expect(
+      apiFootballFetch("/fixtures", { id: 1 }, { fetchImpl })
+    ).rejects.toThrow(/not valid JSON/);
+  });
+
+  it("retries HTTP 500 and eventually succeeds", async () => {
+    const fixture = loadApiFootballFixture("fixture-by-id.json");
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(mockResponse({}, { status: 500 }))
+      .mockResolvedValueOnce(
+        mockResponse(fixture, {
+          headers: {
+            "x-ratelimit-requests-remaining": "5000",
+          },
+        })
+      );
+
+    const result = await apiFootballFetch(
+      "/fixtures",
+      { id: 1035037 },
+      { fetchImpl }
+    );
+
+    expect(result.response).toHaveLength(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries request timeouts", async () => {
+    const fixture = loadApiFootballFixture("fixture-by-id.json");
+    const timeoutError = new DOMException(
+      "The operation timed out.",
+      "TimeoutError"
+    );
+    const fetchImpl = vi
+      .fn()
+      .mockRejectedValueOnce(timeoutError)
+      .mockResolvedValueOnce(
+        mockResponse(fixture, {
+          headers: {
+            "x-ratelimit-requests-remaining": "5000",
+          },
+        })
+      );
+
+    const result = await apiFootballFetch(
+      "/fixtures",
+      { id: 1035037 },
+      { fetchImpl }
+    );
+
+    expect(result.response).toHaveLength(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not return an empty array when the provider returns errors", async () => {
+    const fixture = loadApiFootballFixture("ip-not-allowed.json");
+    const fetchImpl = vi.fn().mockResolvedValue(mockResponse(fixture));
+
+    await expect(
+      apiFootballFetchResponse(
+        "/fixtures/events",
+        { fixture: 1570378 },
+        { fetchImpl }
+      )
+    ).rejects.toBeInstanceOf(ApiFootballError);
+  });
+});
+
+describe("parseRetryAfterMs", () => {
+  it("parses Retry-After seconds", () => {
+    expect(parseRetryAfterMs("2")).toBe(2000);
   });
 });
