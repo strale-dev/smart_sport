@@ -3,11 +3,13 @@ import {
   collectFormResults,
   type TeamFixtureRow,
 } from "@/lib/analytics/compute-form";
+import {
+  queryCompletedTeamFixtures,
+  type CompletedTeamFixtureRow,
+} from "@/lib/analytics/team-history-query";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { PrematchFormSlice } from "@/types/ai";
 import type { FormScope, FormSnapshot } from "@/types/domain";
-
-const TERMINAL_STATUSES = ["FT", "AET", "PEN"] as const;
 
 export type TeamCompetitionFormSlice = {
   leagueProviderId: number;
@@ -24,6 +26,7 @@ export type TeamHistoricalAggregates = {
   last5All: FormSnapshot;
   last10All: FormSnapshot;
   last20All: FormSnapshot;
+  last30All: FormSnapshot;
   last5Home: FormSnapshot;
   last5Away: FormSnapshot;
   last10Home: FormSnapshot;
@@ -67,60 +70,10 @@ async function getTeamUuid(teamProviderId: number): Promise<string | null> {
   return data?.id ?? null;
 }
 
-type TeamFixtureRowWithSeason = TeamFixtureRow & {
-  season?: { year: number } | null;
-};
-
-async function queryFinishedTeamFixtures(
-  teamUuid: string,
-  limit: number,
-  options?: { scope?: FormScope; beforeAt?: string }
-): Promise<TeamFixtureRowWithSeason[]> {
-  const client = createAdminClient();
-  const scope = options?.scope ?? "ALL";
-
-  let query = client
-    .from("fixtures")
-    .select(
-      `
-      provider_id,
-      kickoff_at,
-      score_home,
-      score_away,
-      home_team:teams!fixtures_home_team_id_fkey (provider_id, name),
-      away_team:teams!fixtures_away_team_id_fkey (provider_id, name),
-      league:leagues (provider_id, name),
-      season:seasons (year)
-    `
-    )
-    .in("status", [...TERMINAL_STATUSES])
-    .order("kickoff_at", { ascending: false })
-    .limit(limit);
-
-  if (options?.beforeAt) {
-    query = query.lt("kickoff_at", options.beforeAt);
-  }
-
-  if (scope === "HOME") {
-    query = query.eq("home_team_id", teamUuid);
-  } else if (scope === "AWAY") {
-    query = query.eq("away_team_id", teamUuid);
-  } else {
-    query = query.or(`home_team_id.eq.${teamUuid},away_team_id.eq.${teamUuid}`);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    throw new Error(`Failed to query team fixtures: ${error.message}`);
-  }
-
-  return (data ?? []) as TeamFixtureRowWithSeason[];
-}
-
 function filterRowsBySeason(
-  rows: TeamFixtureRowWithSeason[],
+  rows: CompletedTeamFixtureRow[],
   seasonYear: number
-): TeamFixtureRowWithSeason[] {
+): CompletedTeamFixtureRow[] {
   return rows.filter((row) => row.season?.year === seasonYear);
 }
 
@@ -175,6 +128,7 @@ export async function computeTeamHistoricalAggregates(
       last5All: empty(5, "ALL"),
       last10All: empty(10, "ALL"),
       last20All: empty(20, "ALL"),
+      last30All: empty(30, "ALL"),
       last5Home: empty(5, "HOME"),
       last5Away: empty(5, "AWAY"),
       last10Home: empty(10, "HOME"),
@@ -185,10 +139,15 @@ export async function computeTeamHistoricalAggregates(
     };
   }
 
-  const beforeAt = options?.asOf;
-  const baseRows = await queryFinishedTeamFixtures(teamUuid, 320, {
-    beforeAt,
-  });
+  const beforeAt = options?.asOf ?? new Date().toISOString();
+  const { rows: baseRows, validCount: finishedSampleSize } =
+    await queryCompletedTeamFixtures({
+      teamUuid,
+      beforeAt,
+      scope: "ALL",
+      limit: 320,
+      order: "desc",
+    });
 
   const build = (matches: number, scope: FormScope) => {
     const scoped =
@@ -247,10 +206,11 @@ export async function computeTeamHistoricalAggregates(
 
   return {
     teamProviderId,
-    finishedSampleSize: baseRows.length,
+    finishedSampleSize,
     last5All: build(5, "ALL"),
     last10All: build(10, "ALL"),
     last20All: build(20, "ALL"),
+    last30All: build(30, "ALL"),
     last5Home: build(5, "HOME"),
     last5Away: build(5, "AWAY"),
     last10Home: build(10, "HOME"),

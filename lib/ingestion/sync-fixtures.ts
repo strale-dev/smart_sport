@@ -54,6 +54,8 @@ export type SyncFixturesResult = {
     fixturesFilteredOut: number;
     matchDetailsIngested: number;
     stoppedForTimeBudget?: boolean;
+    teamHistoryRepairTeamsProcessed?: number;
+    teamHistoryRepairTeamsSkipped?: number;
   };
 };
 
@@ -200,9 +202,28 @@ export async function syncFixtures(
     }
   }
 
+  let teamHistoryRepair: Awaited<
+    ReturnType<
+      typeof import("@/lib/ingestion/repair-team-history").runTeamHistoryRepairBatch
+    >
+  > | null = null;
+
+  if (process.env.TEAM_HISTORY_REPAIR_ON_SYNC === "1" && !budget.exceeded()) {
+    const { runTeamHistoryRepairBatch } =
+      await import("@/lib/ingestion/repair-team-history");
+    teamHistoryRepair = await runTeamHistoryRepairBatch({
+      maxTeams: 2,
+      budgetMs: budget.remainingMs(),
+    });
+    apiRequests += teamHistoryRepair.apiRequests;
+    fixturesUpserted += teamHistoryRepair.fixturesUpserted;
+  }
+
   const outcome = resolveCronOutcome({
     failedCount: 0,
-    partialForTimeBudget: stoppedForTimeBudget && fixturesUpserted > 0,
+    partialForTimeBudget:
+      (stoppedForTimeBudget && fixturesUpserted > 0) ||
+      teamHistoryRepair?.stoppedForTimeBudget === true,
   });
 
   return {
@@ -218,6 +239,12 @@ export async function syncFixtures(
       fixturesFilteredOut,
       matchDetailsIngested,
       ...(stoppedForTimeBudget ? { stoppedForTimeBudget: true } : {}),
+      ...(teamHistoryRepair
+        ? {
+            teamHistoryRepairTeamsProcessed: teamHistoryRepair.teamsProcessed,
+            teamHistoryRepairTeamsSkipped: teamHistoryRepair.teamsSkipped,
+          }
+        : {}),
     },
   };
 }

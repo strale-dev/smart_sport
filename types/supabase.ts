@@ -936,7 +936,10 @@ export type Database = {
       ingestion_team_sync_state: {
         Row: {
           finished_count: number
+          history_state: Json | null
           last_gap_fill_at: string | null
+          last_repair_season_year: number | null
+          min_finished_target: number
           seasons_covered: number
           team_provider_id: number
           upcoming_count: number
@@ -944,7 +947,10 @@ export type Database = {
         }
         Insert: {
           finished_count?: number
+          history_state?: Json | null
           last_gap_fill_at?: string | null
+          last_repair_season_year?: number | null
+          min_finished_target?: number
           seasons_covered?: number
           team_provider_id: number
           upcoming_count?: number
@@ -952,7 +958,10 @@ export type Database = {
         }
         Update: {
           finished_count?: number
+          history_state?: Json | null
           last_gap_fill_at?: string | null
+          last_repair_season_year?: number | null
+          min_finished_target?: number
           seasons_covered?: number
           team_provider_id?: number
           upcoming_count?: number

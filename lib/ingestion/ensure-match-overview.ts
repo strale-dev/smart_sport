@@ -40,6 +40,10 @@ import {
 } from "@/lib/match/overview-block-status";
 import { LockNotAcquiredError, isLockHeld, withLock } from "@/lib/redis/lock";
 import { overviewHydrateLockKey } from "@/lib/redis/keys";
+import {
+  countCompletedTeamFixturesByProviderId,
+  TEAM_HISTORY_MIN_MATCHES,
+} from "@/lib/analytics/team-history-query";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Fixture } from "@/types/domain";
 
@@ -51,37 +55,10 @@ const FINISHED_STATUSES = ["FT", "AET", "PEN"] as const;
 async function countFinishedTeamFixtures(
   teamProviderId: number
 ): Promise<number> {
-  const client = createAdminClient();
-  const { data: team, error: teamError } = await client
-    .from("teams")
-    .select("id")
-    .eq("provider_id", teamProviderId)
-    .maybeSingle();
-
-  if (teamError) {
-    throw new Error(
-      `Failed to resolve team ${teamProviderId}: ${teamError.message}`
-    );
-  }
-
-  if (!team) {
-    return 0;
-  }
-
-  const { count, error } = await client
-    .from("fixtures")
-    .select("*", { count: "exact", head: true })
-    .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
-    .in("status", [...FINISHED_STATUSES])
-    .not("score_home", "is", null);
-
-  if (error) {
-    throw new Error(
-      `Failed to count finished fixtures for team ${teamProviderId}: ${error.message}`
-    );
-  }
-
-  return count ?? 0;
+  return countCompletedTeamFixturesByProviderId({
+    teamProviderId,
+    beforeAt: new Date().toISOString(),
+  });
 }
 
 async function ingestRawFixtureList(
@@ -96,6 +73,9 @@ async function ingestRawFixtureList(
 
 async function fillTeamFormIfThin(teamProviderId: number): Promise<boolean> {
   const finishedCount = await countFinishedTeamFixtures(teamProviderId);
+  if (finishedCount >= TEAM_HISTORY_MIN_MATCHES) {
+    return true;
+  }
   if (!shouldFillTeamForm(finishedCount)) {
     return true;
   }

@@ -16,6 +16,7 @@ import {
   startIngestionSyncRun,
   upsertLeagueSeasonSyncState,
 } from "@/lib/ingestion/ingestion-sync-state";
+import { runTeamHistoryRepairBatch } from "@/lib/ingestion/repair-team-history";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import { ingestFixtureFromRaw } from "@/lib/ingestion/upsert";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -301,6 +302,18 @@ export async function backfillHistoricalFixtures(
 
       if (stoppedForTimeBudget) {
         break;
+      }
+    }
+
+    if (!stoppedForTimeBudget && !dryRun) {
+      const repairBatch = await runTeamHistoryRepairBatch({
+        maxTeams: 8,
+        budgetMs: backfillBudgetMs ?? 120_000,
+      });
+      apiRequests += repairBatch.apiRequests;
+      fixturesUpserted += repairBatch.fixturesUpserted;
+      if (backfillBudgetExceeded()) {
+        stoppedForTimeBudget = true;
       }
     }
 

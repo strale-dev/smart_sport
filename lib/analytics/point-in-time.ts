@@ -4,10 +4,12 @@ import {
   type TeamFixtureRow,
 } from "@/lib/analytics/compute-form";
 import { summarizeH2HMeetings } from "@/lib/analytics/compute-h2h";
+import {
+  queryCompletedTeamFixtures,
+  TERMINAL_FIXTURE_STATUSES,
+} from "@/lib/analytics/team-history-query";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FormScope } from "@/types/domain";
-
-const TERMINAL_STATUSES = ["FT", "AET", "PEN"] as const;
 
 export async function queryTeamFixturesBefore(
   teamUuid: string,
@@ -15,39 +17,16 @@ export async function queryTeamFixturesBefore(
   scope: FormScope,
   limit: number
 ): Promise<TeamFixtureRow[]> {
-  const client = createAdminClient();
-  let query = client
-    .from("fixtures")
-    .select(
-      `
-      provider_id,
-      kickoff_at,
-      score_home,
-      score_away,
-      home_team:teams!fixtures_home_team_id_fkey (provider_id, name),
-      away_team:teams!fixtures_away_team_id_fkey (provider_id, name),
-      league:leagues (provider_id, name)
-    `
-    )
-    .in("status", [...TERMINAL_STATUSES])
-    .lt("kickoff_at", beforeAt)
-    .order("kickoff_at", { ascending: false })
-    .limit(limit * 3);
+  const { rows } = await queryCompletedTeamFixtures({
+    teamUuid,
+    beforeAt,
+    scope,
+    limit,
+    order: "desc",
+    fetchMultiplier: 3,
+  });
 
-  if (scope === "HOME") {
-    query = query.eq("home_team_id", teamUuid);
-  } else if (scope === "AWAY") {
-    query = query.eq("away_team_id", teamUuid);
-  } else {
-    query = query.or(`home_team_id.eq.${teamUuid},away_team_id.eq.${teamUuid}`);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    throw new Error(`Failed to query point-in-time fixtures: ${error.message}`);
-  }
-
-  return (data ?? []) as TeamFixtureRow[];
+  return rows;
 }
 
 export async function computeFormBefore(
@@ -89,7 +68,7 @@ export async function computeH2HBefore(
       league:leagues (provider_id, name)
     `
     )
-    .in("status", [...TERMINAL_STATUSES])
+    .in("status", [...TERMINAL_FIXTURE_STATUSES])
     .lt("kickoff_at", beforeAt)
     .or(
       `and(home_team_id.eq.${teamAUuid},away_team_id.eq.${teamBUuid}),and(home_team_id.eq.${teamBUuid},away_team_id.eq.${teamAUuid})`
@@ -139,7 +118,7 @@ export async function computeTeamXgAveragesBefore(
   const { data: fixtures, error } = await client
     .from("fixtures")
     .select("id, home_team_id, away_team_id")
-    .in("status", [...TERMINAL_STATUSES])
+    .in("status", [...TERMINAL_FIXTURE_STATUSES])
     .lt("kickoff_at", beforeAt)
     .or(`home_team_id.eq.${teamUuid},away_team_id.eq.${teamUuid}`)
     .order("kickoff_at", { ascending: false })
@@ -230,7 +209,7 @@ export async function computeLeagueRanksBefore(input: {
     .from("fixtures")
     .select("home_team_id, away_team_id, score_home, score_away")
     .eq("league_id", input.leagueUuid)
-    .in("status", [...TERMINAL_STATUSES])
+    .in("status", [...TERMINAL_FIXTURE_STATUSES])
     .lt("kickoff_at", input.beforeAt);
 
   if (input.seasonUuid) {
@@ -330,7 +309,7 @@ export async function loadTerminalFixturesChronological(): Promise<
       league:leagues (provider_id)
     `
     )
-    .in("status", [...TERMINAL_STATUSES])
+    .in("status", [...TERMINAL_FIXTURE_STATUSES])
     .order("kickoff_at", { ascending: true });
 
   if (error) {
