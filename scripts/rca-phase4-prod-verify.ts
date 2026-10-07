@@ -50,12 +50,12 @@ async function probeCronRoute(
 }
 
 function readAiEligible(
-  prematchReadiness: { aiEligible?: boolean } | null
+  fixtureReadiness: { gates?: { aiGenerationAllowed?: boolean } } | null
 ): boolean | null {
-  if (prematchReadiness == null) {
+  if (fixtureReadiness == null) {
     return null;
   }
-  return prematchReadiness.aiEligible === true;
+  return fixtureReadiness.gates?.aiGenerationAllowed === true;
 }
 
 async function loadCoverageMetrics(
@@ -66,7 +66,7 @@ async function loadCoverageMetrics(
 
   const { data: upcomingRows, error: upcomingError } = await client
     .from("fixtures")
-    .select("id, provider_id, prematch_readiness")
+    .select("id, provider_id, fixture_readiness")
     .in("status", ["NS", "TBD"])
     .gte("kickoff_at", now.toISOString())
     .lt("kickoff_at", in7d);
@@ -80,7 +80,9 @@ async function loadCoverageMetrics(
   const eligibleUpcoming = upcoming.filter(
     (row) =>
       readAiEligible(
-        row.prematch_readiness as { aiEligible?: boolean } | null
+        row.fixture_readiness as {
+          gates?: { aiGenerationAllowed?: boolean };
+        } | null
       ) === true
   ).length;
 
@@ -129,7 +131,7 @@ async function loadFixtureWalk(
 ): Promise<RcaFixtureWalkRow[]> {
   const { data: workingRows, error: workingError } = await client
     .from("fixtures")
-    .select("id, provider_id, status, kickoff_at, prematch_readiness")
+    .select("id, provider_id, status, kickoff_at, fixture_readiness")
     .eq("status", "FT")
     .order("kickoff_at", { ascending: false })
     .limit(30);
@@ -171,7 +173,9 @@ async function loadFixtureWalk(
       status: row.status,
       kickoffAt: row.kickoff_at,
       aiEligible: readAiEligible(
-        row.prematch_readiness as { aiEligible?: boolean } | null
+        row.fixture_readiness as {
+          gates?: { aiGenerationAllowed?: boolean };
+        } | null
       ),
       hasPrematchInsight: true,
       hasPrematchPrediction: (predCount ?? 0) > 0,
@@ -182,7 +186,7 @@ async function loadFixtureWalk(
   const nowIso = new Date().toISOString();
   const { data: brokenRows, error: brokenError } = await client
     .from("fixtures")
-    .select("id, provider_id, status, kickoff_at, prematch_readiness")
+    .select("id, provider_id, status, kickoff_at, fixture_readiness")
     .in("status", ["NS", "TBD"])
     .gt("kickoff_at", nowIso)
     .order("kickoff_at", { ascending: true })
@@ -218,7 +222,9 @@ async function loadFixtureWalk(
       status: row.status,
       kickoffAt: row.kickoff_at,
       aiEligible: readAiEligible(
-        row.prematch_readiness as { aiEligible?: boolean } | null
+        row.fixture_readiness as {
+          gates?: { aiGenerationAllowed?: boolean };
+        } | null
       ),
       hasPrematchInsight: false,
       hasPrematchPrediction: (predCount ?? 0) > 0,

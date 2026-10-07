@@ -115,6 +115,26 @@ function buildFallbackResponse(
   };
 }
 
+async function resolvePrematchContextHashForHistorical(
+  fixtureExternalId: number
+): Promise<string | null> {
+  const prediction =
+    (await getLatestPrematch(fixtureExternalId)) ??
+    (await getOrComputePrematch(fixtureExternalId));
+  if (!prediction) {
+    return null;
+  }
+  try {
+    const { contextHash } = await buildPrematchContext(
+      fixtureExternalId,
+      prediction
+    );
+    return contextHash;
+  } catch {
+    return null;
+  }
+}
+
 async function readHistoricalPrematchInsight(
   fixtureUuid: string,
   fixtureExternalId: number
@@ -135,6 +155,17 @@ async function readHistoricalPrematchInsight(
       status: "UNAVAILABLE",
       fixtureExternalId,
       reason: "NO_STORED_INSIGHT",
+    };
+  }
+
+  const currentHash =
+    await resolvePrematchContextHashForHistorical(fixtureExternalId);
+  if (currentHash != null && row.context_hash !== currentHash) {
+    return {
+      status: "UNAVAILABLE",
+      fixtureExternalId,
+      reason: "STALE_PREMATCH_CONTEXT",
+      prediction,
     };
   }
 
@@ -305,10 +336,18 @@ export async function generatePrematchInsight(
 
   if (insightMode === "historical") {
     const stored = await readLatestPrematchInsight(fixture.id);
+    let contextHashMatches: boolean | undefined;
+    if (stored) {
+      const currentHash =
+        await resolvePrematchContextHashForHistorical(fixtureExternalId);
+      contextHashMatches =
+        currentHash == null ? undefined : stored.context_hash === currentHash;
+    }
     const action = historicalPrematchWriteAction({
       trigger: options.trigger,
       hasUserId: Boolean(options.userId),
       hasStoredPrematch: stored != null,
+      contextHashMatches,
     });
 
     if (action === "return_stored" && stored) {
@@ -352,6 +391,25 @@ export async function generatePrematchInsight(
     };
   }
 
+  if (insightMode === "prematch") {
+    const { evaluateFixtureReadinessForProvider, isAiGenerationAllowed } =
+      await import("@/lib/fixtures/readiness");
+    const readiness =
+      await evaluateFixtureReadinessForProvider(fixtureExternalId);
+    if (!readiness || !isAiGenerationAllowed(readiness)) {
+      reportPrematchInsightOutcome("unavailable", fixtureExternalId, {
+        reason: "READINESS_NOT_MET",
+        trigger: options.trigger,
+        fixtureStatus: fixture.status,
+      });
+      return {
+        status: "UNAVAILABLE",
+        fixtureExternalId,
+        reason: "GENERATION_NOT_ALLOWED",
+      };
+    }
+  }
+
   const prediction = await getOrComputePrematch(fixtureExternalId);
   if (!prediction) {
     return { status: "MISS", fixtureExternalId };
@@ -364,6 +422,23 @@ export async function generatePrematchInsight(
       trigger: options.trigger,
       fixtureStatus: fixture.status,
       detail: snapshot ? "insufficient_model_signal" : "missing_input_snapshot",
+    });
+    return {
+      status: "UNAVAILABLE",
+      fixtureExternalId,
+      reason: "GENERATION_NOT_ALLOWED",
+    };
+  }
+
+  const { isAiContextReady, evaluateFixtureReadinessForProvider } =
+    await import("@/lib/fixtures/readiness");
+  const contextReadiness =
+    await evaluateFixtureReadinessForProvider(fixtureExternalId);
+  if (!contextReadiness || !isAiContextReady(contextReadiness)) {
+    reportPrematchInsightOutcome("unavailable", fixtureExternalId, {
+      reason: "AI_CONTEXT_NOT_READY",
+      trigger: options.trigger,
+      fixtureStatus: fixture.status,
     });
     return {
       status: "UNAVAILABLE",
@@ -457,6 +532,19 @@ export async function generatePrematchInsight(
       }
     );
 
+    try {
+      const { evaluateAndPersistFixtureReadiness } =
+        await import("@/lib/fixtures/readiness");
+      await evaluateAndPersistFixtureReadiness({
+        providerId: fixtureExternalId,
+      });
+    } catch (refreshError) {
+      console.warn(
+        `[aiService] readiness refresh failed for ${fixtureExternalId}`,
+        refreshError
+      );
+    }
+
     return {
       status: "OK",
       insight: generated,
@@ -511,6 +599,12 @@ export async function generateLiveInsight(
   const fixture = await resolveFixtureUuidByExternalId(input.fixtureExternalId);
   if (!fixture) {
     return { ok: false, reason: "FIXTURE_NOT_FOUND" };
+  }
+
+  const { isPausedLiveFixtureStatus } =
+    await import("@/lib/fixtures/live-status");
+  if (isPausedLiveFixtureStatus(fixture.status)) {
+    return { ok: false, reason: "LIVE_PAUSED" };
   }
 
   const { context, contextHash } = await buildLiveContext({

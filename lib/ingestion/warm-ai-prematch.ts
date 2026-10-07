@@ -4,6 +4,7 @@ import { generatePrematchInsight } from "@/lib/services/aiService";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
 import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
+import type { FixtureReadinessSnapshot } from "@/lib/fixtures/readiness";
 
 export type WarmAiPrematchScope = "daily" | "imminent";
 
@@ -34,14 +35,19 @@ export function warmWindowBoundsForScope(
 
 type WarmFixtureRow = {
   provider_id: number;
-  prematch_readiness: { aiEligible?: boolean } | null;
+  fixture_readiness: FixtureReadinessSnapshot | null;
   kickoff_at: string;
 };
 
+function isAiGenerationAllowedFromRow(row: WarmFixtureRow): boolean {
+  const gates = row.fixture_readiness?.gates;
+  return gates?.aiGenerationAllowed === true;
+}
+
 function sortWarmCandidates(rows: WarmFixtureRow[]): WarmFixtureRow[] {
   return [...rows].sort((left, right) => {
-    const leftEligible = left.prematch_readiness?.aiEligible === true ? 1 : 0;
-    const rightEligible = right.prematch_readiness?.aiEligible === true ? 1 : 0;
+    const leftEligible = isAiGenerationAllowedFromRow(left) ? 1 : 0;
+    const rightEligible = isAiGenerationAllowedFromRow(right) ? 1 : 0;
     if (leftEligible !== rightEligible) {
       return rightEligible - leftEligible;
     }
@@ -61,12 +67,12 @@ async function loadFixturesInScope(
 
   const { data, error } = await client
     .from("fixtures")
-    .select("provider_id, kickoff_at, prematch_readiness")
+    .select("provider_id, kickoff_at, fixture_readiness")
     .in("status", ["NS", "TBD"])
     .gte("kickoff_at", from)
     .lte("kickoff_at", to)
     .order("kickoff_at", { ascending: true })
-    .limit(limit * 2);
+    .limit(limit * 4);
 
   if (error) {
     throw new Error(
@@ -75,7 +81,10 @@ async function loadFixturesInScope(
   }
 
   const sorted = sortWarmCandidates((data ?? []) as WarmFixtureRow[]);
-  return sorted.slice(0, limit).map((row) => row.provider_id);
+  return sorted
+    .filter(isAiGenerationAllowedFromRow)
+    .slice(0, limit)
+    .map((row) => row.provider_id);
 }
 
 export async function warmAiPrematchInsights(

@@ -75,13 +75,19 @@ export async function writeLastPollAt(
   memoryLastPollAt.set(key, timestampMs);
 }
 
-export async function waitForCadence(lastAtKey: string): Promise<void> {
+export async function waitForCadence(
+  lastAtKey: string,
+  intervalFactor = 1
+): Promise<void> {
   let targetIntervalMs = randomPollIntervalMs();
   const quota = await getStoredQuotaSnapshot();
   if (quota.isLowBudget) {
     targetIntervalMs = Math.round(
       targetIntervalMs * LIVE_LOW_BUDGET_POLL_INTERVAL_FACTOR
     );
+  }
+  if (intervalFactor > 1) {
+    targetIntervalMs = Math.round(targetIntervalMs * intervalFactor);
   }
   const lastAt = await readLastPollAt(lastAtKey);
   if (lastAt == null) {
@@ -187,7 +193,31 @@ export async function runFixturePollChainTick(
   }
 
   const lastAtKey = livePollFixtureLastAtKey(fixtureProviderId);
-  await waitForCadence(lastAtKey);
+  let pollIntervalFactor = 1;
+  try {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const { isPausedLiveFixtureStatus } =
+      await import("@/lib/fixtures/live-status");
+    const client = createAdminClient();
+    const { data: fixtureRow } = await client
+      .from("fixtures")
+      .select("status")
+      .eq("provider_id", fixtureProviderId)
+      .maybeSingle();
+    if (
+      fixtureRow?.status &&
+      isPausedLiveFixtureStatus(
+        fixtureRow.status as import("@/types/domain").FixtureStatus
+      )
+    ) {
+      const { PAUSED_LIVE_POLL_INTERVAL_FACTOR } =
+        await import("@/lib/fixtures/live-status");
+      pollIntervalFactor = PAUSED_LIVE_POLL_INTERVAL_FACTOR;
+    }
+  } catch {
+    pollIntervalFactor = 1;
+  }
+  await waitForCadence(lastAtKey, pollIntervalFactor);
 
   if (!(await shouldContinueFixturePoll(fixtureProviderId))) {
     await releaseLock(lockKey);

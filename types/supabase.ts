@@ -528,15 +528,13 @@ export type Database = {
           kickoff_at: string
           last_provider_sync_at: string | null
           league_id: string
-          match_ingestion_state: Json | null
-          match_ingestion_updated_at: string | null
+          fixture_readiness: Json
+          fixture_readiness_updated_at: string | null
           minute: number | null
           pen_away: number | null
           pen_home: number | null
           period_first_start_at: string | null
           period_second_start_at: string | null
-          prematch_readiness: Json
-          prematch_readiness_updated_at: string | null
           provider_id: number
           provider_payload: Json | null
           referee: string | null
@@ -565,15 +563,13 @@ export type Database = {
           kickoff_at: string
           last_provider_sync_at?: string | null
           league_id: string
-          match_ingestion_state?: Json | null
-          match_ingestion_updated_at?: string | null
+          fixture_readiness?: Json
+          fixture_readiness_updated_at?: string | null
           minute?: number | null
           pen_away?: number | null
           pen_home?: number | null
           period_first_start_at?: string | null
           period_second_start_at?: string | null
-          prematch_readiness?: Json
-          prematch_readiness_updated_at?: string | null
           provider_id: number
           provider_payload?: Json | null
           referee?: string | null
@@ -602,15 +598,13 @@ export type Database = {
           kickoff_at?: string
           last_provider_sync_at?: string | null
           league_id?: string
-          match_ingestion_state?: Json | null
-          match_ingestion_updated_at?: string | null
+          fixture_readiness?: Json
+          fixture_readiness_updated_at?: string | null
           minute?: number | null
           pen_away?: number | null
           pen_home?: number | null
           period_first_start_at?: string | null
           period_second_start_at?: string | null
-          prematch_readiness?: Json
-          prematch_readiness_updated_at?: string | null
           provider_id?: number
           provider_payload?: Json | null
           referee?: string | null

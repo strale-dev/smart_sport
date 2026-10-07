@@ -1,6 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { PREMATCH_SCHEDULED_LEAD_MS } from "@/lib/ai/prematch-availability";
 import { resetMemoryLocksForTests } from "@/lib/redis/lock";
+
+const evaluateFixtureReadinessForProvider = vi.fn();
+const evaluateAndPersistFixtureReadiness = vi.fn();
+
+vi.mock("@/lib/fixtures/readiness", () => ({
+  evaluateFixtureReadinessForProvider,
+  evaluateAndPersistFixtureReadiness,
+  isFixtureReadyForPrediction: (snapshot: {
+    gates: { predictionReady: boolean };
+  }) => snapshot.gates.predictionReady,
+}));
 
 const readLatestPrematchPrediction = vi.fn();
 const readOfficialPrematchPrediction = vi.fn();
@@ -114,6 +126,11 @@ describe("predictionService", () => {
   beforeEach(() => {
     resetMemoryLocksForTests();
     vi.clearAllMocks();
+
+    evaluateFixtureReadinessForProvider.mockResolvedValue({
+      gates: { predictionReady: true },
+    });
+    evaluateAndPersistFixtureReadiness.mockResolvedValue(undefined);
 
     getActiveModelVersion.mockResolvedValue({
       id: "model-1",
@@ -253,7 +270,7 @@ describe("predictionService", () => {
     expect(second?.predictionId).toBe("prediction-1");
   });
 
-  it("backfills prematch when kickoff passed and no stored row exists", async () => {
+  it("does not insert prematch when kickoff passed and no official row (FR-03)", async () => {
     const kickoffAt = new Date(Date.now() - 3_600_000).toISOString();
     resolveFixtureUuidByExternalId.mockResolvedValue({
       id: "fixture-uuid",
@@ -299,8 +316,76 @@ describe("predictionService", () => {
 
     const result = await getOrComputePrematch(123);
 
-    expect(result?.predictionId).toBe("prediction-live-backfill");
-    expect(insertPrematchPrediction).toHaveBeenCalledTimes(1);
+    expect(result).toBeNull();
+    expect(insertPrematchPrediction).not.toHaveBeenCalled();
+  });
+
+  it("returns null outside compute window when only stale row exists (FR-01)", async () => {
+    const kickoffAt = new Date(
+      Date.now() + PREMATCH_SCHEDULED_LEAD_MS + 86_400_000
+    ).toISOString();
+    resolveFixtureUuidByExternalId.mockResolvedValue({
+      id: "fixture-uuid",
+      status: "NS",
+      kickoff_at: kickoffAt,
+    });
+    readLatestPrematchPrediction.mockResolvedValue({
+      id: "old-prediction",
+      fixture_id: "fixture-uuid",
+      model_version_id: "model-1",
+      home_win_prob: 0.5,
+      draw_prob: 0.25,
+      away_win_prob: 0.25,
+      expected_goals_home: 1.5,
+      expected_goals_away: 1.1,
+      expected_goals_total_min: 2,
+      expected_goals_total_max: 3,
+      btts_prob: 0.52,
+      weaker_team_scoring_prob: 0.48,
+      confidence: "MEDIUM",
+      input_snapshot: stablePrematchFeatures,
+      created_at: new Date(Date.now() - 86_400_000).toISOString(),
+    });
+
+    const { getOrComputePrematch } =
+      await import("@/lib/services/predictionService");
+
+    const result = await getOrComputePrematch(123);
+    expect(result).toBeNull();
+    expect(insertPrematchPrediction).not.toHaveBeenCalled();
+  });
+
+  it("treats missing features as not fresh for cache (FR-02)", async () => {
+    resolveFixtureUuidByExternalId.mockResolvedValue({
+      id: "fixture-uuid",
+      status: "NS",
+      kickoff_at: new Date(Date.now() + 86_400_000).toISOString(),
+    });
+    readLatestPrematchPrediction.mockResolvedValue({
+      id: "prediction-1",
+      fixture_id: "fixture-uuid",
+      model_version_id: "model-1",
+      home_win_prob: 0.5,
+      draw_prob: 0.25,
+      away_win_prob: 0.25,
+      expected_goals_home: 1.5,
+      expected_goals_away: 1.1,
+      expected_goals_total_min: 2,
+      expected_goals_total_max: 3,
+      btts_prob: 0.52,
+      weaker_team_scoring_prob: 0.48,
+      confidence: "MEDIUM",
+      input_snapshot: stablePrematchFeatures,
+      created_at: new Date().toISOString(),
+    });
+    buildPrematchFeatures.mockResolvedValue(null);
+
+    const { getOrComputePrematch } =
+      await import("@/lib/services/predictionService");
+
+    await expect(getOrComputePrematch(123)).rejects.toThrow(
+      /Unable to build features/
+    );
   });
 
   it("returns official prematch snapshot after kickoff without inserting", async () => {

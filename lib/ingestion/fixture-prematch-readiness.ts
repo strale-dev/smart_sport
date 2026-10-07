@@ -1,7 +1,12 @@
+/**
+ * @deprecated Use `@/lib/fixtures/readiness` — kept for import stability during migration.
+ */
 import { hasMinimumModelSignal } from "@/lib/ai/prematch-availability";
 import { buildPrematchFeatures } from "@/lib/models/features";
-import { createAdminClient } from "@/lib/supabase/admin";
-import type { Json } from "@/types/supabase";
+import {
+  evaluateAndPersistFixtureReadiness,
+  refreshReadinessBatch,
+} from "@/lib/fixtures/readiness";
 
 export type PrematchReadinessSnapshot = {
   aiEligible: boolean;
@@ -55,66 +60,24 @@ export async function evaluatePrematchReadiness(
   return buildReadinessFromFeatures(features);
 }
 
-export async function persistPrematchReadiness(
-  fixtureUuid: string,
-  snapshot: PrematchReadinessSnapshot
-): Promise<void> {
-  const client = createAdminClient();
-  const { error } = await client
-    .from("fixtures")
-    .update({
-      prematch_readiness: snapshot as unknown as Json,
-      prematch_readiness_updated_at: snapshot.evaluatedAt,
-    })
-    .eq("id", fixtureUuid);
-
-  if (error) {
-    throw new Error(`Failed to persist prematch readiness: ${error.message}`);
-  }
-}
-
 export async function refreshPrematchReadinessForProviderFixture(
   fixtureExternalId: number
 ): Promise<PrematchReadinessSnapshot | null> {
-  const client = createAdminClient();
-  const { data, error } = await client
-    .from("fixtures")
-    .select("id")
-    .eq("provider_id", fixtureExternalId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(
-      `Failed to resolve fixture ${fixtureExternalId}: ${error.message}`
-    );
-  }
-
-  if (!data) {
+  const snapshot = await evaluateAndPersistFixtureReadiness({
+    providerId: fixtureExternalId,
+  });
+  if (!snapshot) {
     return null;
   }
-
-  const snapshot = await evaluatePrematchReadiness(fixtureExternalId);
-  await persistPrematchReadiness(data.id, snapshot);
-  return snapshot;
+  return buildReadinessFromFeatures(
+    await buildPrematchFeatures(fixtureExternalId, {
+      fixtureExternalId,
+    })
+  );
 }
 
 export async function refreshPrematchReadinessBatch(
   fixtureExternalIds: readonly number[]
 ): Promise<number> {
-  let updated = 0;
-  for (const fixtureExternalId of fixtureExternalIds) {
-    try {
-      const result =
-        await refreshPrematchReadinessForProviderFixture(fixtureExternalId);
-      if (result) {
-        updated += 1;
-      }
-    } catch (error) {
-      console.error(
-        `[fixture-prematch-readiness] fixture ${fixtureExternalId}`,
-        error
-      );
-    }
-  }
-  return updated;
+  return refreshReadinessBatch(fixtureExternalIds);
 }

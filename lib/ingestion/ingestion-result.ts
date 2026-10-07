@@ -9,8 +9,6 @@ import { isTerminalFixtureStatus } from "@/lib/ingestion/config";
 import { LINEUP_PUBLISH_LEAD_MS } from "@/lib/match/overview-hydrate-policy";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FixtureStatus } from "@/types/domain";
-import type { Json } from "@/types/supabase";
-
 export type IngestionOutcome =
   "SUCCESS" | "PARTIAL" | "SKIPPED" | "RETRYABLE_FAILURE" | "PERMANENT_FAILURE";
 
@@ -262,17 +260,16 @@ export async function persistMatchIngestionState(
   fixtureUuid: string,
   state: FixtureMatchIngestionState
 ): Promise<void> {
-  const { error } = await client
-    .from("fixtures")
-    .update({
-      match_ingestion_state: state as unknown as Json,
-      match_ingestion_updated_at: state.updatedAt,
-    })
-    .eq("id", fixtureUuid);
-
-  if (error) {
-    throw new Error(
-      `Failed to persist match ingestion state: ${error.message}`
+  void client;
+  void state;
+  const { evaluateAndPersistFixtureReadiness } =
+    await import("@/lib/fixtures/readiness");
+  try {
+    await evaluateAndPersistFixtureReadiness({ fixtureUuid });
+  } catch (error) {
+    console.error(
+      `[ingestion-result] readiness refresh failed for ${fixtureUuid}`,
+      error
     );
   }
 }

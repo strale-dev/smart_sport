@@ -1,3 +1,8 @@
+import {
+  FINISHED_FIXTURE_STATUSES,
+  isFinishedFixtureStatus as isFinishedFixtureStatusShared,
+  isLiveFixtureStatus as isLiveFixtureStatusShared,
+} from "@/lib/fixtures/live-status";
 import type { FixtureStatus } from "@/types/domain";
 
 export const CACHE_TTL = {
@@ -34,19 +39,15 @@ export const CACHE_TTL = {
   leagueTopScorersStale: 86_400,
 } as const;
 
-const LIVE_STATUSES = new Set<FixtureStatus>([
-  "LIVE",
-  "1H",
-  "HT",
-  "2H",
-  "ET",
-  "BT",
-  "P",
-]);
-
 export function isLiveFixtureStatus(status: FixtureStatus): boolean {
-  return LIVE_STATUSES.has(status);
+  return isLiveFixtureStatusShared(status);
 }
+
+export function isFinishedFixtureStatus(status: FixtureStatus): boolean {
+  return isFinishedFixtureStatusShared(status);
+}
+
+export { FINISHED_FIXTURE_STATUSES };
 
 export function providerFixturesLiveKey(): string {
   return "provider:fixtures:live";
@@ -305,12 +306,6 @@ export function livePollFollowNotificationLastAtKey(
   fixtureProviderId: number
 ): string {
   return `live:poll:fixture:${fixtureProviderId}:follow_notify:last_at`;
-}
-
-const FINISHED_STATUSES = new Set<FixtureStatus>(["FT", "AET", "PEN"]);
-
-export function isFinishedFixtureStatus(status: FixtureStatus): boolean {
-  return FINISHED_STATUSES.has(status);
 }
 
 export function lockLiveCenterPollKey(): string {

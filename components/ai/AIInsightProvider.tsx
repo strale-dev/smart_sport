@@ -128,6 +128,26 @@ export function AIInsightProvider({
     refetchOnWindowFocus: false,
   });
 
+  const readinessQuery = useQuery({
+    queryKey: [...liveKeys.all, "fixture-readiness", fixtureId] as const,
+    queryFn: async () => {
+      const response = await fetch(`/api/fixtures/${fixtureId}/readiness`);
+      if (!response.ok) {
+        return null;
+      }
+      const body = (await response.json()) as {
+        readiness?: { gates?: { aiGenerationAllowed?: boolean } };
+      };
+      return body.readiness ?? null;
+    },
+    enabled: prematchQueryEnabled,
+    staleTime: AI_READ_STALE_MS,
+    refetchOnWindowFocus: false,
+  });
+
+  const aiGenerationAllowed =
+    readinessQuery.data?.gates?.aiGenerationAllowed === true;
+
   const liveViewModel = useMemo((): PrematchInsightViewModel | null => {
     if (!isLivePhase) {
       return null;
@@ -318,7 +338,8 @@ export function AIInsightProvider({
       !data ||
       data.status !== "MISS" ||
       !canEnsurePrematch ||
-      !displayExperience.shouldAutoGenerateNarrative
+      !displayExperience.shouldAutoGenerateNarrative ||
+      !aiGenerationAllowed
     ) {
       return;
     }
@@ -331,6 +352,7 @@ export function AIInsightProvider({
       window.clearTimeout(timer);
     };
   }, [
+    aiGenerationAllowed,
     canEnsurePrematch,
     displayExperience.shouldAutoGenerateNarrative,
     ensurePrematchInsight,

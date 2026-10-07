@@ -1,30 +1,24 @@
+import {
+  FINISHED_FIXTURE_STATUSES,
+  LIVE_FIXTURE_STATUSES,
+  NEITHER_FIXTURE_STATUSES,
+  PREMATCH_FIXTURE_STATUSES,
+} from "@/lib/fixtures/live-status";
 import type { FixtureStatus } from "@/types/domain";
 
 export type FixturePhase = "PREMATCH" | "LIVE" | "FINISHED" | "NEITHER";
 
-export const PREMATCH_STATUSES = new Set<FixtureStatus>(["NS", "TBD"]);
+/** @deprecated Use PREMATCH_FIXTURE_STATUSES from live-status */
+export const PREMATCH_STATUSES = PREMATCH_FIXTURE_STATUSES;
 
-export const LIVE_STATUSES = new Set<FixtureStatus>([
-  "1H",
-  "HT",
-  "2H",
-  "ET",
-  "P",
-  "BT",
-  "LIVE",
-  "INT",
-  "SUSP",
-]);
+/** @deprecated Use LIVE_FIXTURE_STATUSES from live-status */
+export const LIVE_STATUSES = LIVE_FIXTURE_STATUSES;
 
-export const FINISHED_STATUSES = new Set<FixtureStatus>(["FT", "AET", "PEN"]);
+/** @deprecated Use FINISHED_FIXTURE_STATUSES from live-status */
+export const FINISHED_STATUSES = FINISHED_FIXTURE_STATUSES;
 
-export const NEITHER_STATUSES = new Set<FixtureStatus>([
-  "PST",
-  "CANC",
-  "ABD",
-  "AWD",
-  "WO",
-]);
+/** @deprecated Use NEITHER_FIXTURE_STATUSES from live-status */
+export const NEITHER_STATUSES = NEITHER_FIXTURE_STATUSES;
 
 export function resolveFixturePhase(status: string): FixturePhase {
   if (PREMATCH_STATUSES.has(status as FixtureStatus)) {
@@ -63,8 +57,12 @@ export function historicalPrematchWriteAction(input: {
   trigger: "user" | "cron";
   hasUserId: boolean;
   hasStoredPrematch: boolean;
+  contextHashMatches?: boolean;
 }): HistoricalPrematchWriteAction {
   if (input.hasStoredPrematch) {
+    if (input.contextHashMatches === false) {
+      return "generation_not_allowed";
+    }
     return "return_stored";
   }
 

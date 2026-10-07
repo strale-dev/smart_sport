@@ -20,7 +20,13 @@ import {
   isFinishedFixtureStatus,
   shouldShowFixtureScore,
 } from "@/lib/fixtures/display";
+import {
+  addDaysToDateKey,
+  formatDateKeyInTimezone,
+} from "@/lib/datetime/timezone";
 import { filterAllowlistedFixtures } from "@/lib/fixtures/navigable";
+import { LIFECYCLE_TIMEZONE } from "@/lib/fixtures/readiness/constants";
+import { getLifecycleTodayDateKey } from "@/lib/fixtures/readiness";
 import {
   readDashboardFollowPoolIdsForUser,
   readH2hInterestForFixtures,
@@ -53,22 +59,21 @@ export type DashboardData = {
   aiInsights: PredictionChangeSummary[];
 };
 
-function utcDateString(date = new Date()): string {
-  return date.toISOString().slice(0, 10);
+function addLifecycleDays(dateKey: string, days: number): string {
+  return addDaysToDateKey(dateKey, days);
 }
 
-function addUtcDays(date: string, days: number): string {
-  const next = new Date(`${date}T00:00:00.000Z`);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next.toISOString().slice(0, 10);
+function fixtureLifecycleDateKey(fixture: Fixture): string {
+  return formatDateKeyInTimezone(fixture.kickoffAt, LIFECYCLE_TIMEZONE);
 }
 
-function fixtureUtcDateKey(fixture: Fixture): string {
-  return fixture.kickoffAt.slice(0, 10);
-}
-
-function fixturesOnUtcDate(fixtures: Fixture[], dateKey: string): Fixture[] {
-  return fixtures.filter((fixture) => fixtureUtcDateKey(fixture) === dateKey);
+function fixturesOnLifecycleDate(
+  fixtures: Fixture[],
+  dateKey: string
+): Fixture[] {
+  return fixtures.filter(
+    (fixture) => fixtureLifecycleDateKey(fixture) === dateKey
+  );
 }
 
 async function buildImportanceContext(
@@ -135,13 +140,13 @@ export async function getDashboardData(
   const now = options.now ?? new Date();
   const preferredLeagueExternalId = options.preferredLeagueExternalId ?? null;
   const userId = options.userId ?? null;
-  const today = utcDateString(now);
-  const yesterday = addUtcDays(today, -1);
-  const tomorrow = addUtcDays(today, 1);
-  const upcomingFrom = addUtcDays(today, 1);
-  const upcomingThrough = addUtcDays(today, UPCOMING_DAYS);
+  const today = getLifecycleTodayDateKey(now);
+  const yesterday = addLifecycleDays(today, -1);
+  const tomorrow = addLifecycleDays(today, 1);
+  const upcomingFrom = addLifecycleDays(today, 1);
+  const upcomingThrough = addLifecycleDays(today, UPCOMING_DAYS);
   const rangeFrom = yesterday;
-  const rangeToExclusive = addUtcDays(today, UPCOMING_DAYS + 1);
+  const rangeToExclusive = addLifecycleDays(today, UPCOMING_DAYS + 1);
 
   const followPoolPromise = userId
     ? readDashboardFollowPoolIdsForUser(userId).catch((error) => {
@@ -161,11 +166,11 @@ export async function getDashboardData(
     ]);
 
   const rangeFixtures = dedupeFixtures(rangeResult.data);
-  const todayFixtures = fixturesOnUtcDate(rangeFixtures, today);
-  const yesterdayFixtures = fixturesOnUtcDate(rangeFixtures, yesterday);
-  const tomorrowFixtures = fixturesOnUtcDate(rangeFixtures, tomorrow);
+  const todayFixtures = fixturesOnLifecycleDate(rangeFixtures, today);
+  const yesterdayFixtures = fixturesOnLifecycleDate(rangeFixtures, yesterday);
+  const tomorrowFixtures = fixturesOnLifecycleDate(rangeFixtures, tomorrow);
   const upcomingFixtures = rangeFixtures.filter((fixture) => {
-    const dateKey = fixtureUtcDateKey(fixture);
+    const dateKey = fixtureLifecycleDateKey(fixture);
     return dateKey >= upcomingFrom && dateKey <= upcomingThrough;
   });
 

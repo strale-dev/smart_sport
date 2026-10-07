@@ -1,6 +1,8 @@
+import { addDaysToDateKey } from "@/lib/datetime/timezone";
 import { getEnabledProviderIds } from "@/lib/competitions/index";
 import { LEGACY_CORE_PROVIDER_IDS } from "@/lib/competitions/legacy";
 import { FIXTURES_WINDOW_DAYS } from "@/lib/fixtures/constants";
+import { getLifecycleTodayDateKey } from "@/lib/fixtures/readiness/constants";
 import { parsePublicEnv } from "@/lib/env";
 
 /** Dev/default subset — same IDs as pre-expansion production allowlist. */
@@ -124,15 +126,10 @@ export function buildFixtureDateWindow(
   windowDays = getIngestionConfig().fixtureWindowDays
 ): string[] {
   const dates: string[] = [];
-  const base = Date.UTC(
-    anchor.getUTCFullYear(),
-    anchor.getUTCMonth(),
-    anchor.getUTCDate()
-  );
+  const todayKey = getLifecycleTodayDateKey(anchor);
 
   for (let offset = -windowDays; offset <= windowDays; offset += 1) {
-    const day = new Date(base + offset * 86_400_000);
-    dates.push(day.toISOString().slice(0, 10));
+    dates.push(addDaysToDateKey(todayKey, offset));
   }
 
   return dates;
@@ -142,16 +139,8 @@ export function isTodayOrTomorrowUtc(
   date: string,
   anchor = new Date()
 ): boolean {
-  const today = anchor.toISOString().slice(0, 10);
-  const tomorrow = new Date(
-    Date.UTC(
-      anchor.getUTCFullYear(),
-      anchor.getUTCMonth(),
-      anchor.getUTCDate() + 1
-    )
-  )
-    .toISOString()
-    .slice(0, 10);
+  const today = getLifecycleTodayDateKey(anchor);
+  const tomorrow = addDaysToDateKey(today, 1);
 
   return date === today || date === tomorrow;
 }

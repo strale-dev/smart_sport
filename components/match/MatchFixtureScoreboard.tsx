@@ -11,6 +11,7 @@ import {
   isFinishedFixtureStatus,
   shouldShowFixtureScore,
 } from "@/lib/fixtures/display";
+import { isPausedLiveFixtureStatus } from "@/lib/fixtures/live-status";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import { cn } from "@/lib/utils";
 import type { Fixture } from "@/types/domain";
@@ -58,6 +59,7 @@ export function MatchFixtureScoreboard({
 }: MatchFixtureScoreboardProps) {
   const timeZone = useViewerTimezone();
   const isLive = isLiveFixtureStatus(fixture.status);
+  const isPausedLive = isPausedLiveFixtureStatus(fixture.status);
   const isFinished = isFinishedFixtureStatus(fixture.status);
   const showScore = shouldShowFixtureScore(fixture);
   const scoreText = formatFixtureRowCenterLabel(
@@ -147,6 +149,11 @@ export function MatchFixtureScoreboard({
             fixture.score.halftimeAway != null ? (
               <p className="text-muted-foreground font-mono text-xs tabular-nums">
                 HT {fixture.score.halftimeHome} – {fixture.score.halftimeAway}
+              </p>
+            ) : null}
+            {isPausedLive ? (
+              <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+                Paused
               </p>
             ) : null}
           </div>

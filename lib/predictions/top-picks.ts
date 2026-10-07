@@ -18,6 +18,14 @@ import { predictionsTopPicksKey } from "@/lib/redis/keys";
 import { peekCachedValue, writeCachedValue } from "@/lib/redis/cache";
 import { maxWinProbability } from "@/lib/models/confidence";
 import { predictedOutcomeFromProbabilities } from "@/lib/models/confidence";
+import {
+  startOfDayUtcForTimezone,
+  addDaysToDateKey,
+} from "@/lib/datetime/timezone";
+import {
+  getLifecycleTodayDateKey,
+  LIFECYCLE_TIMEZONE,
+} from "@/lib/fixtures/readiness/constants";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Fixture, FixtureStatus } from "@/types/domain";
 import type { AiConfidence, PrematchFeatureVector } from "@/types/prediction";
@@ -56,23 +64,28 @@ type FixtureCandidate = {
   fixture: Fixture;
 };
 
-function utcTodayDate(now = new Date()): string {
-  return now.toISOString().slice(0, 10);
+function lifecycleTodayDate(now = new Date()): string {
+  return getLifecycleTodayDateKey(now);
 }
 
-function secondsUntilUtcMidnight(now = new Date()): number {
-  const end = new Date(`${utcTodayDate(now)}T00:00:00.000Z`);
-  end.setUTCDate(end.getUTCDate() + 1);
+function secondsUntilLifecycleMidnight(now = new Date()): number {
+  const todayKey = getLifecycleTodayDateKey(now);
+  const end = new Date(
+    startOfDayUtcForTimezone(addDaysToDateKey(todayKey, 1), LIFECYCLE_TIMEZONE)
+  );
   return Math.max(60, Math.floor((end.getTime() - now.getTime()) / 1000));
 }
 
-async function loadUpcomingFixturesTodayUtc(
-  utcDate: string
+async function loadUpcomingFixturesTodayLifecycle(
+  lifecycleDate: string
 ): Promise<FixtureCandidate[]> {
   const client = createAdminClient();
   const config = getIngestionConfig();
-  const dayEnd = new Date(`${utcDate}T00:00:00.000Z`);
-  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+  const dayStart = startOfDayUtcForTimezone(lifecycleDate, LIFECYCLE_TIMEZONE);
+  const dayEnd = startOfDayUtcForTimezone(
+    addDaysToDateKey(lifecycleDate, 1),
+    LIFECYCLE_TIMEZONE
+  );
 
   const { data: leagues } = await client
     .from("leagues")
@@ -146,8 +159,8 @@ async function loadUpcomingFixturesTodayUtc(
       "league_id",
       leagues.map((league) => league.id)
     )
-    .gte("kickoff_at", `${utcDate}T00:00:00.000Z`)
-    .lt("kickoff_at", dayEnd.toISOString())
+    .gte("kickoff_at", dayStart)
+    .lt("kickoff_at", dayEnd)
     .in("status", ["NS", "TBD"])
     .order("kickoff_at", { ascending: true });
 
@@ -350,9 +363,9 @@ async function buildPickFromFixture(
 export async function computeTopPicks(
   now = new Date()
 ): Promise<TopPicksResult> {
-  const utcDate = utcTodayDate(now);
+  const utcDate = lifecycleTodayDate(now);
   const config = resolveTopPicksConfig();
-  const candidates = await loadUpcomingFixturesTodayUtc(utcDate);
+  const candidates = await loadUpcomingFixturesTodayLifecycle(utcDate);
 
   const picks: TopPick[] = [];
   for (const candidate of candidates) {
@@ -374,7 +387,7 @@ export async function computeTopPicks(
 export async function getTopPicksOfTheDay(
   now = new Date()
 ): Promise<TopPicksResult> {
-  const utcDate = utcTodayDate(now);
+  const utcDate = lifecycleTodayDate(now);
   const cacheKey = predictionsTopPicksKey(utcDate);
   const cached = await peekCachedValue<TopPicksResult>(cacheKey);
   if (cached) {
@@ -382,6 +395,6 @@ export async function getTopPicksOfTheDay(
   }
 
   const result = await computeTopPicks(now);
-  await writeCachedValue(cacheKey, result, secondsUntilUtcMidnight(now));
+  await writeCachedValue(cacheKey, result, secondsUntilLifecycleMidnight(now));
   return result;
 }
