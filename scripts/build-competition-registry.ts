@@ -2,7 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildCompetitionRegistry } from "@/lib/competitions/build-registry";
+import {
+  applyCompetitionOverridesToRegistry,
+  buildCompetitionRegistry,
+} from "@/lib/competitions/build-registry";
 import {
   mergeProbedCapabilitiesIntoRegistry,
   type CompetitionCapabilitiesProbeFile,
@@ -46,6 +49,7 @@ async function main() {
       fs.readFileSync(probeSidecarPath, "utf8")
     ) as CompetitionCapabilitiesProbeFile;
     registry = mergeProbedCapabilitiesIntoRegistry(registry, probeFile);
+    registry = applyCompetitionOverridesToRegistry(registry);
   }
 
   fs.writeFileSync(

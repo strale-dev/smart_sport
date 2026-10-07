@@ -1,4 +1,8 @@
-import { ApiFootballError } from "@/lib/api-football/errors";
+import {
+  ApiFootballError,
+  ApiFootballQuotaError,
+  ApiFootballRateLimitError,
+} from "@/lib/api-football/errors";
 
 export function formatApiFootballFailureReason(error: unknown): string {
   if (error instanceof ApiFootballError && error.providerErrors) {
@@ -42,6 +46,9 @@ export function isOptionalProviderFailure(error: unknown): boolean {
   return (
     error.name === "ApiFootballError" ||
     error.name === "ApiFootballQuotaError" ||
+    error.name === "ApiFootballRateLimitError" ||
+    error instanceof ApiFootballQuotaError ||
+    error instanceof ApiFootballRateLimitError ||
     error.message.includes("API-Football")
   );
 }

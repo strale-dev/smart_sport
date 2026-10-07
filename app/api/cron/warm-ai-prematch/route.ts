@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
   const scope = parseWarmScope(request);
   return runCronRoute(request, {
     jobName: `warm-ai-prematch:${scope}`,
-    lockTtlSeconds: 600,
+    // maxDuration 60s + 30s buffer so a stuck run does not block the next GHA tick.
+    lockTtlSeconds: 90,
     run: () => warmAiPrematchInsights(scope),
   });
 }

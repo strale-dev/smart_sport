@@ -44,6 +44,17 @@ function formatScore(fixture: Fixture): string {
   return `${fixture.score.home ?? 0}-${fixture.score.away ?? 0}`;
 }
 
+/** Exported for tests — empty active set means "no provider signal", not "zero live fixtures". */
+export function shouldRevalidateBecauseAbsentFromActiveLiveSet(
+  providerId: number,
+  activeLiveProviderIds: Set<number> | undefined
+): boolean {
+  if (!activeLiveProviderIds || activeLiveProviderIds.size === 0) {
+    return false;
+  }
+  return !activeLiveProviderIds.has(providerId);
+}
+
 function needsRevalidation(
   fixture: Fixture,
   activeLiveProviderIds: Set<number> | undefined,
@@ -55,7 +66,12 @@ function needsRevalidation(
 
   const providerId = fixture.externalId;
 
-  if (activeLiveProviderIds && !activeLiveProviderIds.has(providerId)) {
+  if (
+    shouldRevalidateBecauseAbsentFromActiveLiveSet(
+      providerId,
+      activeLiveProviderIds
+    )
+  ) {
     return true;
   }
 

@@ -12,6 +12,18 @@ import {
   isRetryableStatus,
 } from "@/lib/api-football/errors";
 import {
+  buildProviderErrorOutcome,
+  envelopeOutcomeKind,
+  logApiFootballRequest,
+  mapExhaustedRetryError,
+  mapOutcomeToError,
+  hasProviderErrors,
+  normalizeProviderErrors,
+  parseAndValidateEnvelope,
+  parseRetryAfterMs,
+  type ApiFootballFetchOutcome,
+} from "@/lib/api-football/fetch-outcome";
+import {
   getInMemoryQuotaSnapshot,
   hydrateQuotaFromRedis,
   recordQuotaFromHeaders,
@@ -34,50 +46,6 @@ export type ApiFootballFetchAllPagesOptions = ApiFootballFetchOptions & {
     totalPages: number;
   }) => void | Promise<void>;
 };
-
-function normalizeProviderErrors(
-  errors: ApiFootballEnvelope<unknown>["errors"]
-): Record<string, string> | undefined {
-  if (!errors) {
-    return undefined;
-  }
-
-  if (Array.isArray(errors)) {
-    return errors.reduce<Record<string, string>>((acc, error, index) => {
-      acc[String(index)] = String(error);
-      return acc;
-    }, {});
-  }
-
-  if (typeof errors === "object") {
-    return Object.fromEntries(
-      Object.entries(errors as Record<string, unknown>).map(([key, value]) => [
-        key,
-        String(value),
-      ])
-    );
-  }
-
-  return { message: String(errors) };
-}
-
-function hasProviderErrors(
-  errors: ApiFootballEnvelope<unknown>["errors"]
-): boolean {
-  if (!errors) {
-    return false;
-  }
-
-  if (Array.isArray(errors)) {
-    return errors.length > 0;
-  }
-
-  if (typeof errors === "object") {
-    return Object.keys(errors as Record<string, unknown>).length > 0;
-  }
-
-  return true;
-}
 
 function buildUrl(
   path: string,
@@ -123,22 +91,131 @@ function getApiKey(): string {
   return process.env.API_FOOTBALL_KEY!;
 }
 
-export async function apiFootballFetch<T>(
+function isFetchTimeoutError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  if (error.name === "AbortError" || error.name === "TimeoutError") {
+    return true;
+  }
+
+  return (
+    error.cause instanceof Error &&
+    (error.cause.name === "AbortError" || error.cause.name === "TimeoutError")
+  );
+}
+
+async function parseResponseBody(
+  response: Response,
+  path: string
+): Promise<
+  | { ok: true; body: unknown }
+  | { ok: false; outcome: ApiFootballFetchOutcome<never> }
+> {
+  const text = await response.text();
+
+  if (!text.trim()) {
+    return {
+      ok: false,
+      outcome: {
+        kind: "permanent",
+        httpStatus: response.status,
+        path,
+        message: "API-Football response body was empty",
+      },
+    };
+  }
+
+  try {
+    return { ok: true, body: JSON.parse(text) as unknown };
+  } catch (cause) {
+    return {
+      ok: false,
+      outcome: {
+        kind: "permanent",
+        httpStatus: response.status,
+        path,
+        message: "API-Football response body is not valid JSON",
+        cause,
+      },
+    };
+  }
+}
+
+function outcomeFromHttpResponse<T>(
+  response: Response,
+  path: string,
+  body: unknown
+): ApiFootballFetchOutcome<T> {
+  if (!response.ok) {
+    if (isRetryableStatus(response.status)) {
+      return {
+        kind: "retryable",
+        httpStatus: response.status,
+        path,
+        message: `Retryable HTTP ${response.status}`,
+        retryAfterMs: parseRetryAfterMs(response.headers.get("Retry-After")),
+      };
+    }
+
+    return {
+      kind: "permanent",
+      httpStatus: response.status,
+      path,
+      message: `API-Football HTTP ${response.status}`,
+    };
+  }
+
+  const validated = parseAndValidateEnvelope<T>(body, path);
+  if (!validated.ok) {
+    return {
+      kind: "permanent",
+      httpStatus: response.status,
+      path,
+      message: validated.message,
+    };
+  }
+
+  if (hasProviderErrors(validated.envelope.errors)) {
+    const providerErrors = normalizeProviderErrors(validated.envelope.errors)!;
+    return buildProviderErrorOutcome(response.status, path, providerErrors);
+  }
+
+  const kind = envelopeOutcomeKind(validated.envelope);
+  return {
+    kind,
+    data: validated.envelope,
+    httpStatus: response.status,
+  };
+}
+
+export async function apiFootballFetchOutcome<T>(
   path: string,
   params: Record<string, string | number | boolean | undefined> = {},
   options: ApiFootballFetchOptions = {}
-): Promise<ApiFootballEnvelope<T>> {
+): Promise<ApiFootballFetchOutcome<T>> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const requestKey = buildRequestKey(path, params);
   const priority = options.priority ?? "normal";
 
   return withInFlightDedup(requestKey, async () => {
+    const startedAt = Date.now();
+    let attempts = 0;
+
     await hydrateQuotaFromRedis();
     const quotaSnapshot = getInMemoryQuotaSnapshot();
     if (
       priority === "normal" &&
       shouldRefuseNonCriticalRequest(quotaSnapshot)
     ) {
+      logApiFootballRequest({
+        scope: "api-football/client",
+        path,
+        outcome: "quota_refused",
+        durationMs: Date.now() - startedAt,
+        attempts: 0,
+      });
       throw new ApiFootballQuotaError(
         "API-Football daily quota is low; non-critical request refused."
       );
@@ -151,29 +228,51 @@ export async function apiFootballFetch<T>(
     try {
       response = await pRetry(
         async () => {
-          const result = await fetchImpl(url, {
-            method: "GET",
-            headers: {
-              "x-apisports-key": apiKey,
-            },
-            cache: "no-store",
-          });
-
-          if (isRetryableStatus(result.status)) {
-            throw new ApiFootballError(`Retryable HTTP ${result.status}`, {
-              statusCode: result.status,
-              path,
+          attempts += 1;
+          try {
+            const result = await fetchImpl(url, {
+              method: "GET",
+              headers: {
+                "x-apisports-key": apiKey,
+              },
+              cache: "no-store",
+              signal: AbortSignal.timeout(API_FOOTBALL_CONFIG.requestTimeoutMs),
             });
-          }
 
-          return result;
+            if (isRetryableStatus(result.status)) {
+              throw new ApiFootballError(`Retryable HTTP ${result.status}`, {
+                statusCode: result.status,
+                path,
+                retryAfterMs: parseRetryAfterMs(
+                  result.headers.get("Retry-After")
+                ),
+              });
+            }
+
+            return result;
+          } catch (error) {
+            if (error instanceof ApiFootballError) {
+              throw error;
+            }
+
+            if (isFetchTimeoutError(error)) {
+              throw new ApiFootballError("API-Football request timed out", {
+                path,
+                statusCode: 503,
+                cause: error,
+              });
+            }
+
+            throw error;
+          }
         },
         {
           retries: API_FOOTBALL_CONFIG.retry.retries,
           factor: API_FOOTBALL_CONFIG.retry.factor,
           minTimeout: API_FOOTBALL_CONFIG.retry.minTimeoutMs,
           maxTimeout: API_FOOTBALL_CONFIG.retry.maxTimeoutMs,
-          onFailedAttempt: (error) => {
+          randomize: API_FOOTBALL_CONFIG.retry.randomize,
+          onFailedAttempt: async ({ error, retryDelay }) => {
             if (
               error instanceof ApiFootballError &&
               error.statusCode !== undefined &&
@@ -181,39 +280,94 @@ export async function apiFootballFetch<T>(
             ) {
               throw error;
             }
+
+            if (
+              error instanceof ApiFootballError &&
+              error.retryAfterMs != null
+            ) {
+              const extra = Math.max(0, error.retryAfterMs - retryDelay);
+              if (extra > 0) {
+                await new Promise((resolve) => setTimeout(resolve, extra));
+              }
+            }
           },
         }
       );
     } catch (error) {
-      if (error instanceof ApiFootballError && error.statusCode === 429) {
-        throw new ApiFootballQuotaError(
-          "API-Football daily quota exhausted after retries."
-        );
-      }
-
-      throw error;
+      mapExhaustedRetryError(
+        error,
+        path,
+        getInMemoryQuotaSnapshot().dayRemaining
+      );
     }
 
     await recordQuotaFromHeaders(response.headers);
 
     if (!response.ok) {
-      throw new ApiFootballError(`API-Football HTTP ${response.status}`, {
-        statusCode: response.status,
+      const outcome: ApiFootballFetchOutcome<T> = {
+        kind: "permanent",
+        httpStatus: response.status,
         path,
+        message: `API-Football HTTP ${response.status}`,
+      };
+      logApiFootballRequest({
+        scope: "api-football/client",
+        path,
+        outcome: outcome.kind,
+        httpStatus: response.status,
+        durationMs: Date.now() - startedAt,
+        attempts,
       });
+      return outcome;
     }
 
-    const payload = (await response.json()) as ApiFootballEnvelope<T>;
-
-    if (hasProviderErrors(payload.errors)) {
-      throw new ApiFootballError("API-Football provider returned errors", {
+    const parsed = await parseResponseBody(response, path);
+    if (!parsed.ok) {
+      logApiFootballRequest({
+        scope: "api-football/client",
         path,
-        providerErrors: normalizeProviderErrors(payload.errors),
+        outcome: parsed.outcome.kind,
+        httpStatus: response.status,
+        durationMs: Date.now() - startedAt,
+        attempts,
       });
+      return parsed.outcome as ApiFootballFetchOutcome<T>;
     }
 
-    return payload;
+    const outcome = outcomeFromHttpResponse<T>(response, path, parsed.body);
+
+    if (outcome.kind === "provider_error") {
+      logApiFootballRequest({
+        scope: "api-football/client",
+        path,
+        outcome: "provider_error",
+        httpStatus: response.status,
+        durationMs: Date.now() - startedAt,
+        attempts,
+      });
+      return outcome;
+    }
+
+    logApiFootballRequest({
+      scope: "api-football/client",
+      path,
+      outcome: outcome.kind === "empty" ? "empty" : "success",
+      httpStatus: response.status,
+      durationMs: Date.now() - startedAt,
+      attempts,
+    });
+
+    return outcome;
   });
+}
+
+export async function apiFootballFetch<T>(
+  path: string,
+  params: Record<string, string | number | boolean | undefined> = {},
+  options: ApiFootballFetchOptions = {}
+): Promise<ApiFootballEnvelope<T>> {
+  const outcome = await apiFootballFetchOutcome<T>(path, params, options);
+  return mapOutcomeToError(outcome);
 }
 
 export async function apiFootballFetchResponse<T>(

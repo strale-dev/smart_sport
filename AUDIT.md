@@ -1,7 +1,7 @@
 # System Audit Log
 
 **Grana:** `fix/system-audit`  
-**Okruženje za DB/code review:** dev Supabase (`user-supabasei`, ref `zovobemlpqoclyjhvkpw`)  
+**Supabase (smart_sport / Scorence):** MCP **`user-supabasei`** only (ref `zovobemlpqoclyjhvkpw`). Ne koristiti `user-supabase` — drugi projekat.  
 **GHA trigger target:** produkcija `https://scorence.app` (vidi `docs/ING-3-pro-cutover.md`)
 
 ---
@@ -259,6 +259,15 @@ Fixture (fixtures.status ∈ NS/TBD/LIVE/FT/…)
 | **RC-9**                | Warm cap **40 / 25** vs. coverage gap                                           | **Odloženo — čeka odluku operatora**   | Cap nije podignut niti uveden queue u Fazi 2. Backfill (30 / 6h) delimično ublažava FT backlog.                                                                         |
 | **POST prematch abuse** | Nema **per-user** rate limita na `POST /api/ai/prematch/[fixtureId]`            | **Otvoreno**                           | Authenticated abuse troši **OpenAI projektni ključ** (prematch generisanje ne gate-uje free-tier `assertCanGenerateAi`). Auth + lock po fixture-u, bez IP cap-a.        |
 | **context_hash churn**  | Hash se menja **2–6×** pre utakmice (lineups, standings, prediction refresh, …) | **Otvoreno — prati stvarnu potrošnju** | Svaka promena hash-a = potencijalno **novi LLM poziv** (novi red po `(fixture_id, type, context_hash)`). RC-6 smanjuje prazan UI, ne sprečava novi hash.                |
+
+### 2.7 Prod incident (2026-09-30) — dijagnoza, nije nova Phase 2 regresija
+
+| Signal                       | Zaključak                                                                                                                                                                                                                                                                                                                               |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GHA posle deploy-a `5088f69` | **Zelen** (`ingestion-schedule` / `ingestion-ai-warm` success); poslednji failure pre PR #2 stack-a (`36416509310`, 2026-09-28).                                                                                                                                                                                                        |
+| Phase 2 u prod               | **Da** — PR #2 + deploy `5088f69` (Sentry release).                                                                                                                                                                                                                                                                                     |
+| Uzrok simptoma               | **Stari ops obrazac:** multi-cron GHA kasni satima → `sync-lineups` / warm imminent promašuju 90-min prozor; Friendlies (`providerId` 10) imao probe `lineups: false`; live reconcile finalizovao DB live kad je provider tick vratio 0 allowlisted live; warm daily lock TTL 600s + paralelni 6h job-ovi.                              |
+| Fix (2026-09-30)             | Split GHA workflow-i + `ingestion-cadence-watchdog.yml`; override/probe `lineups: true` za liga 10; runtime `applyCompetitionOverride` u `findCompetition`; reconcile ne tretira prazan active live set kao „nema live”; warm lock TTL 90s (60s maxDuration + 30s buffer); 6h warm sequential batch script; reconcile FT scenario test. |
 
 ## Faza 3 — AI Prediction Correctness
 
