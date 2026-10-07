@@ -92,6 +92,10 @@ export function overviewHydrateLockKey(fixtureId: number): string {
   return `lock:overview-hydrate:${fixtureId}`;
 }
 
+export function fixtureMatchDetailsLockKey(fixtureProviderId: number): string {
+  return `lock:fixture:${fixtureProviderId}:match-details`;
+}
+
 export function providerTeamKey(id: number): string {
   return `provider:team:${id}`;
 }

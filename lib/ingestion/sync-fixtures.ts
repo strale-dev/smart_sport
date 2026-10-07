@@ -19,7 +19,8 @@ import {
   ingestFixtureFromRaw,
 } from "@/lib/ingestion/upsert";
 import { ingestMatchDetailsFromProvider } from "@/lib/ingestion/ingest-match-details";
-import { fixtureHasMatchDetails } from "@/lib/ingestion/match-details-upsert";
+import { fixtureNeedsMatchDetailSync } from "@/lib/ingestion/ingestion-result";
+import type { FixtureStatus } from "@/types/domain";
 import { getRedis } from "@/lib/redis/client";
 import { providerFixturesDateKey } from "@/lib/redis/keys";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -127,8 +128,16 @@ export async function syncFixtures(
         matchDetailsIngested === 0 &&
         competitionSupportsAnyMatchDetails(domain.league.externalId)
       ) {
-        const hasDetails = await fixtureHasMatchDetails(client, fixtureId);
-        if (!hasDetails) {
+        const needsDetails = await fixtureNeedsMatchDetailSync(
+          client,
+          fixtureId,
+          {
+            fixtureStatus: domain.status as FixtureStatus,
+            kickoffAt: domain.kickoffAt,
+            competition: findCompetition(domain.league.externalId),
+          }
+        );
+        if (needsDetails) {
           await ingestMatchDetailsFromProvider(domain.externalId);
           matchDetailsIngested += 1;
         }

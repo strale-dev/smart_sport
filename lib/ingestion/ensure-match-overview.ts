@@ -13,12 +13,14 @@ import {
   ingestMatchDetailsFromProvider,
 } from "@/lib/ingestion/ingest-match-details";
 import { ingestStandingsForLeagueSeason } from "@/lib/ingestion/sync-standings";
+import { evaluateFixtureDependencyCompleteness } from "@/lib/ingestion/ingestion-result";
 import {
   fixtureHasLineups,
   fixtureHasMatchDetails,
   fixtureHasPlayerPerformances,
   getFixtureUuidByProviderId,
 } from "@/lib/ingestion/match-details-upsert";
+import type { FixtureStatus } from "@/types/domain";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import { ingestFixtureFromRaw } from "@/lib/ingestion/upsert";
 import { getMatchOverviewRenderMode } from "@/lib/fixtures/overview-layout";
@@ -282,7 +284,11 @@ async function hydrateUnlocked(
       const details = await ingestMatchDetailsFromProvider(fixture.externalId, {
         skipLineups: true,
       });
-      if (!details.ok) {
+      if (
+        !details.ok ||
+        details.outcome === "RETRYABLE_FAILURE" ||
+        details.outcome === "PERMANENT_FAILURE"
+      ) {
         failedGroups.add("matchDetails");
         if (details.reason) {
           console.warn(
@@ -302,12 +308,34 @@ async function hydrateUnlocked(
     shouldIngestLineups({ hasLineups, kickoffAt: fixture.kickoffAt }) &&
     competitionSupportsLineups(findCompetition(fixture.league.externalId))
   ) {
-    try {
-      await ingestLineupsFromProvider(fixture.externalId);
-    } catch (error) {
+    const lineups = await ingestLineupsFromProvider(fixture.externalId);
+    if (
+      lineups.outcome === "RETRYABLE_FAILURE" ||
+      lineups.outcome === "PERMANENT_FAILURE"
+    ) {
       failedGroups.add("lineups");
-      console.warn("[overview] lineups ingest failed", error);
+      if (lineups.reason) {
+        console.warn(
+          `[overview] lineups not ingested for ${fixture.externalId}: ${lineups.reason}`
+        );
+      }
     }
+  }
+
+  const competition = findCompetition(fixture.league.externalId);
+  const completeness = await evaluateFixtureDependencyCompleteness(
+    client,
+    fixtureUuid,
+    {
+      fixtureStatus: fixture.status as FixtureStatus,
+      kickoffAt: fixture.kickoffAt,
+      competition,
+    }
+  );
+  if (!completeness.complete && renderMode !== "pre") {
+    console.warn(
+      `[overview] fixture ${fixture.externalId} incomplete dependencies: ${completeness.missing.join(", ")}`
+    );
   }
 
   const [homeFormOk, awayFormOk, h2hOk] = await Promise.all([

@@ -528,6 +528,8 @@ export type Database = {
           kickoff_at: string
           last_provider_sync_at: string | null
           league_id: string
+          match_ingestion_state: Json | null
+          match_ingestion_updated_at: string | null
           minute: number | null
           pen_away: number | null
           pen_home: number | null
@@ -563,6 +565,8 @@ export type Database = {
           kickoff_at: string
           last_provider_sync_at?: string | null
           league_id: string
+          match_ingestion_state?: Json | null
+          match_ingestion_updated_at?: string | null
           minute?: number | null
           pen_away?: number | null
           pen_home?: number | null
@@ -598,6 +602,8 @@ export type Database = {
           kickoff_at?: string
           last_provider_sync_at?: string | null
           league_id?: string
+          match_ingestion_state?: Json | null
+          match_ingestion_updated_at?: string | null
           minute?: number | null
           pen_away?: number | null
           pen_home?: number | null
