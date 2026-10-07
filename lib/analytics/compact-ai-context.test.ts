@@ -103,5 +103,9 @@ describe("compact-ai-context", () => {
     const compact = buildCompactPrematchAnalyticsContext(features);
     expect(compact.home.trends.last5?.xgFor.status).toBe("unavailable");
     expect(compact.home.trends.last5?.xgFor.value).toBeNull();
+    expect(compact.home.homeAwaySplit.homeXgAgainst5.status).toBe(
+      "unavailable"
+    );
+    expect(compact.home.homeAwaySplit.homeXgAgainst5.value).toBeNull();
   });
 });

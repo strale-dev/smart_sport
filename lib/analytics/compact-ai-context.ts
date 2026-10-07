@@ -43,6 +43,8 @@ export type CompactTeamAnalytics = {
     awayLast5Ppg: CompactMetric;
     homeXgFor5: CompactMetric;
     awayXgFor5: CompactMetric;
+    homeXgAgainst5: CompactMetric;
+    awayXgAgainst5: CompactMetric;
   };
   periodCompare: TeamHistoryFeatures["periodCompare"];
   recentExamples: TeamHistoryFeatures["recentExamples"];
@@ -137,6 +139,20 @@ function buildCompactTeam(team: TeamHistoryFeatures): CompactTeamAnalytics {
       ),
       awayXgFor5: compactMetric(
         away5?.xgForAvg ?? {
+          status: "unavailable",
+          value: null,
+          sampleSize: 0,
+        }
+      ),
+      homeXgAgainst5: compactMetric(
+        home5?.xgAgainstAvg ?? {
+          status: "unavailable",
+          value: null,
+          sampleSize: 0,
+        }
+      ),
+      awayXgAgainst5: compactMetric(
+        away5?.xgAgainstAvg ?? {
           status: "unavailable",
           value: null,
           sampleSize: 0,

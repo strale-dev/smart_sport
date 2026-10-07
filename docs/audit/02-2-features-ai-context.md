@@ -58,7 +58,7 @@ Live prematch context still uses `getRecentForm` / `getH2H` (non-PIT) — unchan
 
 **H2H:** half-life 21d (10-meeting window); raw weights normalized so total ≤ `H2H_EFFECTIVE_MEETING_CAP` (= **5**). H2H kept separate from team rolling stats.
 
-**Compact context:** `MAX_RECENT_EXAMPLES = 3` per team; `MAX_COMPACT_CONTEXT_BYTES = 16384`.
+**Compact context:** `MAX_RECENT_EXAMPLES = 3` per team; `MAX_COMPACT_CONTEXT_BYTES = 16384`; `homeAwaySplit` includes home/away last-5 PPG and xG for/against per venue scope.
 
 ---
 
@@ -84,7 +84,7 @@ npm.cmd run typecheck
 
 | Command                 | Result                                                            |
 | ----------------------- | ----------------------------------------------------------------- |
-| `npm.cmd run test:ci`   | **749 passed** (182 files), +19 vs 02-1 baseline                  |
+| `npm.cmd run test:ci`   | **751 passed** (182 files), +21 vs 02-1 baseline                  |
 | `npm.cmd run lint`      | **0 errors**, 13 warnings (pre-existing; no new errors from 02-2) |
 | `npm.cmd run typecheck` | **Passed**                                                        |
 
