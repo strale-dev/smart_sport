@@ -13,6 +13,9 @@ import {
   isLeagueInAllowlist,
   isTodayOrTomorrowUtc,
 } from "@/lib/ingestion/config";
+import { createCronIngestBudget } from "@/lib/ingestion/cron-budget";
+import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
+import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import {
   countAllowlistFixturesForUtcDate,
@@ -40,14 +43,17 @@ export type SyncFixturesResult = {
   ok: boolean;
   job: string;
   skipped?: boolean;
+  degraded?: boolean;
   reason?: string;
   stats: {
     datesRequested: number;
     datesSkipped: number;
+    datesPartiallyProcessed?: number;
     apiRequests: number;
     fixturesUpserted: number;
     fixturesFilteredOut: number;
     matchDetailsIngested: number;
+    stoppedForTimeBudget?: boolean;
   };
 };
 
@@ -88,8 +94,24 @@ export async function syncFixtures(
   let fixturesUpserted = 0;
   let fixturesFilteredOut = 0;
   let matchDetailsIngested = 0;
+  let stoppedForTimeBudget = false;
+  let datesPartiallyProcessed = 0;
+  const budget = createCronIngestBudget(Date.now());
 
   for (const date of dates) {
+    if (budget.exceeded()) {
+      stoppedForTimeBudget = true;
+      logIngestionEvent({
+        job_name: "sync-fixtures",
+        stage: "budget_stop",
+        error_type: "budget_exceeded",
+        ok: true,
+        degraded: true,
+        reason: "Stopped before next date fetch for wall-clock budget",
+      });
+      break;
+    }
+
     if (await shouldSkipDateSync(date, config.leagueProviderIds)) {
       datesSkipped += 1;
       continue;
@@ -112,8 +134,24 @@ export async function syncFixtures(
     fixturesFilteredOut += rawFixtures.length - allowlisted.length;
 
     const domainFixtures: Fixture[] = [];
+    let datePartial = false;
 
     for (const raw of allowlisted) {
+      if (budget.exceeded()) {
+        stoppedForTimeBudget = true;
+        datePartial = true;
+        logIngestionEvent({
+          job_name: "sync-fixtures",
+          stage: "budget_stop",
+          error_type: "budget_exceeded",
+          ok: true,
+          degraded: true,
+          reason: "Stopped mid-date fixture upserts for wall-clock budget",
+          detail: { date },
+        });
+        break;
+      }
+
       const { fixtureId, domain } = await ingestFixtureFromRaw(
         client,
         raw,
@@ -144,6 +182,11 @@ export async function syncFixtures(
       }
     }
 
+    if (datePartial) {
+      datesPartiallyProcessed += 1;
+      break;
+    }
+
     const redis = getRedis();
     if (redis && domainFixtures.length > 0) {
       await redis.set(
@@ -157,16 +200,24 @@ export async function syncFixtures(
     }
   }
 
+  const outcome = resolveCronOutcome({
+    failedCount: 0,
+    partialForTimeBudget: stoppedForTimeBudget && fixturesUpserted > 0,
+  });
+
   return {
-    ok: true,
+    ok: outcome.ok,
+    degraded: outcome.degraded,
     job: "sync-fixtures",
     stats: {
       datesRequested: dates.length,
       datesSkipped,
+      ...(datesPartiallyProcessed > 0 ? { datesPartiallyProcessed } : {}),
       apiRequests,
       fixturesUpserted,
       fixturesFilteredOut,
       matchDetailsIngested,
+      ...(stoppedForTimeBudget ? { stoppedForTimeBudget: true } : {}),
     },
   };
 }

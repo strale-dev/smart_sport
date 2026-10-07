@@ -882,6 +882,24 @@ export type Database = {
         }
         Relationships: []
       }
+      ingestion_job_checkpoints: {
+        Row: {
+          cursor: Json
+          job_name: string
+          updated_at: string
+        }
+        Insert: {
+          cursor?: Json
+          job_name: string
+          updated_at?: string
+        }
+        Update: {
+          cursor?: Json
+          job_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ingestion_sync_runs: {
         Row: {
           error_message: string | null

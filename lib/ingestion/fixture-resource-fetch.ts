@@ -9,6 +9,7 @@ import {
   type MatchDependencyKind,
   type ProviderDataAvailability,
 } from "@/lib/ingestion/ingestion-result";
+import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
 import type { FixtureStatus } from "@/types/domain";
 
 export type FixtureResourceFetchResult<T> = {
@@ -43,8 +44,17 @@ export async function fetchFixtureResource<T>(
   if (!fetchResult.ok) {
     const reason = fetchResult.reason;
     const retryable = isRetryableProviderFailureReason(reason);
+    const outcome = retryable ? "RETRYABLE_FAILURE" : "PERMANENT_FAILURE";
+    logIngestionEvent({
+      job_name: "fixture-resource-fetch",
+      stage: "provider_fetch",
+      resource: dependency,
+      ok: false,
+      retryable,
+      reason,
+    });
     return {
-      outcome: retryable ? "RETRYABLE_FAILURE" : "PERMANENT_FAILURE",
+      outcome,
       reason,
       rowCount: 0,
     };

@@ -5,9 +5,11 @@ import {
   competitionSupportsPlayerPerformances,
 } from "@/lib/competitions/capabilities";
 import { findCompetition } from "@/lib/competitions/index";
+import { createCronIngestBudget } from "@/lib/ingestion/cron-budget";
 import { getIngestionConfig } from "@/lib/ingestion/config";
 import { ingestLineupsFromProvider } from "@/lib/ingestion/ingest-lineups";
 import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
+import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
 import { ingestMatchDetailsFromProvider } from "@/lib/ingestion/ingest-match-details";
 import { fixtureNeedsMatchDetailSync } from "@/lib/ingestion/ingestion-result";
 import {
@@ -46,6 +48,8 @@ export type SyncMatchDetailsResult = {
     ingested: number;
     failed: number;
     apiRequests: number;
+    stoppedForTimeBudget?: boolean;
+    candidatesRemaining?: number;
   };
 };
 
@@ -140,8 +144,30 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
   let ingested = 0;
   let failed = 0;
   let apiRequests = 0;
+  let stoppedForTimeBudget = false;
+  let processed = 0;
+  const budget = createCronIngestBudget(Date.now());
 
   for (const fixture of candidates) {
+    if (budget.exceeded()) {
+      stoppedForTimeBudget = true;
+      logIngestionEvent({
+        job_name: "sync-match-details",
+        stage: "budget_stop",
+        error_type: "budget_exceeded",
+        ok: true,
+        degraded: true,
+        reason: "Stopped candidate loop for wall-clock budget",
+        detail: {
+          processed,
+          candidatesRemaining: candidates.length - processed,
+        },
+      });
+      break;
+    }
+
+    processed += 1;
+
     if (fixture.needs === "lineups") {
       const result = await ingestLineupsFromProvider(fixture.provider_id);
       apiRequests += result.stats.apiRequests;
@@ -171,7 +197,10 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
     }
   }
 
-  const cronOutcome = resolveCronOutcome({ failedCount: failed });
+  const cronOutcome = resolveCronOutcome({
+    failedCount: failed,
+    partialForTimeBudget: stoppedForTimeBudget && failed === 0 && ingested > 0,
+  });
 
   return {
     ok: cronOutcome.ok,
@@ -182,6 +211,12 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
       ingested,
       failed,
       apiRequests,
+      ...(stoppedForTimeBudget
+        ? {
+            stoppedForTimeBudget: true,
+            candidatesRemaining: candidates.length - processed,
+          }
+        : {}),
     },
   };
 }

@@ -5,6 +5,7 @@ import {
   fetchFixtureResource,
   shouldPersistResourceWrite,
 } from "@/lib/ingestion/fixture-resource-fetch";
+import { withFixtureMatchDetailsLock } from "@/lib/ingestion/fixture-match-details-lock";
 import {
   buildFixtureMatchIngestionState,
   dependencyRecordFromFetch,
@@ -15,6 +16,7 @@ import {
   type ProviderDataAvailability,
 } from "@/lib/ingestion/ingestion-result";
 import { ingestFixtureSidelinedFromProvider } from "@/lib/ingestion/ingest-sidelined";
+import { logFixtureIngestUnit } from "@/lib/ingestion/ingestion-observability";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import {
   getFixtureIngestContext,
@@ -98,6 +100,9 @@ export async function ingestLineupsFromProvider(
   );
 
   let lineupsCount = 0;
+  let dependencyOutcome: IngestionOutcome = lineupsFetch.outcome;
+  let dependencyReason = lineupsFetch.reason;
+
   if (
     lineupsFetch.outcome === "SUCCESS" &&
     lineupsFetch.value &&
@@ -107,24 +112,29 @@ export async function ingestLineupsFromProvider(
     ) &&
     lineupsFetch.rowCount > 0
   ) {
-    lineupsCount = await upsertLineups(
-      client,
-      context.fixtureUuid,
-      lineupsFetch.value
+    const lock = await withFixtureMatchDetailsLock(fixtureProviderId, () =>
+      upsertLineups(client, context.fixtureUuid, lineupsFetch.value!)
     );
 
-    const hasConfirmedLineup = lineupsFetch.value.some(
-      (entry) => entry.isConfirmed
-    );
-    if (hasConfirmedLineup) {
-      await dispatchLineupConfirmedNotifications(fixtureProviderId);
+    if (!lock.acquired) {
+      dependencyOutcome = "RETRYABLE_FAILURE";
+      dependencyReason = lock.reason;
+    } else {
+      lineupsCount = lock.value;
+
+      const hasConfirmedLineup = lineupsFetch.value.some(
+        (entry) => entry.isConfirmed
+      );
+      if (hasConfirmedLineup) {
+        await dispatchLineupConfirmedNotifications(fixtureProviderId);
+      }
+
+      await writeCachedValue(
+        providerFixtureLineupsKey(fixtureProviderId),
+        lineupsFetch.value,
+        CACHE_TTL.fixtureLineupsStale
+      );
     }
-
-    await writeCachedValue(
-      providerFixtureLineupsKey(fixtureProviderId),
-      lineupsFetch.value,
-      CACHE_TTL.fixtureLineupsStale
-    );
   }
 
   const dependency = dependencyRecordFromFetch({
@@ -132,8 +142,8 @@ export async function ingestLineupsFromProvider(
     fixtureStatus: context.status,
     kickoffAt: context.kickoffAt,
     supported: true,
-    fetchOutcome: lineupsFetch.outcome,
-    reason: lineupsFetch.reason,
+    fetchOutcome: dependencyOutcome,
+    reason: dependencyReason,
     rowCount: lineupsCount,
     availability: lineupsFetch.availability,
   });
@@ -151,6 +161,18 @@ export async function ingestLineupsFromProvider(
       error
     );
   }
+
+  logFixtureIngestUnit({
+    job_name: "ingest-lineups",
+    fixtureProviderId,
+    resource: "lineups",
+    outcome: dependency.outcome,
+    persisted: lineupsCount > 0,
+    skippedReason: dependency.reason,
+    retryable: dependency.outcome === "RETRYABLE_FAILURE",
+    providerPath: "/fixtures/lineups",
+    detail: { lineups: lineupsCount, apiRequests: 1 },
+  });
 
   return {
     ok: ingestionOutcomeToOk(dependency.outcome),

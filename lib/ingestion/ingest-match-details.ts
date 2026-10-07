@@ -36,6 +36,7 @@ import {
   upsertFixtureStatistics,
   upsertPlayerMatchPerformances,
 } from "@/lib/ingestion/match-details-upsert";
+import { logFixtureIngestUnit } from "@/lib/ingestion/ingestion-observability";
 import { writeCachedValue } from "@/lib/redis/cache";
 import {
   CACHE_TTL,
@@ -357,6 +358,29 @@ export async function ingestMatchDetailsFromProvider(
 
   const outcome = state.aggregate;
   const reason = mergeReasons(Object.values(dependencies));
+
+  const persisted =
+    eventsCount > 0 ||
+    statisticsCount > 0 ||
+    lineupsCount > 0 ||
+    playerPerformancesCount > 0;
+
+  logFixtureIngestUnit({
+    job_name: "ingest-match-details",
+    fixtureProviderId,
+    resource: "match_details",
+    outcome,
+    persisted,
+    skippedReason: reason,
+    retryable: outcome === "RETRYABLE_FAILURE" || outcome === "PARTIAL",
+    detail: {
+      events: eventsCount,
+      statistics: statisticsCount,
+      lineups: lineupsCount,
+      playerPerformances: playerPerformancesCount,
+      apiRequests,
+    },
+  });
 
   return {
     ok: ingestionOutcomeToOk(outcome),
