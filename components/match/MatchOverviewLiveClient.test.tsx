@@ -42,7 +42,9 @@ vi.mock("@/components/match/TimelineCard", () => ({
 vi.mock("@/lib/live/live-probability-delta", () => ({
   fetchLiveProbabilityDelta: vi.fn().mockResolvedValue({
     prematch: { home: 0.5, draw: 0.25, away: 0.25 },
+    prematchKind: "PRE_MATCH_PROBABILITY",
     live: { home: 0.55, draw: 0.2, away: 0.25 },
+    liveKind: "LIVE_PROBABILITY",
     liveMinute: 55,
     prematchPrediction: null,
   }),

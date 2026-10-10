@@ -1,9 +1,14 @@
+import type { ProbabilityPresentationKind } from "@/types/probability-presentation";
 import type {
+  PrematchModelTier,
   PrematchPredictionSnapshot,
   WinProbabilities,
 } from "@/types/prediction";
 
 export type PrematchPredictionDeltaSnapshot = PrematchPredictionSnapshot & {
+  presentationKind: "PRE_MATCH_PROBABILITY";
+  modelTier: PrematchModelTier;
+  expectedGoalsAvailable: boolean;
   predictionId: string;
   modelVersion: string;
   createdAt: string;
@@ -11,7 +16,9 @@ export type PrematchPredictionDeltaSnapshot = PrematchPredictionSnapshot & {
 
 export type LiveProbabilityDeltaResponse = {
   prematch: WinProbabilities | null;
+  prematchKind: ProbabilityPresentationKind | null;
   live: WinProbabilities | null;
+  liveKind: ProbabilityPresentationKind | null;
   liveMinute: number | null;
   prematchPrediction: PrematchPredictionDeltaSnapshot | null;
 };

@@ -28,7 +28,7 @@ vi.mock("@/lib/predictions/db", () => ({
   insertPrematchPrediction,
   getActiveModelVersion,
   resolveFixtureUuidByExternalId,
-  mapPredictionRowToResult: (
+  mapPrematchPredictionRowForFixture: async (
     row: {
       id: string;
       fixture_id: string;
@@ -56,6 +56,10 @@ vi.mock("@/lib/predictions/db", () => ({
     modelVersion,
     predictionId: row.id,
     type: "PREMATCH" as const,
+    presentationKind: "PRE_MATCH_PROBABILITY" as const,
+    modelTier: "FIXTURE_SPECIFIC" as const,
+    inputSnapshotFingerprint: "fp-test",
+    expectedGoalsAvailable: true,
     winProbabilities: {
       home: row.home_win_prob,
       draw: row.draw_prob,

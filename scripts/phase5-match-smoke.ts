@@ -65,7 +65,9 @@ if (mapped.state !== "ok" || mapped.insightMode !== "live") {
 
 const deltaFixture: LiveProbabilityDeltaResponse = {
   prematch: { home: 0.45, draw: 0.28, away: 0.27 },
+  prematchKind: "PRE_MATCH_PROBABILITY",
   live: { home: 0.58, draw: 0.22, away: 0.2 },
+  liveKind: "LIVE_PROBABILITY",
   liveMinute: 67,
   prematchPrediction: null,
 };

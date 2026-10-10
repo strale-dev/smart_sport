@@ -6,7 +6,7 @@ import type { LiveProbabilityDeltaResponse } from "@/lib/live/live-probability-d
 import {
   getActiveModelVersion,
   mapLivePredictionRowToResult,
-  mapPredictionRowToResult,
+  mapPrematchPredictionRowForFixture,
   readLatestLivePrediction,
   readOfficialPrematchPrediction,
   readLatestPrematchPrediction,
@@ -53,16 +53,23 @@ export async function GET(
     const kickoffReached = Date.now() >= new Date(fixture.kickoff_at).getTime();
     const [prematchRow, liveRow] = await Promise.all([
       kickoffReached
-        ? readOfficialPrematchPrediction(fixture.id, fixture.kickoff_at).then(
-            (official) => official ?? readLatestPrematchPrediction(fixture.id)
-          )
+        ? readOfficialPrematchPrediction(fixture.id, fixture.kickoff_at)
         : readLatestPrematchPrediction(fixture.id),
       readLatestLivePrediction(fixture.id),
     ]);
 
     const prematchResult = prematchRow
-      ? mapPredictionRowToResult(
+      ? await mapPrematchPredictionRowForFixture(
           prematchRow,
+          fixtureExternalId,
+          modelVersion.version,
+          true
+        )
+      : null;
+
+    const liveResult = liveRow
+      ? mapLivePredictionRowToResult(
+          liveRow,
           fixtureExternalId,
           modelVersion.version,
           true
@@ -71,17 +78,15 @@ export async function GET(
 
     const body: LiveProbabilityDeltaResponse = {
       prematch: prematchResult?.winProbabilities ?? null,
-      live: liveRow
-        ? mapLivePredictionRowToResult(
-            liveRow,
-            fixtureExternalId,
-            modelVersion.version,
-            true
-          ).winProbabilities
-        : null,
+      prematchKind: prematchResult ? "PRE_MATCH_PROBABILITY" : null,
+      live: liveResult?.winProbabilities ?? null,
+      liveKind: liveResult ? "LIVE_PROBABILITY" : null,
       liveMinute: liveRow?.minute ?? null,
       prematchPrediction: prematchResult
         ? {
+            presentationKind: "PRE_MATCH_PROBABILITY" as const,
+            modelTier: prematchResult.modelTier,
+            expectedGoalsAvailable: prematchResult.expectedGoalsAvailable,
             winProbabilities: prematchResult.winProbabilities,
             expectedGoalsHome: prematchResult.expectedGoalsHome,
             expectedGoalsAway: prematchResult.expectedGoalsAway,

@@ -15,9 +15,14 @@ const prediction = {
 
 const deltaWithLive = {
   prematch: { home: 0.4, draw: 0.3, away: 0.3 },
+  prematchKind: "PRE_MATCH_PROBABILITY",
   live: { home: 0.55, draw: 0.25, away: 0.2 },
+  liveKind: "LIVE_PROBABILITY",
   liveMinute: 67,
   prematchPrediction: {
+    presentationKind: "PRE_MATCH_PROBABILITY",
+    modelTier: "FIXTURE_SPECIFIC",
+    expectedGoalsAvailable: true,
     predictionId: "p1",
     modelVersion: "v1",
     createdAt: "2026-01-01T00:00:00.000Z",

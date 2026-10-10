@@ -63,4 +63,13 @@ describe("prematch feature fingerprint", () => {
     const payload = prematchFeatureFingerprintPayload(base);
     expect(payload).not.toHaveProperty("dataQuality");
   });
+
+  it("changes when fixture identity fields change", () => {
+    const a = computePrematchFeatureFingerprint(base);
+    const b = computePrematchFeatureFingerprint({
+      ...base,
+      homeTeamProviderId: 99,
+    });
+    expect(a).not.toBe(b);
+  });
 });

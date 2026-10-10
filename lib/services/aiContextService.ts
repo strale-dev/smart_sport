@@ -38,7 +38,7 @@ import { readLatestPrematchInsight } from "@/lib/ai/db";
 import type { MeaningfulEventKind } from "@/lib/live/event-detector-types";
 import {
   getActiveModelVersion,
-  mapPredictionRowToResult,
+  mapPrematchPredictionRowForFixture,
   readOfficialPrematchPrediction,
   readLatestPrematchPrediction,
   resolveFixtureUuidByExternalId,
@@ -409,8 +409,7 @@ async function resolvePrematchReferenceForLive(
 
   const kickoffReached = Date.now() >= new Date(kickoffAt).getTime();
   const prematchRow = kickoffReached
-    ? ((await readOfficialPrematchPrediction(fixtureRow.id, kickoffAt)) ??
-      (await readLatestPrematchPrediction(fixtureRow.id)))
+    ? await readOfficialPrematchPrediction(fixtureRow.id, kickoffAt)
     : await readLatestPrematchPrediction(fixtureRow.id);
 
   if (!prematchRow) {
@@ -418,12 +417,15 @@ async function resolvePrematchReferenceForLive(
   }
 
   const modelVersion = await getActiveModelVersion();
-  const prematchResult = mapPredictionRowToResult(
+  const prematchResult = await mapPrematchPredictionRowForFixture(
     prematchRow,
     fixtureExternalId,
     modelVersion.version,
     true
   );
+  if (!prematchResult) {
+    return null;
+  }
 
   const prematchInsight = await readLatestPrematchInsight(fixtureRow.id);
   const summary = prematchInsight?.summary?.trim() || null;

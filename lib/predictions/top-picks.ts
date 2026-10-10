@@ -3,7 +3,7 @@ import { readLatestPrematchInsight } from "@/lib/ai/db";
 import { buildMatchHref } from "@/lib/fixtures/match-url";
 import { getIngestionConfig } from "@/lib/ingestion/config";
 import {
-  mapPredictionRowToResult,
+  mapPrematchPredictionRowForFixture,
   readLatestPrematchPrediction,
 } from "@/lib/predictions/db";
 import {
@@ -307,12 +307,15 @@ async function buildPickFromFixture(
   }
 
   const config = resolveTopPicksConfig();
-  const mapped = mapPredictionRowToResult(
+  const mapped = await mapPrematchPredictionRowForFixture(
     predictionRow,
     fixture.externalId,
     "1.0.0",
     true
   );
+  if (!mapped || mapped.modelTier === "GENERIC_BASELINE") {
+    return null;
+  }
   const dataQuality = mapped.inputSnapshot.dataQuality;
   const modelProbability = maxWinProbability(mapped.winProbabilities);
 

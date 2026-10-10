@@ -9,6 +9,10 @@ import {
   bucketConfidence,
   predictedOutcomeFromProbabilities,
 } from "@/lib/models/confidence";
+import {
+  capConfidenceByDataQuality,
+  resolvePrematchModelTier,
+} from "@/lib/predictions/prematch-validation";
 import { DEFAULT_MODEL_COEFFICIENTS } from "@/lib/models/coefficients";
 import { computeLogisticProbabilities } from "@/lib/models/logistic";
 import { normalizeWinProbabilitiesWithFloor } from "@/lib/models/normalize-probabilities";
@@ -303,7 +307,12 @@ export function scorePrematchFromFeatures(
     computeLogisticProbabilities(features, coefficients.logistic)
   );
   const poisson = computePoissonOutput(features, coefficients.poisson);
-  const confidence = bucketConfidence(winProbabilities);
+  const modelTier = resolvePrematchModelTier(features, winProbabilities);
+  const confidence = capConfidenceByDataQuality(
+    bucketConfidence(winProbabilities),
+    features,
+    modelTier
+  );
 
   return {
     winProbabilities,

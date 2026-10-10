@@ -7,6 +7,9 @@ export function prematchFeatureFingerprintPayload(
 ): Record<string, unknown> {
   return {
     fixtureExternalId: features.fixtureExternalId,
+    homeTeamProviderId: features.homeTeamProviderId,
+    awayTeamProviderId: features.awayTeamProviderId,
+    leagueProviderId: features.leagueProviderId,
     asOf: features.asOf,
     eloHome: features.eloHome,
     eloAway: features.eloAway,

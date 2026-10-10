@@ -4,7 +4,7 @@ import { evaluateFixtureDependencyCompleteness } from "@/lib/ingestion/ingestion
 import { findCompetition } from "@/lib/competitions";
 import { buildPrematchFeatures } from "@/lib/models/features";
 import {
-  mapPredictionRowToResult,
+  mapPrematchPredictionRowForFixture,
   readLatestPrematchPrediction,
   resolveFixtureUuidByExternalId,
 } from "@/lib/predictions/db";
@@ -125,14 +125,16 @@ async function buildEvaluationInput(input: {
   let currentContextHash: string | null = null;
   if (features && predictionRow) {
     try {
-      const mapped = mapPredictionRowToResult(
+      const mapped = await mapPrematchPredictionRowForFixture(
         predictionRow,
         input.providerId,
         "1.0.0",
         true
       );
-      const ctx = await buildPrematchContext(input.providerId, mapped);
-      currentContextHash = ctx.contextHash;
+      if (mapped) {
+        const ctx = await buildPrematchContext(input.providerId, mapped);
+        currentContextHash = ctx.contextHash;
+      }
     } catch {
       currentContextHash = null;
     }

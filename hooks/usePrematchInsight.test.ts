@@ -58,6 +58,10 @@ const baseInsight = {
 
 const basePrediction = {
   type: "PREMATCH",
+  presentationKind: "PRE_MATCH_PROBABILITY",
+  modelTier: "FIXTURE_SPECIFIC",
+  inputSnapshotFingerprint: "fp",
+  expectedGoalsAvailable: true,
   fixtureExternalId: 123,
   fixtureId: "fixture-uuid",
   modelVersionId: "mv-1",

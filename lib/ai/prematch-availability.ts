@@ -186,8 +186,12 @@ export function resolvePrematchDisplayExperience(input: {
 
 export function isFixtureSpecificPrematchModel(
   features: PrematchFeatureVector,
-  prediction: Pick<PrematchPredictionResult, "winProbabilities">
+  prediction: Pick<PrematchPredictionResult, "winProbabilities" | "modelTier">
 ): boolean {
+  if (prediction.modelTier === "GENERIC_BASELINE") {
+    return false;
+  }
+
   if (!hasMinimumModelSignal(features)) {
     return false;
   }
@@ -201,7 +205,7 @@ export function isFixtureSpecificPrematchModel(
  */
 export function canGeneratePrematchNarrative(
   features: PrematchFeatureVector,
-  prediction: Pick<PrematchPredictionResult, "winProbabilities">
+  prediction: Pick<PrematchPredictionResult, "winProbabilities" | "modelTier">
 ): boolean {
   if (!hasMinimumModelSignal(features)) {
     return false;
