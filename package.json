@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "check:ci": "npm run typecheck && npm run lint && npm run test:ci",
     "test": "vitest",
-    "test:ci": "vitest run",
+    "test:ci": "vitest run --config vitest.config.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",

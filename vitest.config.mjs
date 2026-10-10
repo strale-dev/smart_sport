@@ -9,6 +9,8 @@ export default defineConfig({
     environment: "node",
     setupFiles: ["./vitest.setup.ts"],
     exclude: [...configDefaults.exclude, "e2e/**"],
+    // Husky pre-push on Windows can flake with default file parallelism.
+    fileParallelism: process.env.CI === "true" ? undefined : false,
   },
   resolve: {
     alias: {

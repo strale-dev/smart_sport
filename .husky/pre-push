@@ -1,3 +1,1 @@
-npm run typecheck
-npm run lint
-npm run test:ci
+npm run check:ci
