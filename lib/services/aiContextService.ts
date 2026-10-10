@@ -24,9 +24,11 @@ import type { TeamHistoryFeatures } from "@/lib/analytics/history-feature-types"
 import { resolveMatchFixtureContext } from "@/lib/match/fixture-context";
 import { getH2H, getRecentForm } from "@/lib/services/analyticsService";
 import type {
+  HistoricalTeamContextSlice,
   LiveAiContext,
   PrematchAiContext,
   LineupsContextState,
+  PrematchFormSlice,
 } from "@/types/ai";
 import type {
   LivePredictionResult,
@@ -66,16 +68,44 @@ function metricValueOrNull(
   return m.value;
 }
 
+function formSliceFromWindow(
+  team: TeamHistoryFeatures,
+  scope: "ALL" | "HOME" | "AWAY",
+  window: 5 | 10 | 20
+): PrematchFormSlice {
+  const w = team.windows[scope]?.[window];
+  if (!w || w.played === 0) {
+    return null;
+  }
+  const ppg = w.ppg.status === "available" ? w.ppg.value : null;
+  if (ppg === null) {
+    return null;
+  }
+  const gf = w.goalsFor.value != null ? w.goalsFor.value * w.played : 0;
+  const ga = w.goalsAgainst.value != null ? w.goalsAgainst.value * w.played : 0;
+  return {
+    wins: w.wins,
+    draws: w.draws,
+    losses: w.losses,
+    ppg,
+    goalsFor: Math.round(gf),
+    goalsAgainst: Math.round(ga),
+  };
+}
+
 function historicalContextFromFeatures(
   team: TeamHistoryFeatures
-): NonNullable<PrematchAiContext["historicalContext"]>["home"] {
+): HistoricalTeamContextSlice {
   const allScope = team.completenessByScope.find((c) => c.scope === "ALL");
   const w20 = team.windows.ALL?.[20];
   return {
     sampleSize: allScope?.validCount ?? 0,
     last20Ppg: metricValueOrNull(w20?.ppg),
-    seasonPpg: null,
-    previousSeasonPpg: null,
+    last10All: formSliceFromWindow(team, "ALL", 10),
+    last10Home: formSliceFromWindow(team, "HOME", 10),
+    last10Away: formSliceFromWindow(team, "AWAY", 10),
+    seasonToDate: null,
+    previousSeason: null,
     topCompetitions: [],
   };
 }
@@ -304,6 +334,20 @@ async function buildPrematchContextUncached(
       home: historicalContextFromFeatures(historyFeatures.home),
       away: historicalContextFromFeatures(historyFeatures.away),
     },
+    predictionFeatures: {
+      homeXgForAvg: prediction.inputSnapshot.homeXgForAvg,
+      awayXgForAvg: prediction.inputSnapshot.awayXgForAvg,
+      homeXgAgainstAvg: prediction.inputSnapshot.homeXgAgainstAvg,
+      awayXgAgainstAvg: prediction.inputSnapshot.awayXgAgainstAvg,
+      homeRestDays: prediction.inputSnapshot.homeRestDays,
+      awayRestDays: prediction.inputSnapshot.awayRestDays,
+      homeInjuryImpact: prediction.inputSnapshot.homeInjuryImpact,
+      awayInjuryImpact: prediction.inputSnapshot.awayInjuryImpact,
+      homeTopScorersSidelined: prediction.inputSnapshot.homeTopScorersSidelined,
+      awayTopScorersSidelined: prediction.inputSnapshot.awayTopScorersSidelined,
+      leaguePositionDiff: prediction.inputSnapshot.leaguePositionDiff,
+      standingPointsDiff: prediction.inputSnapshot.standingPointsDiff,
+    },
     dataQuality: resolveDisplayDataQuality({
       dataMissing,
       predictionDataQuality: prediction.inputSnapshot.dataQuality,
@@ -338,6 +382,8 @@ async function buildPrematchContextUncached(
     analyticsCompact: context.analyticsCompact,
     referee: context.referee,
     round: context.round,
+    historicalContext: context.historicalContext,
+    predictionFeatures: context.predictionFeatures,
   });
 
   return { context, contextHash };

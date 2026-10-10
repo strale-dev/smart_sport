@@ -33,6 +33,8 @@ export type PrematchInsightViewModel = {
   fallbackMessage: string | null;
   /** Latest live model win probabilities when narrative is not ready yet. */
   liveWinProbabilities: WinProbabilities | null;
+  /** Shown narrative may be from an older context_hash while refresh runs. */
+  contextStale: boolean;
 };
 
 export function resolveInitialPrematchInsightState(input: {
@@ -69,6 +71,7 @@ export function mapPrematchInsightResponseToViewModel(
         errorMessage: null,
         fallbackMessage: null,
         liveWinProbabilities: null,
+        contextStale: response.contextStale === true,
       };
     case "MISS":
       return {
@@ -82,6 +85,7 @@ export function mapPrematchInsightResponseToViewModel(
         errorMessage: null,
         fallbackMessage: null,
         liveWinProbabilities: null,
+        contextStale: false,
       };
     case "UNAVAILABLE":
       return {
@@ -95,6 +99,7 @@ export function mapPrematchInsightResponseToViewModel(
         errorMessage: null,
         fallbackMessage: null,
         liveWinProbabilities: null,
+        contextStale: false,
       };
     case "FALLBACK":
       return {
@@ -108,6 +113,7 @@ export function mapPrematchInsightResponseToViewModel(
         errorMessage: null,
         fallbackMessage: response.message,
         liveWinProbabilities: null,
+        contextStale: false,
       };
     case "AI_LIMIT_REACHED":
       return {
@@ -121,6 +127,7 @@ export function mapPrematchInsightResponseToViewModel(
         errorMessage: null,
         fallbackMessage: null,
         liveWinProbabilities: null,
+        contextStale: false,
       };
     case "GUEST_FORBIDDEN":
       return {
@@ -134,6 +141,7 @@ export function mapPrematchInsightResponseToViewModel(
         errorMessage: null,
         fallbackMessage: null,
         liveWinProbabilities: null,
+        contextStale: false,
       };
     default:
       return {
@@ -147,6 +155,7 @@ export function mapPrematchInsightResponseToViewModel(
         errorMessage: "Unexpected response",
         fallbackMessage: null,
         liveWinProbabilities: null,
+        contextStale: false,
       };
   }
 }
@@ -165,5 +174,6 @@ export function createEmptyPrematchInsightViewModel(
     errorMessage: null,
     fallbackMessage: null,
     liveWinProbabilities: null,
+    contextStale: false,
   };
 }

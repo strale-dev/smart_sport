@@ -434,7 +434,7 @@ export function getAiPrematchCacheTtlSec(
 export function getAiPromptVersion(
   source: Record<string, string | undefined> = process.env
 ): string {
-  return emptyToUndefined(source.AI_PROMPT_VERSION) ?? "1.2.0";
+  return emptyToUndefined(source.AI_PROMPT_VERSION) ?? "1.3.0";
 }
 
 export function assertOpenAiConfiguredInProduction(

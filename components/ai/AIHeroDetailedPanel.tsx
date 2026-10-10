@@ -170,36 +170,40 @@ export function AIHeroDetailedPanel({
           )}
         </AIHeroMotionSection>
 
-        <AIHeroMotionSection motionKey={`${insight.id}-probs`}>
-          <WinProbabilitiesBar
-            probabilities={metrics.winProbabilities}
-            winOutcome={metrics.winOutcome}
-            homeTeam={homeTeam}
-            awayTeam={awayTeam}
-          />
-        </AIHeroMotionSection>
+        {prediction ? (
+          <>
+            <AIHeroMotionSection motionKey={`${insight.id}-probs`}>
+              <WinProbabilitiesBar
+                probabilities={metrics.winProbabilities}
+                winOutcome={metrics.winOutcome}
+                homeTeam={homeTeam}
+                awayTeam={awayTeam}
+              />
+            </AIHeroMotionSection>
 
-        <div className="text-muted-foreground grid gap-2 text-sm sm:grid-cols-3">
-          <p>
-            Expected goals:{" "}
-            {formatExpectedGoalsRange(metrics.expectedGoalsRange)}
-            {metrics.expectedGoalsTotal != null
-              ? ` (μ ${metrics.expectedGoalsTotal.toFixed(1)})`
-              : null}
-          </p>
-          {metrics.over2Prob != null ? (
-            <p>Over 2.5: {formatWinProbability(metrics.over2Prob)}</p>
-          ) : null}
-          {metrics.over3Prob != null ? (
-            <p>Over 3.5: {formatWinProbability(metrics.over3Prob)}</p>
-          ) : null}
-          {metrics.weakerTeamScoringChance != null ? (
-            <p>
-              Underdog threat:{" "}
-              {formatWinProbability(metrics.weakerTeamScoringChance)}
-            </p>
-          ) : null}
-        </div>
+            <div className="text-muted-foreground grid gap-2 text-sm sm:grid-cols-3">
+              <p>
+                Expected goals:{" "}
+                {formatExpectedGoalsRange(metrics.expectedGoalsRange)}
+                {metrics.expectedGoalsTotal != null
+                  ? ` (μ ${metrics.expectedGoalsTotal.toFixed(1)})`
+                  : null}
+              </p>
+              {metrics.over2Prob != null ? (
+                <p>Over 2.5: {formatWinProbability(metrics.over2Prob)}</p>
+              ) : null}
+              {metrics.over3Prob != null ? (
+                <p>Over 3.5: {formatWinProbability(metrics.over3Prob)}</p>
+              ) : null}
+              {metrics.weakerTeamScoringChance != null ? (
+                <p>
+                  Underdog threat:{" "}
+                  {formatWinProbability(metrics.weakerTeamScoringChance)}
+                </p>
+              ) : null}
+            </div>
+          </>
+        ) : null}
 
         <AnalysisDataCoverage
           coverage={insight.dataCoverage}

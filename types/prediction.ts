@@ -160,6 +160,9 @@ export type LiveFeatureVector = {
   possessionAway: number | null;
   cornersHome: number | null;
   cornersAway: number | null;
+  /** Official pre-kickoff win probabilities — fixed anchor for live scoring (RC-12). */
+  anchorWinProbabilities: WinProbabilities;
+  /** @deprecated Same as anchor; kept for older snapshots/readers. */
   priorWinProbabilities: WinProbabilities;
   dataQuality: PredictionDataQuality;
 };

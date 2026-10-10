@@ -51,7 +51,7 @@ export type HistoricalPrematchWriteAction =
 
 /**
  * Live and finished fixtures never regenerate when a pre-match row already exists.
- * Cron does not create that first row; only a signed-in user open does.
+ * Cron may create the first row when none exists (backfill scope).
  */
 export function historicalPrematchWriteAction(input: {
   trigger: "user" | "cron";
@@ -70,7 +70,7 @@ export function historicalPrematchWriteAction(input: {
     return "guest_forbidden";
   }
 
-  if (input.trigger === "user") {
+  if (input.trigger === "user" || input.trigger === "cron") {
     return "backfill";
   }
 

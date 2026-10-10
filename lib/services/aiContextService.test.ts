@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { computeContextHash } from "@/lib/ai/hash";
 import { sanitizeProviderText } from "@/lib/ai/sanitize";
 import { MAX_COMPACT_CONTEXT_BYTES } from "@/lib/analytics/history-feature-types";
 import {
@@ -224,5 +225,118 @@ describe("aiContextService", () => {
     const parsed = JSON.parse(prompt) as LiveAiContext;
     expect(parsed.dataAvailable).toContain("Live match statistics");
     expect(parsed.lineups?.[0]?.substitutes).toEqual([]);
+  });
+
+  it("includes expanded historicalContext and predictionFeatures in prematch JSON (RC-8)", () => {
+    const context: PrematchAiContext = {
+      fixtureExternalId: 1,
+      kickoffAt: "2026-09-07T18:00:00.000Z",
+      status: "NS",
+      venue: null,
+      league: {
+        externalId: 61,
+        name: "Ligue 1",
+        category: "domestic_league",
+        tier: 1,
+        isInternational: false,
+        supportsStandings: true,
+      },
+      homeTeam: { externalId: 80, name: "Home", isNational: false },
+      awayTeam: { externalId: 79, name: "Away", isNational: false },
+      lineupsState: "MISSING",
+      round: null,
+      referee: null,
+      modelVersion: "1.0.0",
+      promptVersion: "1.3.0",
+      prediction: {
+        winProbabilities: { home: 0.4, draw: 0.3, away: 0.3 },
+        expectedGoalsHome: 1.4,
+        expectedGoalsAway: 1.2,
+        expectedGoalsTotalMin: 2,
+        expectedGoalsTotalMax: 3,
+        bttsProb: 0.55,
+        weakerTeamScoringProb: 0.42,
+        confidence: "MEDIUM",
+        predictedOutcome: "1",
+        dataQuality: "PARTIAL",
+      },
+      form: {
+        homeLast5: null,
+        awayLast5: null,
+        homeLast5Home: null,
+        awayLast5Away: null,
+      },
+      standings: null,
+      lineups: null,
+      sidelined: null,
+      dataAvailable: ["Model prediction"],
+      dataMissing: [],
+      h2h: null,
+      historicalContext: {
+        home: {
+          sampleSize: 40,
+          last20Ppg: 1.5,
+          last10All: {
+            wins: 5,
+            draws: 2,
+            losses: 3,
+            ppg: 1.7,
+            goalsFor: 12,
+            goalsAgainst: 10,
+          },
+          last10Home: null,
+          last10Away: null,
+          seasonToDate: null,
+          previousSeason: null,
+          topCompetitions: [],
+        },
+        away: {
+          sampleSize: 38,
+          last20Ppg: 1.4,
+          last10All: null,
+          last10Home: null,
+          last10Away: null,
+          seasonToDate: null,
+          previousSeason: null,
+          topCompetitions: [],
+        },
+      },
+      predictionFeatures: {
+        homeXgForAvg: 1.55,
+        awayXgForAvg: 1.2,
+        homeXgAgainstAvg: 1.1,
+        awayXgAgainstAvg: 1.3,
+        homeRestDays: 6,
+        awayRestDays: 5,
+        homeInjuryImpact: 0.1,
+        awayInjuryImpact: 0.2,
+        homeTopScorersSidelined: 0,
+        awayTopScorersSidelined: 1,
+        leaguePositionDiff: 3,
+        standingPointsDiff: 4,
+      },
+      dataQuality: "PARTIAL",
+      dataTimestamp: "2026-09-06T12:00:00.000Z",
+    };
+
+    const prompt = buildPrematchUserPrompt(context);
+    expect(prompt).toContain('"last10All"');
+    expect(prompt).toContain('"homeXgForAvg": 1.55');
+    expect(prompt).toContain('"standingPointsDiff": 4');
+
+    const withoutFeatures = computeContextHash({
+      fixtureExternalId: context.fixtureExternalId,
+      modelVersion: context.modelVersion,
+      promptVersion: context.promptVersion,
+      historicalContext: context.historicalContext,
+    });
+    const withFeatures = computeContextHash({
+      fixtureExternalId: context.fixtureExternalId,
+      modelVersion: context.modelVersion,
+      promptVersion: context.promptVersion,
+      historicalContext: context.historicalContext,
+      predictionFeatures: context.predictionFeatures,
+    });
+    expect(withoutFeatures).not.toBe(withFeatures);
   });
 });

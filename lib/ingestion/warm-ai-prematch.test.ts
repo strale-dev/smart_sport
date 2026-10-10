@@ -17,6 +17,12 @@ describe("warmWindowBoundsForScope", () => {
     expect(from).toBe("2026-03-21T12:00:00.000Z");
     expect(to).toBe("2026-03-21T13:30:00.000Z");
   });
+
+  it("backfill scope covers the previous 7 days through now", () => {
+    const { from, to } = warmWindowBoundsForScope("backfill", now);
+    expect(from).toBe("2026-03-14T12:00:00.000Z");
+    expect(to).toBe("2026-03-21T12:00:00.000Z");
+  });
 });
 
 describe("warm cron outcome semantics", () => {

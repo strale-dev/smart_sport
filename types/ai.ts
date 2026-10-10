@@ -17,6 +17,21 @@ export type PrematchFormSlice = {
   goalsAgainst: number;
 } | null;
 
+export type HistoricalTeamContextSlice = {
+  sampleSize: number;
+  last20Ppg: number | null;
+  last10All: PrematchFormSlice;
+  last10Home: PrematchFormSlice;
+  last10Away: PrematchFormSlice;
+  seasonToDate: PrematchFormSlice;
+  previousSeason: PrematchFormSlice;
+  topCompetitions: Array<{
+    leagueName: string;
+    matches: number;
+    ppg: number | null;
+  }>;
+};
+
 export type PrematchAiContext = {
   fixtureExternalId: number;
   kickoffAt: string;
@@ -92,28 +107,23 @@ export type PrematchAiContext = {
   analyticsCompact?: import("@/lib/analytics/compact-ai-context").CompactPrematchAnalyticsContext;
   /** Compact historical aggregates (not raw fixture lists). */
   historicalContext?: {
-    home: {
-      sampleSize: number;
-      last20Ppg: number | null;
-      seasonPpg: number | null;
-      previousSeasonPpg: number | null;
-      topCompetitions: Array<{
-        leagueName: string;
-        matches: number;
-        ppg: number | null;
-      }>;
-    };
-    away: {
-      sampleSize: number;
-      last20Ppg: number | null;
-      seasonPpg: number | null;
-      previousSeasonPpg: number | null;
-      topCompetitions: Array<{
-        leagueName: string;
-        matches: number;
-        ppg: number | null;
-      }>;
-    };
+    home: HistoricalTeamContextSlice;
+    away: HistoricalTeamContextSlice;
+  };
+  /** Model feature signals not duplicated in form/h2h blocks. */
+  predictionFeatures?: {
+    homeXgForAvg: number | null;
+    awayXgForAvg: number | null;
+    homeXgAgainstAvg: number | null;
+    awayXgAgainstAvg: number | null;
+    homeRestDays: number | null;
+    awayRestDays: number | null;
+    homeInjuryImpact: number | null;
+    awayInjuryImpact: number | null;
+    homeTopScorersSidelined: number;
+    awayTopScorersSidelined: number;
+    leaguePositionDiff: number | null;
+    standingPointsDiff: number | null;
   };
   dataQuality: "COMPLETE" | "PARTIAL" | "STALE";
   dataTimestamp: string;

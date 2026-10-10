@@ -152,9 +152,11 @@ async function readHistoricalPrematchInsight(
   const prediction = await getLatestPrematch(fixtureExternalId);
   if (!prediction) {
     return {
-      status: "UNAVAILABLE",
-      fixtureExternalId,
-      reason: "NO_STORED_INSIGHT",
+      status: "OK",
+      insight: mapAiInsightRowToStored(row, fixtureExternalId, true),
+      prediction: null,
+      cached: true,
+      insightMode: "historical",
     };
   }
 
@@ -288,6 +290,18 @@ export async function readPrematchInsight(
   );
 
   if (!stored) {
+    const latestRow = await readLatestPrematchInsight(fixture.id);
+    if (latestRow) {
+      return {
+        status: "OK",
+        insight: mapAiInsightRowToStored(latestRow, fixtureExternalId, true),
+        prediction,
+        cached: true,
+        insightMode: "prematch",
+        contextStale: true,
+      };
+    }
+
     return { status: "MISS", fixtureExternalId, prediction };
   }
 
