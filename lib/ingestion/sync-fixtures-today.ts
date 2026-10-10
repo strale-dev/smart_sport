@@ -9,7 +9,12 @@ import {
   isTerminalFixtureStatus,
 } from "@/lib/ingestion/config";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
-import { refreshPrematchReadinessBatch } from "@/lib/ingestion/fixture-prematch-readiness";
+import { LIVE_FIXTURE_STATUSES } from "@/lib/fixtures/live-status";
+import {
+  getLifecycleTodayDateKey,
+  refreshReadinessBatch,
+  refreshReadinessForKickoffWindow,
+} from "@/lib/fixtures/readiness";
 import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
 import { ingestFixtureFromRaw } from "@/lib/ingestion/upsert";
 import { getRedis } from "@/lib/redis/client";
@@ -36,20 +41,11 @@ export type SyncFixturesTodayResult = {
   };
 };
 
-const LIVE_FIXTURE_STATUSES = new Set([
-  "1H",
-  "2H",
-  "HT",
-  "ET",
-  "BT",
-  "P",
-  "LIVE",
-  "INT",
-]);
-
 function fixtureTodaySyncPriority(raw: RawApiFootballFixture): number {
   const status = raw.fixture.status?.short ?? "NS";
-  if (LIVE_FIXTURE_STATUSES.has(status)) {
+  if (
+    LIVE_FIXTURE_STATUSES.has(status as import("@/types/domain").FixtureStatus)
+  ) {
     return 0;
   }
   if (!isTerminalFixtureStatus(status)) {
@@ -63,7 +59,7 @@ export async function syncFixturesToday(
 ): Promise<SyncFixturesTodayResult> {
   const config = getIngestionConfig();
   const client = createAdminClient();
-  const date = anchor.toISOString().slice(0, 10);
+  const date = getLifecycleTodayDateKey(anchor);
   const syncedAt = anchor.toISOString();
 
   let rawFixtures: RawApiFootballFixture[];
@@ -143,10 +139,18 @@ export async function syncFixturesToday(
   }
 
   let readinessRefreshed = 0;
-  if (domainFixtures.length > 0) {
-    readinessRefreshed = await refreshPrematchReadinessBatch(
-      domainFixtures.map((fixture) => fixture.externalId)
+  try {
+    readinessRefreshed = await refreshReadinessForKickoffWindow(anchor);
+  } catch (error) {
+    console.error(
+      "[sync-fixtures-today] readiness window refresh failed",
+      error
     );
+    if (domainFixtures.length > 0) {
+      readinessRefreshed = await refreshReadinessBatch(
+        domainFixtures.map((fixture) => fixture.externalId)
+      );
+    }
   }
 
   const outcome = resolveCronOutcome({

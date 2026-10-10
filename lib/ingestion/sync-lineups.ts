@@ -1,7 +1,10 @@
 import { competitionSupportsLineups } from "@/lib/competitions/capabilities";
 import { findCompetition } from "@/lib/competitions/index";
+import { createCronIngestBudget } from "@/lib/ingestion/cron-budget";
+import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
 import { getIngestionConfig } from "@/lib/ingestion/config";
 import { ingestLineupsFromProvider } from "@/lib/ingestion/ingest-lineups";
+import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
 import { shouldRunNonCriticalIngestion } from "@/lib/ingestion/schedule";
 import { fixtureNeedsLineupSync } from "@/lib/ingestion/match-details-upsert";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -14,6 +17,7 @@ export type SyncLineupsResult = {
   ok: boolean;
   job: string;
   skipped?: boolean;
+  degraded?: boolean;
   reason?: string;
   stats?: {
     candidates: number;
@@ -25,6 +29,8 @@ export type SyncLineupsResult = {
     leaguesWithLineups: number;
     leaguesSkippedNoLineups: number;
     nonCriticalSkipped?: boolean;
+    stoppedForTimeBudget?: boolean;
+    candidatesRemaining?: number;
   };
 };
 
@@ -122,8 +128,30 @@ export async function syncLineups(): Promise<SyncLineupsResult> {
   let skippedComplete = 0;
   let errors = 0;
   let apiRequests = 0;
+  let stoppedForTimeBudget = false;
+  let processed = 0;
+  const budget = createCronIngestBudget(Date.now());
 
   for (const fixture of candidates) {
+    if (budget.exceeded()) {
+      stoppedForTimeBudget = true;
+      logIngestionEvent({
+        job_name: "sync-lineups",
+        stage: "budget_stop",
+        error_type: "budget_exceeded",
+        ok: true,
+        degraded: true,
+        reason: "Stopped candidate loop for wall-clock budget",
+        detail: {
+          processed,
+          candidatesRemaining: candidates.length - processed,
+        },
+      });
+      break;
+    }
+
+    processed += 1;
+
     try {
       const needsSync = await fixtureNeedsLineupSync(
         client,
@@ -154,8 +182,14 @@ export async function syncLineups(): Promise<SyncLineupsResult> {
     }
   }
 
+  const outcome = resolveCronOutcome({
+    failedCount: errors,
+    partialForTimeBudget: stoppedForTimeBudget && errors === 0 && synced > 0,
+  });
+
   return {
-    ok: true,
+    ok: outcome.ok,
+    degraded: outcome.degraded,
     job: "sync-lineups",
     stats: {
       candidates: candidates.length,
@@ -166,6 +200,12 @@ export async function syncLineups(): Promise<SyncLineupsResult> {
       leaguesRequested: config.leagueProviderIds.length,
       leaguesWithLineups: lineupLeagueProviderIds.length,
       leaguesSkippedNoLineups,
+      ...(stoppedForTimeBudget
+        ? {
+            stoppedForTimeBudget: true,
+            candidatesRemaining: candidates.length - processed,
+          }
+        : {}),
     },
   };
 }

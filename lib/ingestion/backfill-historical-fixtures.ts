@@ -16,6 +16,7 @@ import {
   startIngestionSyncRun,
   upsertLeagueSeasonSyncState,
 } from "@/lib/ingestion/ingestion-sync-state";
+import { runTeamHistoryRepairBatch } from "@/lib/ingestion/repair-team-history";
 import { throttleProviderRequest } from "@/lib/ingestion/throttle";
 import { ingestFixtureFromRaw } from "@/lib/ingestion/upsert";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -244,9 +245,26 @@ export async function backfillHistoricalFixtures(
   let seasonsProcessed = 0;
   let seasonsSkipped = 0;
   let teamGapFillRequests = 0;
+  let stoppedForTimeBudget = false;
+
+  const backfillBudgetRaw = process.env.BACKFILL_WALL_CLOCK_BUDGET_MS;
+  const backfillBudgetMs = backfillBudgetRaw
+    ? Number.parseInt(backfillBudgetRaw, 10)
+    : null;
+  const backfillStartedAtMs = Date.now();
+  const backfillBudgetExceeded = () =>
+    backfillBudgetMs != null &&
+    Number.isFinite(backfillBudgetMs) &&
+    backfillBudgetMs > 0 &&
+    Date.now() - backfillStartedAtMs >= backfillBudgetMs;
 
   try {
     for (const leagueProviderId of leagueProviderIds) {
+      if (backfillBudgetExceeded()) {
+        stoppedForTimeBudget = true;
+        break;
+      }
+
       await throttleProviderRequest();
       const seasons = await listSeasonsByLeague(leagueProviderId);
       apiRequests += 1;
@@ -254,6 +272,11 @@ export async function backfillHistoricalFixtures(
       const seasonYears = resolveSeasonYearsForLeague(seasons);
 
       for (const seasonYear of seasonYears) {
+        if (backfillBudgetExceeded()) {
+          stoppedForTimeBudget = true;
+          break;
+        }
+
         if (resume && !dryRun) {
           const existing = await getLeagueSeasonSyncState(
             leagueProviderId,
@@ -276,12 +299,33 @@ export async function backfillHistoricalFixtures(
         fixturesUpserted += result.fixturesUpserted;
         ingestErrors += result.ingestErrors;
       }
+
+      if (stoppedForTimeBudget) {
+        break;
+      }
     }
 
-    if (gapFillTeams) {
+    if (!stoppedForTimeBudget && !dryRun) {
+      const repairBatch = await runTeamHistoryRepairBatch({
+        maxTeams: 8,
+        budgetMs: backfillBudgetMs ?? 120_000,
+      });
+      apiRequests += repairBatch.apiRequests;
+      fixturesUpserted += repairBatch.fixturesUpserted;
+      if (backfillBudgetExceeded()) {
+        stoppedForTimeBudget = true;
+      }
+    }
+
+    if (gapFillTeams && !stoppedForTimeBudget) {
       const seasonCandidates = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
 
       for (const teamProviderId of TIER1_GAP_FILL_TEAM_PROVIDER_IDS) {
+        if (backfillBudgetExceeded()) {
+          stoppedForTimeBudget = true;
+          break;
+        }
+
         const finished = await countFinishedFixturesForTeam(teamProviderId);
         if (finished >= BACKFILL_TARGET_FINISHED_PER_TEAM) {
           continue;
@@ -302,7 +346,8 @@ export async function backfillHistoricalFixtures(
 
     if (runId) {
       await finishIngestionSyncRun(runId, {
-        status: ingestErrors > 0 ? "failed" : "complete",
+        status:
+          ingestErrors > 0 && !stoppedForTimeBudget ? "failed" : "complete",
         stats: {
           tier,
           leaguesProcessed: leagueProviderIds.length,
@@ -312,9 +357,14 @@ export async function backfillHistoricalFixtures(
           fixturesUpserted,
           ingestErrors,
           teamGapFillRequests,
+          ...(stoppedForTimeBudget ? { stoppedForTimeBudget: true } : {}),
         },
         errorMessage:
-          ingestErrors > 0 ? `${ingestErrors} ingest error(s)` : undefined,
+          ingestErrors > 0
+            ? `${ingestErrors} ingest error(s)`
+            : stoppedForTimeBudget
+              ? "Stopped for wall-clock budget; re-run with --resume"
+              : undefined,
       });
     }
   } catch (error) {

@@ -13,8 +13,13 @@ import {
   teamRefToInsert,
   venueRefToInsert,
 } from "@/lib/api-football/to-db";
+import { startOfDayUtcForTimezone } from "@/lib/datetime/timezone";
 import { FIXTURE_INGEST_MARKS_SEASON_CURRENT } from "@/lib/ingestion/season-current-policy";
 import { isFinishedFixtureStatus } from "@/lib/fixtures/display";
+import {
+  getLifecycleTodayDateKey,
+  LIFECYCLE_TIMEZONE,
+} from "@/lib/fixtures/readiness/constants";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   CountryRef,
@@ -484,6 +489,19 @@ export async function ingestFixtureFromRaw(
     }
   }
 
+  try {
+    const { evaluateAndPersistFixtureReadiness } =
+      await import("@/lib/fixtures/readiness");
+    await evaluateAndPersistFixtureReadiness({
+      providerId: domain.externalId,
+    });
+  } catch (readinessError) {
+    console.error(
+      `[ingestFixtureFromRaw] readiness evaluation failed for ${domain.externalId}`,
+      readinessError
+    );
+  }
+
   return { fixtureId, domain };
 }
 
@@ -607,7 +625,10 @@ const STANDINGS_SCHEDULE_LIVE_STATUSES = new Set([
 ]);
 
 function utcDayStartIso(anchor = new Date()): string {
-  return `${anchor.toISOString().slice(0, 10)}T00:00:00.000Z`;
+  return startOfDayUtcForTimezone(
+    getLifecycleTodayDateKey(anchor),
+    LIFECYCLE_TIMEZONE
+  );
 }
 
 function utcDayEndIso(anchor = new Date()): string {

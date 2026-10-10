@@ -278,7 +278,9 @@ export type PrematchInsightResponse =
       reason?:
         | "NO_STORED_INSIGHT"
         | "FIXTURE_NOT_ANALYZABLE"
-        | "GENERATION_NOT_ALLOWED";
+        | "GENERATION_NOT_ALLOWED"
+        | "STALE_PREMATCH_CONTEXT";
+      prediction?: import("@/types/prediction").PrematchPredictionResult;
     }
   | {
       status: "FALLBACK";

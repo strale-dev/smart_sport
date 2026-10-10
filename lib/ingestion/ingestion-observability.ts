@@ -19,6 +19,11 @@ export type IngestionObservabilityPayload = {
   job_name: string;
   stage: string;
   fixture_id?: number;
+  fixture_provider_id?: number;
+  resource?: string;
+  provider_path?: string;
+  persisted?: boolean;
+  retryable?: boolean;
   error_type?: IngestionErrorType;
   ok?: boolean;
   degraded?: boolean;
@@ -27,6 +32,39 @@ export type IngestionObservabilityPayload = {
   /** Additional context (stats, trigger, etc.) */
   detail?: Record<string, unknown>;
 };
+
+export type FixtureIngestUnitLogInput = {
+  job_name: string;
+  stage?: string;
+  fixtureProviderId: number;
+  resource: string;
+  outcome: string;
+  persisted: boolean;
+  skippedReason?: string;
+  retryable?: boolean;
+  providerPath?: string;
+  detail?: Record<string, unknown>;
+};
+
+export function logFixtureIngestUnit(input: FixtureIngestUnitLogInput): void {
+  logIngestionEvent({
+    job_name: input.job_name,
+    stage: input.stage ?? "fixture_unit",
+    fixture_provider_id: input.fixtureProviderId,
+    fixture_id: input.fixtureProviderId,
+    resource: input.resource,
+    provider_path: input.providerPath,
+    persisted: input.persisted,
+    retryable: input.retryable,
+    ok:
+      input.outcome === "SUCCESS" ||
+      input.outcome === "SKIPPED" ||
+      input.outcome === "PARTIAL",
+    skipped: input.outcome === "SKIPPED",
+    reason: input.skippedReason ?? input.outcome,
+    detail: input.detail,
+  });
+}
 
 const LOG_PREFIX = "[ingestion]";
 

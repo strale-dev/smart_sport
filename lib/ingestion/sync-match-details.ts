@@ -5,13 +5,18 @@ import {
   competitionSupportsPlayerPerformances,
 } from "@/lib/competitions/capabilities";
 import { findCompetition } from "@/lib/competitions/index";
+import { createCronIngestBudget } from "@/lib/ingestion/cron-budget";
 import { getIngestionConfig } from "@/lib/ingestion/config";
 import { ingestLineupsFromProvider } from "@/lib/ingestion/ingest-lineups";
+import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
+import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
 import { ingestMatchDetailsFromProvider } from "@/lib/ingestion/ingest-match-details";
+import { fixtureNeedsMatchDetailSync } from "@/lib/ingestion/ingestion-result";
 import {
   fixtureHasLineups,
-  fixtureHasMatchDetails,
+  fixtureNeedsLineupSync,
 } from "@/lib/ingestion/match-details-upsert";
+import type { FixtureStatus } from "@/types/domain";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const TERMINAL_STATUSES = ["FT", "AET", "PEN"] as const;
@@ -36,11 +41,15 @@ export type SyncMatchDetailsResult = {
   ok: boolean;
   job: string;
   skipped?: boolean;
+  degraded?: boolean;
   reason?: string;
   stats: {
     candidates: number;
     ingested: number;
+    failed: number;
     apiRequests: number;
+    stoppedForTimeBudget?: boolean;
+    candidatesRemaining?: number;
   };
 };
 
@@ -69,7 +78,7 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
       job: "sync-match-details",
       skipped: true,
       reason: "No allowlist leagues in database.",
-      stats: { candidates: 0, ingested: 0, apiRequests: 0 },
+      stats: { candidates: 0, ingested: 0, failed: 0, apiRequests: 0 },
     };
   }
 
@@ -111,30 +120,65 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
       continue;
     }
 
-    const hasDetails = await fixtureHasMatchDetails(client, fixture.id);
-    if (!hasDetails) {
+    const competition = findCompetition(leagueProviderId ?? -1);
+    const needsDetails = await fixtureNeedsMatchDetailSync(client, fixture.id, {
+      fixtureStatus: fixture.status as FixtureStatus,
+      kickoffAt: fixture.kickoff_at,
+      competition,
+    });
+    if (needsDetails) {
       candidates.push({ provider_id: fixture.provider_id, needs: "details" });
       continue;
     }
 
     const hasLineups = await fixtureHasLineups(client, fixture.id);
-    if (
+    const needsLineups =
       !hasLineups &&
-      competitionSupportsLineups(findCompetition(leagueProviderId ?? -1))
-    ) {
+      competitionSupportsLineups(competition) &&
+      (await fixtureNeedsLineupSync(client, fixture.id, fixture.kickoff_at));
+    if (needsLineups) {
       candidates.push({ provider_id: fixture.provider_id, needs: "lineups" });
     }
   }
 
   let ingested = 0;
+  let failed = 0;
   let apiRequests = 0;
+  let stoppedForTimeBudget = false;
+  let processed = 0;
+  const budget = createCronIngestBudget(Date.now());
 
   for (const fixture of candidates) {
+    if (budget.exceeded()) {
+      stoppedForTimeBudget = true;
+      logIngestionEvent({
+        job_name: "sync-match-details",
+        stage: "budget_stop",
+        error_type: "budget_exceeded",
+        ok: true,
+        degraded: true,
+        reason: "Stopped candidate loop for wall-clock budget",
+        detail: {
+          processed,
+          candidatesRemaining: candidates.length - processed,
+        },
+      });
+      break;
+    }
+
+    processed += 1;
+
     if (fixture.needs === "lineups") {
       const result = await ingestLineupsFromProvider(fixture.provider_id);
       apiRequests += result.stats.apiRequests;
-      if (result.ok) {
+      if (
+        result.outcome === "SUCCESS" ||
+        result.outcome === "SKIPPED" ||
+        result.outcome === "PARTIAL"
+      ) {
         ingested += 1;
+      } else {
+        failed += 1;
       }
       continue;
     }
@@ -142,18 +186,37 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
     const result = await ingestMatchDetailsFromProvider(fixture.provider_id);
     apiRequests += result.stats.apiRequests;
 
-    if (result.ok) {
+    if (
+      result.outcome === "SUCCESS" ||
+      result.outcome === "SKIPPED" ||
+      result.outcome === "PARTIAL"
+    ) {
       ingested += 1;
+    } else {
+      failed += 1;
     }
   }
 
+  const cronOutcome = resolveCronOutcome({
+    failedCount: failed,
+    partialForTimeBudget: stoppedForTimeBudget && failed === 0 && ingested > 0,
+  });
+
   return {
-    ok: true,
+    ok: cronOutcome.ok,
+    degraded: cronOutcome.degraded,
     job: "sync-match-details",
     stats: {
       candidates: candidates.length,
       ingested,
+      failed,
       apiRequests,
+      ...(stoppedForTimeBudget
+        ? {
+            stoppedForTimeBudget: true,
+            candidatesRemaining: candidates.length - processed,
+          }
+        : {}),
     },
   };
 }

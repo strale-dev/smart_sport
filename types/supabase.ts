@@ -528,13 +528,13 @@ export type Database = {
           kickoff_at: string
           last_provider_sync_at: string | null
           league_id: string
+          fixture_readiness: Json
+          fixture_readiness_updated_at: string | null
           minute: number | null
           pen_away: number | null
           pen_home: number | null
           period_first_start_at: string | null
           period_second_start_at: string | null
-          prematch_readiness: Json
-          prematch_readiness_updated_at: string | null
           provider_id: number
           provider_payload: Json | null
           referee: string | null
@@ -563,13 +563,13 @@ export type Database = {
           kickoff_at: string
           last_provider_sync_at?: string | null
           league_id: string
+          fixture_readiness?: Json
+          fixture_readiness_updated_at?: string | null
           minute?: number | null
           pen_away?: number | null
           pen_home?: number | null
           period_first_start_at?: string | null
           period_second_start_at?: string | null
-          prematch_readiness?: Json
-          prematch_readiness_updated_at?: string | null
           provider_id: number
           provider_payload?: Json | null
           referee?: string | null
@@ -598,13 +598,13 @@ export type Database = {
           kickoff_at?: string
           last_provider_sync_at?: string | null
           league_id?: string
+          fixture_readiness?: Json
+          fixture_readiness_updated_at?: string | null
           minute?: number | null
           pen_away?: number | null
           pen_home?: number | null
           period_first_start_at?: string | null
           period_second_start_at?: string | null
-          prematch_readiness?: Json
-          prematch_readiness_updated_at?: string | null
           provider_id?: number
           provider_payload?: Json | null
           referee?: string | null
@@ -876,6 +876,24 @@ export type Database = {
         }
         Relationships: []
       }
+      ingestion_job_checkpoints: {
+        Row: {
+          cursor: Json
+          job_name: string
+          updated_at: string
+        }
+        Insert: {
+          cursor?: Json
+          job_name: string
+          updated_at?: string
+        }
+        Update: {
+          cursor?: Json
+          job_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ingestion_sync_runs: {
         Row: {
           error_message: string | null
@@ -912,7 +930,10 @@ export type Database = {
       ingestion_team_sync_state: {
         Row: {
           finished_count: number
+          history_state: Json | null
           last_gap_fill_at: string | null
+          last_repair_season_year: number | null
+          min_finished_target: number
           seasons_covered: number
           team_provider_id: number
           upcoming_count: number
@@ -920,7 +941,10 @@ export type Database = {
         }
         Insert: {
           finished_count?: number
+          history_state?: Json | null
           last_gap_fill_at?: string | null
+          last_repair_season_year?: number | null
+          min_finished_target?: number
           seasons_covered?: number
           team_provider_id: number
           upcoming_count?: number
@@ -928,7 +952,10 @@ export type Database = {
         }
         Update: {
           finished_count?: number
+          history_state?: Json | null
           last_gap_fill_at?: string | null
+          last_repair_season_year?: number | null
+          min_finished_target?: number
           seasons_covered?: number
           team_provider_id?: number
           upcoming_count?: number

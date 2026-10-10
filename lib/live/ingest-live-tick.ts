@@ -220,11 +220,12 @@ export async function ingestLiveFixtureTick(
   }
 
   if (changeFlags.statistics) {
-    statisticsCount = await upsertFixtureStatistics(
+    const statsResult = await upsertFixtureStatistics(
       client,
       fixtureUuid,
       statistics
     );
+    statisticsCount = statsResult.upserted;
   }
 
   await writeProviderCaches(fixtureProviderId, nextState, syncedAt);

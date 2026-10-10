@@ -4,10 +4,12 @@ import {
   type TeamFixtureRow,
 } from "@/lib/analytics/compute-form";
 import { summarizeH2HMeetings } from "@/lib/analytics/compute-h2h";
+import {
+  queryCompletedTeamFixtures,
+  TERMINAL_FIXTURE_STATUSES,
+} from "@/lib/analytics/team-history-query";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FormScope } from "@/types/domain";
-
-const TERMINAL_STATUSES = ["FT", "AET", "PEN"] as const;
 
 export async function queryTeamFixturesBefore(
   teamUuid: string,
@@ -15,39 +17,16 @@ export async function queryTeamFixturesBefore(
   scope: FormScope,
   limit: number
 ): Promise<TeamFixtureRow[]> {
-  const client = createAdminClient();
-  let query = client
-    .from("fixtures")
-    .select(
-      `
-      provider_id,
-      kickoff_at,
-      score_home,
-      score_away,
-      home_team:teams!fixtures_home_team_id_fkey (provider_id, name),
-      away_team:teams!fixtures_away_team_id_fkey (provider_id, name),
-      league:leagues (provider_id, name)
-    `
-    )
-    .in("status", [...TERMINAL_STATUSES])
-    .lt("kickoff_at", beforeAt)
-    .order("kickoff_at", { ascending: false })
-    .limit(limit * 3);
+  const { rows } = await queryCompletedTeamFixtures({
+    teamUuid,
+    beforeAt,
+    scope,
+    limit,
+    order: "desc",
+    fetchMultiplier: 3,
+  });
 
-  if (scope === "HOME") {
-    query = query.eq("home_team_id", teamUuid);
-  } else if (scope === "AWAY") {
-    query = query.eq("away_team_id", teamUuid);
-  } else {
-    query = query.or(`home_team_id.eq.${teamUuid},away_team_id.eq.${teamUuid}`);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    throw new Error(`Failed to query point-in-time fixtures: ${error.message}`);
-  }
-
-  return (data ?? []) as TeamFixtureRow[];
+  return rows;
 }
 
 export async function computeFormBefore(
@@ -89,8 +68,10 @@ export async function computeH2HBefore(
       league:leagues (provider_id, name)
     `
     )
-    .in("status", [...TERMINAL_STATUSES])
+    .in("status", [...TERMINAL_FIXTURE_STATUSES])
     .lt("kickoff_at", beforeAt)
+    .not("score_home", "is", null)
+    .not("score_away", "is", null)
     .or(
       `and(home_team_id.eq.${teamAUuid},away_team_id.eq.${teamBUuid}),and(home_team_id.eq.${teamBUuid},away_team_id.eq.${teamAUuid})`
     )
@@ -135,81 +116,13 @@ export async function computeTeamXgAveragesBefore(
   xgAgainstAvg: number | null;
   samples: number;
 }> {
-  const client = createAdminClient();
-  const { data: fixtures, error } = await client
-    .from("fixtures")
-    .select("id, home_team_id, away_team_id")
-    .in("status", [...TERMINAL_STATUSES])
-    .lt("kickoff_at", beforeAt)
-    .or(`home_team_id.eq.${teamUuid},away_team_id.eq.${teamUuid}`)
-    .order("kickoff_at", { ascending: false })
-    .limit(sampleSize * 2);
-
-  if (error) {
-    throw new Error(`Failed to query xG fixture window: ${error.message}`);
-  }
-
-  const fixtureRows = fixtures ?? [];
-  if (fixtureRows.length === 0) {
-    return { xgForAvg: null, xgAgainstAvg: null, samples: 0 };
-  }
-
-  const fixtureIds = fixtureRows.map((row) => row.id);
-  const { data: stats, error: statsError } = await client
-    .from("fixture_statistics")
-    .select("fixture_id, team_id, expected_goals")
-    .in("fixture_id", fixtureIds);
-
-  if (statsError) {
-    throw new Error(`Failed to query xG stats: ${statsError.message}`);
-  }
-
-  const statsByFixture = new Map<
-    string,
-    Array<{ team_id: string; expected_goals: number | null }>
-  >();
-  for (const row of stats ?? []) {
-    const entries = statsByFixture.get(row.fixture_id) ?? [];
-    entries.push({
-      team_id: row.team_id,
-      expected_goals:
-        row.expected_goals !== null ? Number(row.expected_goals) : null,
-    });
-    statsByFixture.set(row.fixture_id, entries);
-  }
-
-  const xgForValues: number[] = [];
-  const xgAgainstValues: number[] = [];
-
-  for (const fixture of fixtureRows) {
-    const entries = statsByFixture.get(fixture.id) ?? [];
-    const teamStat = entries.find((entry) => entry.team_id === teamUuid);
-    const opponentStat = entries.find((entry) => entry.team_id !== teamUuid);
-    if (
-      teamStat?.expected_goals == null ||
-      opponentStat?.expected_goals == null
-    ) {
-      continue;
-    }
-    xgForValues.push(teamStat.expected_goals);
-    xgAgainstValues.push(opponentStat.expected_goals);
-    if (xgForValues.length >= sampleSize) {
-      break;
-    }
-  }
-
-  if (xgForValues.length === 0) {
-    return { xgForAvg: null, xgAgainstAvg: null, samples: 0 };
-  }
-
-  const average = (values: number[]) =>
-    values.reduce((sum, value) => sum + value, 0) / values.length;
-
-  return {
-    xgForAvg: Number(average(xgForValues).toFixed(2)),
-    xgAgainstAvg: Number(average(xgAgainstValues).toFixed(2)),
-    samples: xgForValues.length,
-  };
+  const { computeTeamXgAveragesFromBatch } =
+    await import("@/lib/analytics/fixture-xg-batch");
+  return computeTeamXgAveragesFromBatch({
+    teamUuid,
+    beforeAt,
+    sampleSize,
+  });
 }
 
 export async function computeLeagueRanksBefore(input: {
@@ -230,7 +143,7 @@ export async function computeLeagueRanksBefore(input: {
     .from("fixtures")
     .select("home_team_id, away_team_id, score_home, score_away")
     .eq("league_id", input.leagueUuid)
-    .in("status", [...TERMINAL_STATUSES])
+    .in("status", [...TERMINAL_FIXTURE_STATUSES])
     .lt("kickoff_at", input.beforeAt);
 
   if (input.seasonUuid) {
@@ -330,7 +243,7 @@ export async function loadTerminalFixturesChronological(): Promise<
       league:leagues (provider_id)
     `
     )
-    .in("status", [...TERMINAL_STATUSES])
+    .in("status", [...TERMINAL_FIXTURE_STATUSES])
     .order("kickoff_at", { ascending: true });
 
   if (error) {

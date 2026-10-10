@@ -13,4 +13,13 @@ describe("syncFixturesFuture outcome semantics", () => {
   it("succeeds when all upserts succeed", () => {
     expect(resolveCronOutcome({ failedCount: 0 })).toEqual({ ok: true });
   });
+
+  it("treats time-budget stop with progress as degraded success", () => {
+    expect(
+      resolveCronOutcome({
+        failedCount: 0,
+        partialForTimeBudget: true,
+      })
+    ).toEqual({ ok: true, degraded: true });
+  });
 });

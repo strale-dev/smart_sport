@@ -103,6 +103,8 @@ export type PrematchAiContext = {
     awayWins: number;
     avgGoals: number | null;
   } | null;
+  /** Recency-weighted team history + trends (bounded; no raw 30–100 match lists). */
+  analyticsCompact?: import("@/lib/analytics/compact-ai-context").CompactPrematchAnalyticsContext;
   /** Compact historical aggregates (not raw fixture lists). */
   historicalContext?: {
     home: HistoricalTeamContextSlice;

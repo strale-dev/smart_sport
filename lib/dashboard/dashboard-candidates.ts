@@ -2,9 +2,15 @@ import {
   rankFixturesByImportance,
   type ImportanceContext,
 } from "@/lib/dashboard/importance-score";
+import { formatDateKeyInTimezone } from "@/lib/datetime/timezone";
 import { isFinishedFixtureStatus } from "@/lib/fixtures/display";
+import { LIFECYCLE_TIMEZONE } from "@/lib/fixtures/readiness/constants";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import type { Fixture } from "@/types/domain";
+
+function fixtureLifecycleDateKey(fixture: Fixture): string {
+  return formatDateKeyInTimezone(fixture.kickoffAt, LIFECYCLE_TIMEZONE);
+}
 
 export function dedupeFixtures(fixtures: Fixture[]): Fixture[] {
   const seen = new Set<number>();
@@ -31,7 +37,7 @@ export function buildForwardFallbackFixtures(input: {
   return dedupeFixtures([
     ...input.tomorrowFixtures,
     ...input.upcomingFixtures.filter(
-      (fixture) => fixture.kickoffAt.slice(0, 10) > input.todayUtc
+      (fixture) => fixtureLifecycleDateKey(fixture) > input.todayUtc
     ),
   ]);
 }
@@ -139,7 +145,7 @@ export function assertNoPastFinishedInTodayPool(
   fixtures: Fixture[]
 ): void {
   for (const fixture of fixtures) {
-    const kickoffDate = fixture.kickoffAt.slice(0, 10);
+    const kickoffDate = fixtureLifecycleDateKey(fixture);
     if (isFinishedFixtureStatus(fixture.status) && kickoffDate < todayUtc) {
       throw new Error(
         `Past finished fixture ${fixture.externalId} leaked into today pool`

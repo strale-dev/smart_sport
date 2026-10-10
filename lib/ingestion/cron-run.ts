@@ -83,7 +83,18 @@ export async function runCronRoute(
       degraded: result.degraded,
       skipped: result.skipped,
       stats: result.stats,
-    }).catch(() => {});
+    }).catch((error) => {
+      logIngestionEvent({
+        job_name: options.jobName,
+        stage: "posthog_capture",
+        ok: false,
+        error_type: "unknown",
+        reason:
+          error instanceof Error
+            ? error.message
+            : "PostHog captureIngestionCronCompleted failed",
+      });
+    });
     return NextResponse.json(result, { status: cronJobHttpStatus(result) });
   } catch (error) {
     console.error(`[cron/${options.jobName}]`, error);

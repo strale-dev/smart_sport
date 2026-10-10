@@ -1,11 +1,16 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { configDefaults, defineConfig } from "vitest/config";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   test: {
     environment: "node",
     setupFiles: ["./vitest.setup.ts"],
     exclude: [...configDefaults.exclude, "e2e/**"],
+    // Husky pre-push on Windows can flake with default file parallelism.
+    fileParallelism: process.env.CI === "true" ? undefined : false,
   },
   resolve: {
     alias: {

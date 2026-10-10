@@ -12,6 +12,7 @@ import type {
   FixturePlayerPerformance,
   FixtureSidelinedPlayer,
   FixtureTeamStatistics,
+  FixtureStatus,
   Lineup,
   Player,
   SquadPlayer,
@@ -65,6 +66,57 @@ export async function getFixtureLeagueProviderId(
   const league = data?.leagues as { provider_id: number } | null | undefined;
   return league?.provider_id ?? null;
 }
+
+export type FixtureIngestContext = {
+  fixtureUuid: string;
+  providerId: number;
+  status: FixtureStatus;
+  kickoffAt: string;
+  leagueProviderId: number | null;
+};
+
+export async function getFixtureIngestContext(
+  client: AdminClient,
+  fixtureProviderId: number
+): Promise<FixtureIngestContext | null> {
+  const { data, error } = await client
+    .from("fixtures")
+    .select(
+      `
+      id,
+      provider_id,
+      status,
+      kickoff_at,
+      leagues ( provider_id )
+    `
+    )
+    .eq("provider_id", fixtureProviderId)
+    .maybeSingle();
+
+  throwIfError(
+    error,
+    `Failed to load fixture ingest context for ${fixtureProviderId}`
+  );
+
+  if (!data) {
+    return null;
+  }
+
+  const league = data.leagues as { provider_id: number } | null | undefined;
+
+  return {
+    fixtureUuid: data.id,
+    providerId: data.provider_id,
+    status: data.status as FixtureStatus,
+    kickoffAt: data.kickoff_at,
+    leagueProviderId: league?.provider_id ?? null,
+  };
+}
+
+export type SnapshotWritePolicy = {
+  /** When false, an empty payload must not delete existing rows. */
+  allowReplace: boolean;
+};
 
 export async function getTeamUuidByProviderId(
   client: AdminClient,
@@ -235,16 +287,13 @@ export async function persistPlayerProfile(player: Player): Promise<void> {
 export async function upsertFixtureEvents(
   client: AdminClient,
   fixtureId: string,
-  events: FixtureEvent[]
+  events: FixtureEvent[],
+  policy: SnapshotWritePolicy = { allowReplace: true }
 ): Promise<number> {
-  const { error: deleteError } = await client
-    .from("fixture_events")
-    .delete()
-    .eq("fixture_id", fixtureId);
-
-  throwIfError(deleteError, "Failed to clear fixture events");
-
   if (events.length === 0) {
+    if (!policy.allowReplace) {
+      return 0;
+    }
     return 0;
   }
 
@@ -281,21 +330,66 @@ export async function upsertFixtureEvents(
     })
   );
 
-  const { error } = await client.from("fixture_events").insert(rows);
-  throwIfError(error, "Failed to insert fixture events");
+  for (const row of rows) {
+    const { error } = await client.from("fixture_events").upsert(row, {
+      onConflict: "fixture_id,provider_event_id",
+    });
+    throwIfError(error, "Failed to upsert fixture event");
+  }
+
+  const keepIds = new Set(
+    rows
+      .map((row) => row.provider_event_id)
+      .filter((id): id is string => id != null && id.length > 0)
+  );
+
+  const { data: existing, error: listError } = await client
+    .from("fixture_events")
+    .select("id, provider_event_id")
+    .eq("fixture_id", fixtureId);
+
+  throwIfError(listError, "Failed to list fixture events for orphan cleanup");
+
+  const orphanIds = (existing ?? [])
+    .filter(
+      (row) =>
+        row.provider_event_id != null && !keepIds.has(row.provider_event_id)
+    )
+    .map((row) => row.id);
+
+  if (orphanIds.length > 0) {
+    const { error: deleteError } = await client
+      .from("fixture_events")
+      .delete()
+      .in("id", orphanIds);
+    throwIfError(deleteError, "Failed to delete orphan fixture events");
+  }
+
   return rows.length;
 }
+
+export type UpsertFixtureStatisticsResult = {
+  upserted: number;
+  skippedMissingTeam: number;
+};
 
 export async function upsertFixtureStatistics(
   client: AdminClient,
   fixtureId: string,
-  stats: FixtureTeamStatistics[]
-): Promise<number> {
+  stats: FixtureTeamStatistics[],
+  policy: SnapshotWritePolicy = { allowReplace: true }
+): Promise<UpsertFixtureStatisticsResult> {
+  if (stats.length === 0 && !policy.allowReplace) {
+    return { upserted: 0, skippedMissingTeam: 0 };
+  }
+
   let upserted = 0;
+  let skippedMissingTeam = 0;
 
   for (const stat of stats) {
     const teamId = await getTeamUuidByProviderId(client, stat.teamExternalId);
     if (!teamId) {
+      skippedMissingTeam += 1;
       continue;
     }
 
@@ -314,7 +408,7 @@ export async function upsertFixtureStatistics(
     upserted += 1;
   }
 
-  return upserted;
+  return { upserted, skippedMissingTeam };
 }
 
 export async function upsertLineups(
@@ -406,16 +500,13 @@ export async function upsertLineups(
 export async function upsertPlayerMatchPerformances(
   client: AdminClient,
   fixtureId: string,
-  performances: FixturePlayerPerformance[]
+  performances: FixturePlayerPerformance[],
+  policy: SnapshotWritePolicy = { allowReplace: true }
 ): Promise<number> {
-  const { error: deleteError } = await client
-    .from("player_match_performances")
-    .delete()
-    .eq("fixture_id", fixtureId);
-
-  throwIfError(deleteError, "Failed to clear player match performances");
-
   if (performances.length === 0) {
+    if (!policy.allowReplace) {
+      return 0;
+    }
     return 0;
   }
 
@@ -464,8 +555,36 @@ export async function upsertPlayerMatchPerformances(
     return 0;
   }
 
-  const { error } = await client.from("player_match_performances").insert(rows);
-  throwIfError(error, "Failed to insert player match performances");
+  for (const row of rows) {
+    const { error } = await client
+      .from("player_match_performances")
+      .upsert(row, { onConflict: "fixture_id,player_id" });
+    throwIfError(error, "Failed to upsert player match performance");
+  }
+
+  const keepPlayerIds = rows.map((row) => row.player_id);
+  const { data: existing, error: listError } = await client
+    .from("player_match_performances")
+    .select("id, player_id")
+    .eq("fixture_id", fixtureId);
+
+  throwIfError(
+    listError,
+    "Failed to list player match performances for orphan cleanup"
+  );
+
+  const orphanIds = (existing ?? [])
+    .filter((row) => !keepPlayerIds.includes(row.player_id))
+    .map((row) => row.id);
+
+  if (orphanIds.length > 0) {
+    const { error: deleteError } = await client
+      .from("player_match_performances")
+      .delete()
+      .in("id", orphanIds);
+    throwIfError(deleteError, "Failed to delete orphan player performances");
+  }
+
   return rows.length;
 }
 

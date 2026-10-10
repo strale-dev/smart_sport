@@ -85,7 +85,7 @@ async function storedPredictionMatchesCurrentFeatures(input: {
     fixtureExternalId: input.fixtureExternalId,
   });
   if (!current) {
-    return true;
+    return false;
   }
 
   return (
@@ -119,6 +119,19 @@ async function computeAndPersistPrematch(
         true
       );
     }
+    throw new Error(
+      `No official prematch prediction for fixture ${fixtureExternalId} after kickoff`
+    );
+  }
+
+  const { evaluateFixtureReadinessForProvider, isFixtureReadyForPrediction } =
+    await import("@/lib/fixtures/readiness");
+  const readiness =
+    await evaluateFixtureReadinessForProvider(fixtureExternalId);
+  if (!readiness || !isFixtureReadyForPrediction(readiness)) {
+    throw new Error(
+      `Fixture ${fixtureExternalId} not ready for prematch prediction`
+    );
   }
 
   const modelVersion = await getActiveModelVersion();
@@ -154,12 +167,25 @@ async function computeAndPersistPrematch(
     inputSnapshot: features,
   });
 
-  return mapPredictionRowToResult(
+  const result = mapPredictionRowToResult(
     row,
     fixtureExternalId,
     modelVersion.version,
     false
   );
+
+  try {
+    const { evaluateAndPersistFixtureReadiness } =
+      await import("@/lib/fixtures/readiness");
+    await evaluateAndPersistFixtureReadiness({ providerId: fixtureExternalId });
+  } catch (error) {
+    console.warn(
+      `[predictionService] readiness refresh failed for ${fixtureExternalId}`,
+      error
+    );
+  }
+
+  return result;
 }
 
 async function readFreshPrematch(
@@ -244,28 +270,11 @@ export async function getOrComputePrematch(
       );
     }
 
-    try {
-      return await computeAndPersistPrematch(fixtureExternalId, fixture.id);
-    } catch (error) {
-      console.warn(
-        `[predictionService] unable to backfill prematch baseline for fixture ${fixtureExternalId}`,
-        error
-      );
-      return null;
-    }
+    return null;
   }
 
   if (!isPrematchComputeWindowOpen(fixture.kickoff_at)) {
-    const row = await readLatestPrematchPrediction(fixture.id);
-    if (!row) {
-      return null;
-    }
-    return mapPredictionRowToResult(
-      row,
-      fixtureExternalId,
-      modelVersion.version,
-      true
-    );
+    return null;
   }
 
   const lockKey = predictionPrematchLockKey(fixtureExternalId);
@@ -374,6 +383,12 @@ export async function updateLiveProbability(input: {
 }): Promise<LivePredictionResult | null> {
   const fixture = await resolveFixtureUuidByExternalId(input.fixtureExternalId);
   if (!fixture) {
+    return null;
+  }
+
+  const { isPausedLiveFixtureStatus } =
+    await import("@/lib/fixtures/live-status");
+  if (isPausedLiveFixtureStatus(fixture.status)) {
     return null;
   }
 
