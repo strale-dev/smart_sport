@@ -180,6 +180,8 @@ export type LivePredictionResult = PrematchModelOutput & {
   modelVersionId: string;
   modelVersion: string;
   predictionId: string;
+  /** Canonical live row identity (matches live AI context_hash binding). */
+  liveSnapshotId: string;
   type: "LIVE";
   presentationKind: ProbabilityPresentationKind;
   minute: number | null;

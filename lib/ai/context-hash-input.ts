@@ -56,6 +56,12 @@ export function assertLivePredictionMatchesFixture(
 }
 
 /** Canonical live probability row identity (aligned with live prediction persistence). */
+export function liveSnapshotIdFromPrediction(
+  prediction: LivePredictionResult
+): string {
+  return computeLiveSnapshotIdentity(prediction.inputSnapshot);
+}
+
 export function computeLiveSnapshotIdentity(
   snapshot: LiveFeatureVector
 ): string {
@@ -130,6 +136,10 @@ export function buildLiveContextHashInput(
       isNational: context.awayTeam.isNational,
     },
     meaningfulTriggers: context.meaningfulTriggers,
+    triggerEventIds: context.latestMatchEvents
+      .map((entry) => entry.externalEventId)
+      .filter((id): id is string => id != null && id.length > 0)
+      .sort(),
     prediction: context.prediction,
     liveStats: context.liveStats,
     prematchReference: context.prematchReference,

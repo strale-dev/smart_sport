@@ -385,6 +385,16 @@ export function liveInsightLastContextKey(fixtureProviderId: number): string {
   return `live:insight:last-context:${fixtureProviderId}`;
 }
 
+export function liveInsightProcessedEventsKey(
+  fixtureProviderId: number
+): string {
+  return `live:insight:processed-events:${fixtureProviderId}`;
+}
+
+export function liveInsightLastSuccessKey(fixtureProviderId: number): string {
+  return `live:insight:last-success:${fixtureProviderId}`;
+}
+
 export function predictionsTopPicksKey(utcDate: string): string {
   return `predictions:top-picks:${utcDate}`;
 }

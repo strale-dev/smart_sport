@@ -7,6 +7,7 @@ import {
   buildLiveContextHashInput,
   buildPrematchContextHashInput,
   computeLiveSnapshotIdentity,
+  liveSnapshotIdFromPrediction,
 } from "@/lib/ai/context-hash-input";
 import { computeContextHash } from "@/lib/ai/hash";
 import type { LiveAiContext, PrematchAiContext } from "@/types/ai";
@@ -113,6 +114,11 @@ function minimalLiveContext(fixtureExternalId: number): LiveAiContext {
     modelVersion: "1.0.0",
     promptVersion: "1.0.0",
     meaningfulTriggers: ["LIVE_BASELINE"],
+    predictionBinding: {
+      predictionId: "p-live",
+      liveSnapshotId: "snap-a",
+    },
+    latestMatchEvents: [],
     prediction: {
       winProbabilities: { home: 0.55, draw: 0.25, away: 0.2 },
       expectedGoalsHome: 1.4,
@@ -163,7 +169,7 @@ function livePrediction(
   }
 ): LivePredictionResult {
   const { snapshot, fixtureExternalId, predictionId, ...rest } = partial;
-  return {
+  const result: LivePredictionResult = {
     type: "LIVE",
     presentationKind: "LIVE_PROBABILITY",
     fixtureId: "uuid",
@@ -188,8 +194,11 @@ function livePrediction(
     inputSnapshot: snapshot,
     createdAt: "2026-09-07T19:00:00.000Z",
     fromCache: false,
+    liveSnapshotId: "",
     ...rest,
   };
+  result.liveSnapshotId = liveSnapshotIdFromPrediction(result);
+  return result;
 }
 
 function liveSnapshot(

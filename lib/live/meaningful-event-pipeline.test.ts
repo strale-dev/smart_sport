@@ -49,6 +49,7 @@ vi.mock("@/lib/predictions/db", async (importOriginal) => {
   };
 });
 
+import { resetLiveInsightGenerationGateMemoryForTests } from "@/lib/live/live-insight-generation-gate";
 import { runMeaningfulEventPipeline } from "@/lib/live/meaningful-event-pipeline";
 
 const {
@@ -87,6 +88,7 @@ function snapshot(
 
 describe("runMeaningfulEventPipeline", () => {
   beforeEach(() => {
+    resetLiveInsightGenerationGateMemoryForTests();
     vi.clearAllMocks();
     getActiveModelVersion.mockResolvedValue({
       id: "model-1",
@@ -258,5 +260,170 @@ describe("runMeaningfulEventPipeline", () => {
 
     expect(result.liveInsightGenerated).toBe(false);
     expect(result.liveInsightSkipReason).toBe("NO_LIVE_BASELINE");
+  });
+
+  it("merges burst events into a single generateLiveInsight call", async () => {
+    const prev = snapshot({
+      fixtureProviderId: 1,
+      score: { home: 0, away: 0 },
+      events: [],
+    });
+    const next = snapshot({
+      fixtureProviderId: 1,
+      score: { home: 1, away: 0 },
+      events: [
+        {
+          externalEventId: "goal-1",
+          type: "Goal",
+          detail: "Normal Goal",
+          comments: null,
+          minute: 50,
+          teamExternalId: 33,
+          playerExternalId: 9,
+          assistPlayerExternalId: null,
+        },
+        {
+          externalEventId: "card-red",
+          type: "Card",
+          detail: "Red Card",
+          comments: null,
+          minute: 50,
+          teamExternalId: 34,
+          playerExternalId: 8,
+          assistPlayerExternalId: null,
+        },
+      ],
+    });
+
+    await runMeaningfulEventPipeline({
+      fixtureProviderId: 1,
+      prevSnapshot: prev,
+      nextSnapshot: next,
+    });
+
+    expect(generateLiveInsight).toHaveBeenCalledTimes(1);
+    expect(generateLiveInsight).toHaveBeenCalledWith(
+      expect.objectContaining({
+        meaningfulTriggers: expect.arrayContaining(["GOAL", "RED_CARD"]),
+        latestMatchEvents: expect.arrayContaining([
+          expect.objectContaining({ externalEventId: "goal-1" }),
+          expect.objectContaining({ externalEventId: "card-red" }),
+        ]),
+      })
+    );
+  });
+
+  it("still updates live prediction when AI generation fails", async () => {
+    generateLiveInsight.mockResolvedValue({ ok: false, reason: "timeout" });
+
+    const result = await runMeaningfulEventPipeline({
+      fixtureProviderId: 1,
+      prevSnapshot: snapshot({
+        fixtureProviderId: 1,
+        score: { home: 0, away: 0 },
+      }),
+      nextSnapshot: snapshot({
+        fixtureProviderId: 1,
+        score: { home: 1, away: 0 },
+        events: [
+          {
+            externalEventId: "goal-2",
+            type: "Goal",
+            detail: "Normal Goal",
+            comments: null,
+            minute: 12,
+            teamExternalId: 33,
+            playerExternalId: null,
+            assistPlayerExternalId: null,
+          },
+        ],
+      }),
+    });
+
+    expect(result.livePredictionUpdated).toBe(true);
+    expect(result.liveInsightGenerated).toBe(false);
+    expect(result.liveInsightSkipReason).toBe("timeout");
+  });
+
+  it("skips LLM when the same event id was already processed", async () => {
+    const prev = snapshot({
+      fixtureProviderId: 1,
+      score: { home: 0, away: 0 },
+      events: [],
+    });
+    const next = snapshot({
+      fixtureProviderId: 1,
+      score: { home: 1, away: 0 },
+      events: [
+        {
+          externalEventId: "goal-dup",
+          type: "Goal",
+          detail: "Normal Goal",
+          comments: null,
+          minute: 20,
+          teamExternalId: 33,
+          playerExternalId: null,
+          assistPlayerExternalId: null,
+        },
+      ],
+    });
+
+    await runMeaningfulEventPipeline({
+      fixtureProviderId: 1,
+      prevSnapshot: prev,
+      nextSnapshot: next,
+    });
+    expect(generateLiveInsight).toHaveBeenCalledTimes(1);
+
+    generateLiveInsight.mockClear();
+    await runMeaningfulEventPipeline({
+      fixtureProviderId: 1,
+      prevSnapshot: prev,
+      nextSnapshot: next,
+    });
+
+    expect(generateLiveInsight).not.toHaveBeenCalled();
+  });
+
+  it("triggers on halftime status transition", async () => {
+    const result = await runMeaningfulEventPipeline({
+      fixtureProviderId: 1,
+      prevSnapshot: snapshot({
+        fixtureProviderId: 1,
+        status: "1H",
+        minute: 45,
+      }),
+      nextSnapshot: snapshot({
+        fixtureProviderId: 1,
+        status: "HT",
+        minute: 45,
+      }),
+    });
+
+    expect(result.livePredictionUpdated).toBe(true);
+    expect(result.broadcastEvents.some((entry) => entry.kind === "HT")).toBe(
+      true
+    );
+  });
+
+  it("triggers on final whistle", async () => {
+    const result = await runMeaningfulEventPipeline({
+      fixtureProviderId: 1,
+      prevSnapshot: snapshot({
+        fixtureProviderId: 1,
+        status: "2H",
+        minute: 90,
+      }),
+      nextSnapshot: snapshot({
+        fixtureProviderId: 1,
+        status: "FT",
+        minute: 90,
+      }),
+    });
+
+    expect(result.livePredictionUpdated).toBe(true);
+    expect(result.broadcastEvents.some((entry) => entry.kind === "FT")).toBe(
+      true
+    );
   });
 });

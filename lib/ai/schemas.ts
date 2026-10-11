@@ -241,6 +241,8 @@ export type LiveInsightResponse =
       status: "OK";
       insight: StoredAIInsight;
       prediction: import("@/types/prediction").LivePredictionResult | null;
+      /** True when a newer LIVE prediction row exists than the insight’s prediction_id. */
+      predictionStale?: boolean;
       cached: boolean;
       insightMode: "live";
     }

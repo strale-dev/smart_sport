@@ -14,6 +14,15 @@ export type PrematchPredictionDeltaSnapshot = PrematchPredictionSnapshot & {
   createdAt: string;
 };
 
+export type LivePredictionDeltaSnapshot = PrematchPredictionSnapshot & {
+  presentationKind: "LIVE_PROBABILITY";
+  expectedGoalsAvailable: boolean;
+  predictionId: string;
+  liveSnapshotId: string;
+  modelVersion: string;
+  createdAt: string;
+};
+
 export type LiveProbabilityDeltaResponse = {
   prematch: WinProbabilities | null;
   prematchKind: ProbabilityPresentationKind | null;
@@ -21,6 +30,7 @@ export type LiveProbabilityDeltaResponse = {
   liveKind: ProbabilityPresentationKind | null;
   liveMinute: number | null;
   prematchPrediction: PrematchPredictionDeltaSnapshot | null;
+  livePrediction: LivePredictionDeltaSnapshot | null;
 };
 
 export async function fetchLiveProbabilityDelta(

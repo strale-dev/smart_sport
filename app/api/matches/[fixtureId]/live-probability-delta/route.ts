@@ -105,6 +105,31 @@ export async function GET(
             createdAt: prematchResult.createdAt,
           }
         : null,
+      livePrediction: liveResult
+        ? {
+            presentationKind: "LIVE_PROBABILITY" as const,
+            expectedGoalsAvailable:
+              liveResult.inputSnapshot.xgHome != null ||
+              liveResult.inputSnapshot.xgAway != null,
+            winProbabilities: liveResult.winProbabilities,
+            expectedGoalsHome: liveResult.expectedGoalsHome,
+            expectedGoalsAway: liveResult.expectedGoalsAway,
+            expectedGoalsTotal: liveResult.expectedGoalsTotal,
+            expectedGoalsTotalMin: liveResult.expectedGoalsTotalMin,
+            expectedGoalsTotalMax: liveResult.expectedGoalsTotalMax,
+            over2Prob: liveResult.over2Prob,
+            over3Prob: liveResult.over3Prob,
+            under2Prob: liveResult.under2Prob,
+            bttsProb: liveResult.bttsProb,
+            weakerTeamScoringProb: liveResult.weakerTeamScoringProb,
+            confidence: liveResult.confidence,
+            predictedOutcome: liveResult.predictedOutcome,
+            predictionId: liveResult.predictionId,
+            liveSnapshotId: liveResult.liveSnapshotId,
+            modelVersion: liveResult.modelVersion,
+            createdAt: liveResult.createdAt,
+          }
+        : null,
     };
 
     return NextResponse.json(body, { status: 200 });

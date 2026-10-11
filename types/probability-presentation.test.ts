@@ -52,6 +52,7 @@ describe("probability presentation kinds", () => {
       type: "LIVE",
       presentationKind: "LIVE_PROBABILITY",
       minute: 55,
+      liveSnapshotId: "live-snap-1",
       inputSnapshot: {} as LivePredictionResult["inputSnapshot"],
     };
     const liveBundle = asLiveProbability(live);

@@ -1,3 +1,7 @@
+import {
+  FINISHED_FIXTURE_STATUSES,
+  isLiveFixtureStatus,
+} from "@/lib/fixtures/live-status";
 import type {
   DetectedMeaningfulEvent,
   DetectResult,
@@ -11,7 +15,6 @@ import {
   SIGNIFICANT_SUB_MAX_MINUTE,
   XG_DELTA_THRESHOLD,
 } from "@/lib/live/event-detector-types";
-
 function normalizeText(value: string | null | undefined): string {
   return value?.toLowerCase() ?? "";
 }
@@ -52,6 +55,115 @@ function isPenaltyVarEvent(event: SnapshotEvent): boolean {
   return haystack.includes("penalty");
 }
 
+/** Major VAR decisions beyond penalty-only (documented in audit 07-1). */
+export function isMajorVarEvent(event: SnapshotEvent): boolean {
+  if (!isVarType(event.type)) {
+    return false;
+  }
+
+  if (isPenaltyVarEvent(event)) {
+    return false;
+  }
+
+  const haystack = `${normalizeText(event.detail)} ${normalizeText(event.comments)}`;
+  const majorPatterns = [
+    "goal cancelled",
+    "goal canceled",
+    "goal disallowed",
+    "no goal",
+    "red card",
+    "card upgraded",
+    "card upgrade",
+    "penalty cancelled",
+    "penalty canceled",
+    "penalty revoked",
+  ];
+
+  return majorPatterns.some((pattern) => haystack.includes(pattern));
+}
+
+function finishedKindForStatus(
+  status: string
+): Extract<MeaningfulEventKind, "FT" | "AET" | "PEN"> | null {
+  if (status === "FT") {
+    return "FT";
+  }
+  if (status === "AET") {
+    return "AET";
+  }
+  if (status === "PEN") {
+    return "PEN";
+  }
+  return null;
+}
+
+function detectStatusTransitionEvents(
+  prev: LiveDetectorSnapshot,
+  next: LiveDetectorSnapshot
+): DetectedMeaningfulEvent[] {
+  if (prev.status === next.status) {
+    return [];
+  }
+
+  const wasLive = isLiveFixtureStatus(prev.status);
+  const finishedKind = finishedKindForStatus(next.status);
+
+  if (wasLive && finishedKind) {
+    return [
+      {
+        kind: finishedKind,
+        reason: "live_to_finished",
+        minute: next.minute,
+        teamExternalId: null,
+        meta: { fromStatus: prev.status, toStatus: next.status },
+      },
+    ];
+  }
+
+  if (next.status === "HT" && prev.status !== "HT") {
+    return [
+      {
+        kind: "HT",
+        reason: "status_halftime",
+        minute: next.minute,
+        teamExternalId: null,
+        meta: { fromStatus: prev.status, toStatus: next.status },
+      },
+    ];
+  }
+
+  const meaningfulStatuses = new Set<string>([
+    "1H",
+    "HT",
+    "2H",
+    "ET",
+    "BT",
+    "P",
+    "LIVE",
+    ...FINISHED_FIXTURE_STATUSES,
+  ]);
+
+  if (
+    meaningfulStatuses.has(prev.status) &&
+    meaningfulStatuses.has(next.status)
+  ) {
+    return [
+      {
+        kind: "MATCH_STATE",
+        reason: "status_transition",
+        minute: next.minute,
+        teamExternalId: null,
+        meta: {
+          fromStatus: prev.status,
+          toStatus: next.status,
+        },
+      },
+    ];
+  }
+
+  return [];
+}
+
 function eventIdentityKey(event: SnapshotEvent): string | null {
   return event.externalEventId;
 }
@@ -66,7 +178,7 @@ function prevEventIds(prev: LiveDetectorSnapshot): Set<string> {
   return ids;
 }
 
-function newEventsSince(
+export function newEventsSince(
   prev: LiveDetectorSnapshot,
   next: LiveDetectorSnapshot
 ): SnapshotEvent[] {
@@ -162,6 +274,36 @@ function totalRedCardStatDelta(
   return total;
 }
 
+const LATEST_MATCH_EVENTS_CAP = 8;
+
+export type CompactMatchEvent = {
+  minute: number;
+  type: string;
+  detail: string | null;
+  teamExternalId: number | null;
+  externalEventId: string | null;
+};
+
+export function compactLatestMatchEvents(
+  prev: LiveDetectorSnapshot | null,
+  next: LiveDetectorSnapshot,
+  limit = LATEST_MATCH_EVENTS_CAP
+): CompactMatchEvent[] {
+  if (!prev) {
+    return [];
+  }
+
+  return newEventsSince(prev, next)
+    .slice(-limit)
+    .map((event) => ({
+      minute: event.minute,
+      type: event.type,
+      detail: event.detail,
+      teamExternalId: event.teamExternalId,
+      externalEventId: event.externalEventId,
+    }));
+}
+
 export function toMeaningfulEventBroadcastPayload(
   event: DetectedMeaningfulEvent
 ): MeaningfulEventBroadcastPayload {
@@ -213,6 +355,20 @@ export function detectMeaningfulEvents(
         meta: event.playerExternalId
           ? { playerExternalId: event.playerExternalId }
           : undefined,
+      });
+    }
+
+    if (isMajorVarEvent(event)) {
+      pushEvent({
+        kind: "VAR_DECISION",
+        reason: "major_var_decision",
+        minute: event.minute,
+        teamExternalId: event.teamExternalId,
+        externalEventId: event.externalEventId ?? undefined,
+        meta: {
+          detail: event.detail,
+          comments: event.comments,
+        },
       });
     }
   }
@@ -316,6 +472,10 @@ export function detectMeaningfulEvents(
         meta: { fallbackIndex: index + 1, scoreGoalMismatch: true },
       });
     }
+  }
+
+  for (const transition of detectStatusTransitionEvents(prev, next)) {
+    pushEvent(transition);
   }
 
   return {

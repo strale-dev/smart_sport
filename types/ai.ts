@@ -160,6 +160,17 @@ export type LiveAiContext = {
   modelVersion: string;
   promptVersion: string;
   meaningfulTriggers: string[];
+  predictionBinding: {
+    predictionId: string;
+    liveSnapshotId: string;
+  };
+  latestMatchEvents: Array<{
+    minute: number;
+    type: string;
+    detail: string | null;
+    teamExternalId: number | null;
+    externalEventId: string | null;
+  }>;
   prediction: PrematchAiContext["prediction"];
   lineupsState: LineupsContextState;
   round: string | null;

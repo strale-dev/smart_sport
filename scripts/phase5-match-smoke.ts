@@ -70,6 +70,7 @@ const deltaFixture: LiveProbabilityDeltaResponse = {
   liveKind: "LIVE_PROBABILITY",
   liveMinute: 67,
   prematchPrediction: null,
+  livePrediction: null,
 };
 
 assertProbabilitySum("prematch", deltaFixture.prematch);

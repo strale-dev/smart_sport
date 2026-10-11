@@ -292,10 +292,17 @@ export async function readLiveInsight(
     predictionId: row.prediction_id,
   });
 
+  const latestLiveRow = await readLatestLivePrediction(fixture.id);
+  const predictionStale =
+    latestLiveRow != null &&
+    row.prediction_id != null &&
+    latestLiveRow.id !== row.prediction_id;
+
   return {
     status: "OK",
     insight: stored,
     prediction,
+    predictionStale: predictionStale || undefined,
     cached: true,
     insightMode: "live",
   };
@@ -695,6 +702,7 @@ export type GenerateLiveInsightInput = {
   minute: number | null;
   score: { home: number | null; away: number | null };
   liveStats: import("@/types/ai").LiveAiContext["liveStats"];
+  latestMatchEvents?: import("@/types/ai").LiveAiContext["latestMatchEvents"];
   /** When set, free-tier live quotas are enforced for this generation. */
   userId?: string | null;
 };
@@ -725,6 +733,7 @@ export async function generateLiveInsight(
     minute: input.minute,
     score: input.score,
     liveStats: input.liveStats,
+    latestMatchEvents: input.latestMatchEvents,
   });
 
   const existing = await readLiveInsightFromStore(

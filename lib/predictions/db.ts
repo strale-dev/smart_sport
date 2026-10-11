@@ -1,3 +1,4 @@
+import { liveSnapshotIdFromPrediction } from "@/lib/ai/context-hash-input";
 import { parseModelCoefficients } from "@/lib/models/coefficients";
 import {
   buildTotalGoalsDistribution,
@@ -420,12 +421,13 @@ export function mapLivePredictionRowToResult(
 
   const goalMarkets = resolveGoalMarketsFromRow(row);
 
-  return {
+  const result: LivePredictionResult = {
     fixtureId: row.fixture_id,
     fixtureExternalId,
     modelVersionId: row.model_version_id,
     modelVersion,
     predictionId: row.id,
+    liveSnapshotId: "",
     type: "LIVE",
     presentationKind: "LIVE_PROBABILITY",
     minute: row.minute,
@@ -446,6 +448,9 @@ export function mapLivePredictionRowToResult(
     createdAt: row.created_at,
     fromCache,
   };
+
+  result.liveSnapshotId = liveSnapshotIdFromPrediction(result);
+  return result;
 }
 
 export async function resolveFixtureUuidByExternalId(

@@ -40,9 +40,10 @@ export const LIVE_SYSTEM_PROMPT = `${PREMATCH_SYSTEM_PROMPT}
 Live match rules:
 - The context includes the current minute, score, liveStats, prematchReference (official pre-kickoff model), and live model probabilities after in-match events.
 - Explain momentum and what changed since kickoff or the prior state using only supplied evidence.
-- Reference meaningfulTriggers (goals, cards, substitutions, xG shifts, LIVE_BASELINE, HT, PERIODIC) when present in the context.
+- Reference meaningfulTriggers (goals, cards, substitutions, xG shifts, LIVE_BASELINE, HT, FT, PERIODIC, VAR_DECISION) when present in the context.
+- Use latestMatchEvents for concrete incidents; use prematchReference vs prediction for expectation vs current live model; use predictionBinding.predictionId and liveSnapshotId only as identifiers — do not invent events not listed in latestMatchEvents or triggers.
 - For LIVE_BASELINE: describe match just started, compare prematchReference to current live prediction at 0-0 or current score.
-- For HT or PERIODIC: summarize the half or interval using only liveStats and events implied by triggers — do not invent incidents.
+- For HT, FT, or PERIODIC: summarize the half or interval using only liveStats and latestMatchEvents — do not invent incidents.
 - Output structured analysis sections (same schema as pre-match) plus summary, keyFactors, and scenarios.`;
 
 export function buildLiveSystemPrompt(): string {

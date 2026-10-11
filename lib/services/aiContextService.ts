@@ -4,6 +4,7 @@ import {
   assertPrematchPredictionMatchesFixture,
   hashLiveContext,
   hashPrematchContext,
+  liveSnapshotIdFromPrediction,
 } from "@/lib/ai/context-hash-input";
 import { sanitizeProviderText } from "@/lib/ai/sanitize";
 import {
@@ -422,6 +423,7 @@ export async function buildLiveContext(input: {
   minute: number | null;
   score: { home: number | null; away: number | null };
   liveStats: LiveAiContext["liveStats"];
+  latestMatchEvents?: LiveAiContext["latestMatchEvents"];
 }): Promise<LiveContextResult> {
   assertLivePredictionMatchesFixture(input.fixtureExternalId, input.prediction);
 
@@ -561,6 +563,11 @@ export async function buildLiveContext(input: {
     modelVersion: input.prediction.modelVersion,
     promptVersion,
     meaningfulTriggers: [...input.meaningfulTriggers].sort(),
+    predictionBinding: {
+      predictionId: input.prediction.predictionId,
+      liveSnapshotId: liveSnapshotIdFromPrediction(input.prediction),
+    },
+    latestMatchEvents: input.latestMatchEvents ?? [],
     prediction: {
       winProbabilities: input.prediction.winProbabilities,
       expectedGoalsHome: input.prediction.expectedGoalsHome,
