@@ -59,6 +59,22 @@ describe("aiService historical prematch readiness (FR-04)", () => {
     buildPrematchContext.mockResolvedValue({ contextHash: "current-hash" });
   });
 
+  it("returns UNAVAILABLE when context hash compute fails", async () => {
+    readLatestPrematchInsight.mockResolvedValue({
+      id: "insight-1",
+      context_hash: "any-hash",
+    });
+    buildPrematchContext.mockRejectedValue(new Error("context build failed"));
+
+    const { readPrematchInsight } = await import("@/lib/services/aiService");
+    const result = await readPrematchInsight(123);
+
+    expect(result.status).toBe("UNAVAILABLE");
+    if (result.status === "UNAVAILABLE") {
+      expect(result.reason).toBe("STALE_PREMATCH_CONTEXT");
+    }
+  });
+
   it("returns UNAVAILABLE when stored insight context hash is stale", async () => {
     readLatestPrematchInsight.mockResolvedValue({
       id: "insight-1",

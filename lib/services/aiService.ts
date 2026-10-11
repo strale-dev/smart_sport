@@ -115,23 +115,36 @@ function buildFallbackResponse(
   };
 }
 
+type PrematchContextHashResolution =
+  | { status: "ok"; hash: string }
+  | { status: "no_prediction" }
+  | { status: "compute_failed" };
+
 async function resolvePrematchContextHashForHistorical(
   fixtureExternalId: number
-): Promise<string | null> {
+): Promise<PrematchContextHashResolution> {
   const prediction =
     (await getLatestPrematch(fixtureExternalId)) ??
     (await getOrComputePrematch(fixtureExternalId));
   if (!prediction) {
-    return null;
+    return { status: "no_prediction" };
   }
   try {
     const { contextHash } = await buildPrematchContext(
       fixtureExternalId,
       prediction
     );
-    return contextHash;
-  } catch {
-    return null;
+    return { status: "ok", hash: contextHash };
+  } catch (error) {
+    console.warn(
+      `[aiService] historical prematch context hash failed for ${fixtureExternalId}`,
+      error instanceof Error ? error.message : error
+    );
+    Sentry.captureMessage("prematch_context_hash_compute_failed", {
+      level: "warning",
+      extra: { fixtureExternalId },
+    });
+    return { status: "compute_failed" };
   }
 }
 
@@ -160,9 +173,20 @@ async function readHistoricalPrematchInsight(
     };
   }
 
-  const currentHash =
+  const hashResolution =
     await resolvePrematchContextHashForHistorical(fixtureExternalId);
-  if (currentHash != null && row.context_hash !== currentHash) {
+  if (hashResolution.status === "compute_failed") {
+    return {
+      status: "UNAVAILABLE",
+      fixtureExternalId,
+      reason: "STALE_PREMATCH_CONTEXT",
+      prediction,
+    };
+  }
+  if (
+    hashResolution.status === "ok" &&
+    row.context_hash !== hashResolution.hash
+  ) {
     return {
       status: "UNAVAILABLE",
       fixtureExternalId,
@@ -352,10 +376,14 @@ export async function generatePrematchInsight(
     const stored = await readLatestPrematchInsight(fixture.id);
     let contextHashMatches: boolean | undefined;
     if (stored) {
-      const currentHash =
+      const hashResolution =
         await resolvePrematchContextHashForHistorical(fixtureExternalId);
       contextHashMatches =
-        currentHash == null ? undefined : stored.context_hash === currentHash;
+        hashResolution.status === "ok"
+          ? stored.context_hash === hashResolution.hash
+          : hashResolution.status === "compute_failed"
+            ? false
+            : undefined;
     }
     const action = historicalPrematchWriteAction({
       trigger: options.trigger,

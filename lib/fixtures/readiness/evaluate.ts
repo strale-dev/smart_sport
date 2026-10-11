@@ -58,6 +58,7 @@ export type FixtureEvaluationInput = {
     createdAt: string;
   } | null;
   currentContextHash: string | null;
+  contextHashComputeFailed?: boolean;
 };
 
 function item(
@@ -211,7 +212,11 @@ export function buildReadinessItems(
     }
   }
 
-  if (!input.features || !hasMinimumModelSignal(input.features)) {
+  if (input.contextHashComputeFailed) {
+    items.push(
+      item("ai_context", "unavailable", "context_hash_compute_failed")
+    );
+  } else if (!input.features || !hasMinimumModelSignal(input.features)) {
     items.push(item("ai_context", "insufficient", "features_or_signal"));
   } else if (
     homeHist === "DATA_INSUFFICIENT" ||
@@ -224,6 +229,8 @@ export function buildReadinessItems(
 
   if (!input.prematchInsight) {
     items.push(item("ai_insight", "not_yet_available"));
+  } else if (input.contextHashComputeFailed) {
+    items.push(item("ai_insight", "unavailable", "context_hash_unknown"));
   } else if (
     input.currentContextHash &&
     input.prematchInsight.contextHash !== input.currentContextHash
@@ -291,7 +298,8 @@ export function computeReadinessGates(
   const aiContextReady =
     featuresOk &&
     homeHist !== "DATA_INSUFFICIENT" &&
-    awayHist !== "DATA_INSUFFICIENT";
+    awayHist !== "DATA_INSUFFICIENT" &&
+    !input.contextHashComputeFailed;
 
   const insightMatches =
     input.prematchInsight != null &&
@@ -308,6 +316,8 @@ export function computeReadinessGates(
     predictionFresh &&
     aiContextReady &&
     inLlmWindow &&
+    !input.contextHashComputeFailed &&
+    input.currentContextHash != null &&
     (!input.prematchInsight || !insightMatches);
 
   const liveDataCurrent =

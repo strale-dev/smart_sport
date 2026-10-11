@@ -178,6 +178,25 @@ describe("evaluateFixtureReadiness", () => {
     );
   });
 
+  it("blocks AI generation when context hash compute failed", () => {
+    const snap = evaluateFixtureReadiness(
+      baseInput({
+        contextHashComputeFailed: true,
+        currentContextHash: null,
+        prediction: {
+          id: "p1",
+          createdAt: "2026-09-26T09:00:00.000Z",
+          inputSnapshot: baseFeatures,
+        },
+      })
+    );
+    expect(snap.gates.aiContextReady).toBe(false);
+    expect(snap.gates.aiGenerationAllowed).toBe(false);
+    expect(snap.items.find((item) => item.key === "ai_context")?.state).toBe(
+      "unavailable"
+    );
+  });
+
   it("stale AI insight on context hash mismatch", () => {
     const snap = evaluateFixtureReadiness(
       baseInput({
@@ -252,6 +271,7 @@ describe("evaluateFixtureReadiness", () => {
           createdAt: "2026-09-26T09:55:00.000Z",
           inputSnapshot: baseFeatures,
         },
+        currentContextHash: "current-hash",
       })
     );
     expect(isAiGenerationAllowed(snap)).toBe(true);
