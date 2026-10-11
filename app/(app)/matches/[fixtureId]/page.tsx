@@ -79,26 +79,26 @@ export default async function MatchPage({ params }: MatchPageProps) {
   });
   const isGuest = !user;
 
-  const premiumAnalytics = await canAccessPremiumAnalytics(user?.id ?? null);
-
-  const [initialFavorited, initialLiveSnapshot] = await Promise.all([
-    user
-      ? isFixtureFavorited(user.id, id).catch(() => false)
-      : Promise.resolve(false),
-    isLiveFixtureStatus(fixture.status)
-      ? Promise.all([
-          getFixtureEvents(fixture.externalId),
-          getFixtureStatistics(fixture.externalId),
-        ]).then(
-          ([{ data: events }, { data: statistics }]) =>
-            ({
-              fixture,
-              events,
-              statistics,
-            }) satisfies MatchLiveSnapshot
-        )
-      : Promise.resolve(undefined),
-  ]);
+  const [premiumAnalytics, initialFavorited, initialLiveSnapshot] =
+    await Promise.all([
+      canAccessPremiumAnalytics(user?.id ?? null),
+      user
+        ? isFixtureFavorited(user.id, id).catch(() => false)
+        : Promise.resolve(false),
+      isLiveFixtureStatus(fixture.status)
+        ? Promise.all([
+            getFixtureEvents(fixture.externalId),
+            getFixtureStatistics(fixture.externalId),
+          ]).then(
+            ([{ data: events }, { data: statistics }]) =>
+              ({
+                fixture,
+                events,
+                statistics,
+              }) satisfies MatchLiveSnapshot
+          )
+        : Promise.resolve(undefined),
+    ]);
 
   return (
     <MatchLiveSession fixture={fixture} initialSnapshot={initialLiveSnapshot}>
@@ -118,7 +118,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
       />
 
       <AIInsightProvider
-        key={`${fixture.externalId}-${fixture.status}-${isGuest ? "guest" : "user"}`}
+        key={`${fixture.externalId}-${isGuest ? "guest" : "user"}`}
         fixtureId={fixture.externalId}
         fixtureStatus={fixture.status}
         kickoffAt={fixture.kickoffAt}

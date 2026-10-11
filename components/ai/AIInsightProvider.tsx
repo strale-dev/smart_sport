@@ -54,11 +54,18 @@ import {
   type MatchAiUiState,
 } from "@/lib/ai/match-ai-ui-state";
 import type { LiveProbabilityDeltaResponse } from "@/lib/live/live-probability-delta";
+import { useMatchLiveContext } from "@/components/match/MatchLiveSession";
 import { captureClientEvent } from "@/lib/posthog/client";
 import { POSTHOG_EVENTS } from "@/lib/posthog/events";
 
 const AI_READ_STALE_MS = 30_000;
 const HISTORICAL_PREMATCH_STALE_MS = 60_000;
+
+const aiQueryDefaults = {
+  staleTime: AI_READ_STALE_MS,
+  refetchOnWindowFocus: false,
+  refetchOnMount: false,
+} as const;
 
 type AIInsightProviderProps = {
   fixtureId: number;
@@ -68,17 +75,27 @@ type AIInsightProviderProps = {
   children: ReactNode;
 };
 
-export type AIInsightContextValue = PrematchInsightViewModel & {
+export type AIInsightViewContextValue = PrematchInsightViewModel & {
   displayExperience: PrematchDisplayExperience;
-  generate: () => Promise<void>;
-  refetch: () => Promise<void>;
-  isGenerating: boolean;
   aiUiState: MatchAiUiState;
   aiUiCopy: MatchAiUiCopy;
   liveDelta: LiveProbabilityDeltaResponse | undefined;
 };
 
-const AIInsightContext = createContext<AIInsightContextValue | null>(null);
+export type AIInsightActionsContextValue = {
+  generate: () => Promise<void>;
+  refetch: () => Promise<void>;
+  isGenerating: boolean;
+};
+
+export type AIInsightContextValue = AIInsightViewContextValue &
+  AIInsightActionsContextValue;
+
+const AIInsightViewContext = createContext<AIInsightViewContextValue | null>(
+  null
+);
+const AIInsightActionsContext =
+  createContext<AIInsightActionsContextValue | null>(null);
 
 function createInitialViewModel(
   fixtureStatus: string,
@@ -103,10 +120,14 @@ export function AIInsightProvider({
   children,
 }: AIInsightProviderProps) {
   const queryClient = useQueryClient();
-  const fixturePhase = resolveFixturePhase(fixtureStatus);
+  const liveContext = useMatchLiveContext();
+  const effectiveStatus = liveContext?.fixture.status ?? fixtureStatus;
+  const fixturePhase = resolveFixturePhase(effectiveStatus);
   const isLivePhase = fixturePhase === "LIVE";
-  const isAnalyzable = isFixtureAnalyzable(fixtureStatus);
+  const isFinishedPhase = fixturePhase === "FINISHED";
+  const isAnalyzable = isFixtureAnalyzable(effectiveStatus);
   const prematchQueryEnabled = !isGuest && !isLivePhase && isAnalyzable;
+  const probabilityDeltaEnabled = isLivePhase || isFinishedPhase;
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [manualErrorMessage, setManualErrorMessage] = useState<string | null>(
@@ -121,8 +142,7 @@ export function AIInsightProvider({
     queryKey: liveKeys.liveInsight(fixtureId),
     queryFn: () => fetchLiveInsight(fixtureId),
     enabled: !isGuest && isLivePhase,
-    staleTime: AI_READ_STALE_MS,
-    refetchOnWindowFocus: false,
+    ...aiQueryDefaults,
   });
 
   const historicalPrematchQuery = useQuery({
@@ -131,22 +151,21 @@ export function AIInsightProvider({
     enabled: !isGuest && isLivePhase,
     staleTime: HISTORICAL_PREMATCH_STALE_MS,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const liveDeltaQuery = useQuery({
     queryKey: liveKeys.probabilityDelta(fixtureId),
     queryFn: () => fetchLiveProbabilityDelta(fixtureId),
-    enabled: isLivePhase,
-    staleTime: AI_READ_STALE_MS,
-    refetchOnWindowFocus: false,
+    enabled: probabilityDeltaEnabled,
+    ...aiQueryDefaults,
   });
 
   const prematchInsightQuery = useQuery({
     queryKey: liveKeys.prematchInsight(fixtureId),
     queryFn: () => fetchPrematchInsightGet(fixtureId),
     enabled: prematchQueryEnabled,
-    staleTime: AI_READ_STALE_MS,
-    refetchOnWindowFocus: false,
+    ...aiQueryDefaults,
   });
 
   const readinessQuery = useQuery({
@@ -162,8 +181,7 @@ export function AIInsightProvider({
       return parseFixtureReadinessSnapshot(body.readiness);
     },
     enabled: prematchQueryEnabled,
-    staleTime: AI_READ_STALE_MS,
-    refetchOnWindowFocus: false,
+    ...aiQueryDefaults,
   });
 
   const readinessSnapshot: FixtureReadinessSnapshot | null =
@@ -205,7 +223,7 @@ export function AIInsightProvider({
     if (isGuest) {
       const delta = liveDeltaQuery.data;
       return {
-        ...createEmptyPrematchInsightViewModel(fixtureStatus),
+        ...createEmptyPrematchInsightViewModel(effectiveStatus),
         state: "guest",
         prediction: delta?.prematchPrediction
           ? predictionFromDeltaSnapshot(fixtureId, delta.prematchPrediction)
@@ -216,7 +234,7 @@ export function AIInsightProvider({
 
     return resolveLivePhaseViewModel({
       fixtureId,
-      fixtureStatus,
+      fixtureStatus: effectiveStatus,
       liveInsightData: liveInsightQuery.data,
       liveInsightError:
         liveInsightQuery.error instanceof Error
@@ -230,8 +248,8 @@ export function AIInsightProvider({
       liveDelta: liveDeltaQuery.data,
     });
   }, [
+    effectiveStatus,
     fixtureId,
-    fixtureStatus,
     historicalPrematchQuery.data,
     historicalPrematchQuery.isPending,
     isGuest,
@@ -244,23 +262,23 @@ export function AIInsightProvider({
 
   const prematchViewModel = useMemo((): PrematchInsightViewModel => {
     if (isLivePhase) {
-      return createInitialViewModel(fixtureStatus, isGuest);
+      return createInitialViewModel(effectiveStatus, isGuest);
     }
 
     if (isGuest || !isAnalyzable) {
-      return createInitialViewModel(fixtureStatus, isGuest);
+      return createInitialViewModel(effectiveStatus, isGuest);
     }
 
     if (prematchInsightQuery.isPending && !prematchInsightQuery.data) {
       return {
-        ...createEmptyPrematchInsightViewModel(fixtureStatus),
+        ...createEmptyPrematchInsightViewModel(effectiveStatus),
         state: "loading",
       };
     }
 
     if (manualErrorMessage) {
       return {
-        ...createEmptyPrematchInsightViewModel(fixtureStatus),
+        ...createEmptyPrematchInsightViewModel(effectiveStatus),
         state: "error",
         errorMessage: manualErrorMessage,
       };
@@ -268,7 +286,7 @@ export function AIInsightProvider({
 
     if (prematchInsightQuery.isError) {
       return {
-        ...createEmptyPrematchInsightViewModel(fixtureStatus),
+        ...createEmptyPrematchInsightViewModel(effectiveStatus),
         state: "error",
         errorMessage:
           prematchInsightQuery.error instanceof Error
@@ -280,16 +298,16 @@ export function AIInsightProvider({
     if (prematchInsightQuery.data) {
       return mapPrematchInsightResponseToViewModel(
         prematchInsightQuery.data,
-        fixtureStatus
+        effectiveStatus
       );
     }
 
     return {
-      ...createEmptyPrematchInsightViewModel(fixtureStatus),
+      ...createEmptyPrematchInsightViewModel(effectiveStatus),
       state: "loading",
     };
   }, [
-    fixtureStatus,
+    effectiveStatus,
     isAnalyzable,
     isGuest,
     isLivePhase,
@@ -412,18 +430,27 @@ export function AIInsightProvider({
   );
 
   const canEnsurePrematch =
-    canGeneratePrematchInsight(fixtureStatus) ||
-    canBackfillMissingPrematchInsight(fixtureStatus);
+    canGeneratePrematchInsight(effectiveStatus) ||
+    canBackfillMissingPrematchInsight(effectiveStatus);
+
+  const invalidateReadiness = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: [...liveKeys.all, "fixture-readiness", fixtureId],
+    });
+  }, [fixtureId, queryClient]);
 
   const applyPrematchQueryData = useCallback(
     (response: PrematchInsightResponse) => {
       const queryKey =
-        resolveFixturePhase(fixtureStatus) === "LIVE"
+        resolveFixturePhase(effectiveStatus) === "LIVE"
           ? liveKeys.historicalPrematch(fixtureId)
           : liveKeys.prematchInsight(fixtureId);
       queryClient.setQueryData(queryKey, response);
+      if (response.status === "OK" || response.status === "MISS") {
+        invalidateReadiness();
+      }
     },
-    [fixtureId, fixtureStatus, queryClient]
+    [effectiveStatus, fixtureId, invalidateReadiness, queryClient]
   );
 
   const ensurePrematchInsight = useCallback(
@@ -472,7 +499,13 @@ export function AIInsightProvider({
         ensureInFlightRef.current = false;
       }
     },
-    [applyPrematchQueryData, autoEnsureKey, fixtureId, prematchInsightQuery]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- use .refetch only to keep actions context stable
+    [
+      applyPrematchQueryData,
+      autoEnsureKey,
+      fixtureId,
+      prematchInsightQuery.refetch,
+    ]
   );
 
   useEffect(() => {
@@ -584,7 +617,7 @@ export function AIInsightProvider({
   const refetch = useCallback(async () => {
     const phaseInitial = resolveInitialPrematchInsightState({
       isGuest,
-      fixtureStatus,
+      fixtureStatus: effectiveStatus,
     });
 
     if (phaseInitial === "guest" || phaseInitial === "neither") {
@@ -612,16 +645,17 @@ export function AIInsightProvider({
     if (response?.status === "MISS" && canEnsurePrematch) {
       await ensurePrematchInsight(response.prediction);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- use .refetch only to keep actions context stable
   }, [
     canEnsurePrematch,
+    effectiveStatus,
     ensurePrematchInsight,
-    fixtureStatus,
     isGuest,
     isLivePhase,
-    historicalPrematchQuery,
-    liveDeltaQuery,
-    liveInsightQuery,
-    prematchInsightQuery,
+    historicalPrematchQuery.refetch,
+    liveDeltaQuery.refetch,
+    liveInsightQuery.refetch,
+    prematchInsightQuery.refetch,
   ]);
 
   useEffect(() => {
@@ -670,41 +704,63 @@ export function AIInsightProvider({
     }
   }, [applyPrematchQueryData, canEnsurePrematch, fixtureId, isGuest]);
 
-  const value = useMemo<AIInsightContextValue>(
+  const viewValue = useMemo<AIInsightViewContextValue>(
     () => ({
       ...viewModel,
       displayExperience,
-      generate,
-      refetch,
-      isGenerating,
       aiUiState,
       aiUiCopy,
       liveDelta,
     }),
-    [
-      viewModel,
-      displayExperience,
+    [viewModel, displayExperience, aiUiState, aiUiCopy, liveDelta]
+  );
+
+  const actionsValue = useMemo<AIInsightActionsContextValue>(
+    () => ({
       generate,
       refetch,
       isGenerating,
-      aiUiState,
-      aiUiCopy,
-      liveDelta,
-    ]
+    }),
+    [generate, refetch, isGenerating]
   );
 
   return (
-    <AIInsightContext.Provider value={value}>
-      {children}
-    </AIInsightContext.Provider>
+    <AIInsightActionsContext.Provider value={actionsValue}>
+      <AIInsightViewContext.Provider value={viewValue}>
+        {children}
+      </AIInsightViewContext.Provider>
+    </AIInsightActionsContext.Provider>
   );
 }
 
 export function usePrematchInsight(): AIInsightContextValue {
-  const context = useContext(AIInsightContext);
-  if (!context) {
+  const view = useContext(AIInsightViewContext);
+  const actions = useContext(AIInsightActionsContext);
+  if (!view || !actions) {
     throw new Error("usePrematchInsight must be used within AIInsightProvider");
   }
 
-  return context;
+  return { ...view, ...actions };
+}
+
+export function usePrematchInsightActions(): AIInsightActionsContextValue {
+  const actions = useContext(AIInsightActionsContext);
+  if (!actions) {
+    throw new Error(
+      "usePrematchInsightActions must be used within AIInsightProvider"
+    );
+  }
+
+  return actions;
+}
+
+export function usePrematchInsightView(): AIInsightViewContextValue {
+  const view = useContext(AIInsightViewContext);
+  if (!view) {
+    throw new Error(
+      "usePrematchInsightView must be used within AIInsightProvider"
+    );
+  }
+
+  return view;
 }
