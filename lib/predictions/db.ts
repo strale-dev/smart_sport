@@ -453,6 +453,51 @@ export function mapLivePredictionRowToResult(
   return result;
 }
 
+export type LiveFixtureDbState = {
+  id: string;
+  providerId: number;
+  status: string;
+  kickoff_at: string;
+  minute: number | null;
+  scoreHome: number | null;
+  scoreAway: number | null;
+  lastProviderSyncAt: string | null;
+};
+
+export async function resolveLiveFixtureStateByExternalId(
+  fixtureExternalId: number
+): Promise<LiveFixtureDbState | null> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("fixtures")
+    .select(
+      "id, provider_id, status, kickoff_at, minute, score_home, score_away, last_provider_sync_at"
+    )
+    .eq("provider_id", fixtureExternalId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Failed to resolve live fixture ${fixtureExternalId}: ${error.message}`
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return {
+    id: data.id,
+    providerId: data.provider_id,
+    status: data.status,
+    kickoff_at: data.kickoff_at,
+    minute: data.minute,
+    scoreHome: data.score_home,
+    scoreAway: data.score_away,
+    lastProviderSyncAt: data.last_provider_sync_at,
+  };
+}
+
 export async function resolveFixtureUuidByExternalId(
   fixtureExternalId: number
 ): Promise<{ id: string; status: string; kickoff_at: string } | null> {

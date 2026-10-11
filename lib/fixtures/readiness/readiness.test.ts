@@ -229,6 +229,21 @@ describe("evaluateFixtureReadiness", () => {
     expect(snap.liveSubState).toBe("paused");
   });
 
+  it("live_sync unavailable when live polling disabled", () => {
+    const snap = evaluateFixtureReadiness(
+      baseInput({
+        status: "2H",
+        lastProviderSyncAt: new Date().toISOString(),
+        livePollingEnabled: false,
+      })
+    );
+    const liveSync = snap.items.find((item) => item.key === "live_sync");
+    expect(liveSync?.state).toBe("unavailable");
+    expect(liveSync?.reason).toBe("live_polling_disabled");
+    expect(snap.gates.liveDataCurrent).toBe(false);
+    expect(snap.artifacts.live?.pollingEnabled).toBe(false);
+  });
+
   it("halftime is active live", () => {
     const snap = evaluateFixtureReadiness(
       baseInput({

@@ -8,6 +8,7 @@ import {
   readLatestPrematchPrediction,
   resolveFixtureUuidByExternalId,
 } from "@/lib/predictions/db";
+import { isLivePollingEnabled } from "@/lib/env";
 import { buildPrematchContext } from "@/lib/services/aiContextService";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/types/supabase";
@@ -177,6 +178,7 @@ async function buildEvaluationInput(input: {
       : null,
     currentContextHash,
     contextHashComputeFailed,
+    livePollingEnabled: isLivePollingEnabled(),
   };
 }
 

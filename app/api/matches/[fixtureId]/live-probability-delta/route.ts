@@ -2,16 +2,7 @@ import * as Sentry from "@sentry/nextjs";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import type { LiveProbabilityDeltaResponse } from "@/lib/live/live-probability-delta";
-import {
-  getActiveModelVersion,
-  mapLivePredictionRowToResult,
-  mapPrematchPredictionRowForFixture,
-  readLatestLivePrediction,
-  readOfficialPrematchPrediction,
-  readLatestPrematchPrediction,
-  resolveFixtureUuidByExternalId,
-} from "@/lib/predictions/db";
+import { resolveLiveProbabilityDelta } from "@/lib/live/resolve-live-probability-delta";
 
 type RouteContext = {
   params: Promise<{ fixtureId: string }>;
@@ -41,98 +32,15 @@ export async function GET(
       );
     }
 
-    const fixture = await resolveFixtureUuidByExternalId(fixtureExternalId);
-    if (!fixture) {
+    const resolved = await resolveLiveProbabilityDelta(fixtureExternalId);
+    if (!resolved.ok) {
       return NextResponse.json(
-        { ok: false, error: "FIXTURE_NOT_FOUND" },
-        { status: 404 }
+        { ok: false, error: resolved.error },
+        { status: resolved.error === "FIXTURE_NOT_FOUND" ? 404 : 400 }
       );
     }
 
-    const modelVersion = await getActiveModelVersion();
-    const kickoffReached = Date.now() >= new Date(fixture.kickoff_at).getTime();
-    const [prematchRow, liveRow] = await Promise.all([
-      kickoffReached
-        ? readOfficialPrematchPrediction(fixture.id, fixture.kickoff_at)
-        : readLatestPrematchPrediction(fixture.id),
-      readLatestLivePrediction(fixture.id),
-    ]);
-
-    const prematchResult = prematchRow
-      ? await mapPrematchPredictionRowForFixture(
-          prematchRow,
-          fixtureExternalId,
-          modelVersion.version,
-          true
-        )
-      : null;
-
-    const liveResult = liveRow
-      ? mapLivePredictionRowToResult(
-          liveRow,
-          fixtureExternalId,
-          modelVersion.version,
-          true
-        )
-      : null;
-
-    const body: LiveProbabilityDeltaResponse = {
-      prematch: prematchResult?.winProbabilities ?? null,
-      prematchKind: prematchResult ? "PRE_MATCH_PROBABILITY" : null,
-      live: liveResult?.winProbabilities ?? null,
-      liveKind: liveResult ? "LIVE_PROBABILITY" : null,
-      liveMinute: liveRow?.minute ?? null,
-      prematchPrediction: prematchResult
-        ? {
-            presentationKind: "PRE_MATCH_PROBABILITY" as const,
-            modelTier: prematchResult.modelTier,
-            expectedGoalsAvailable: prematchResult.expectedGoalsAvailable,
-            winProbabilities: prematchResult.winProbabilities,
-            expectedGoalsHome: prematchResult.expectedGoalsHome,
-            expectedGoalsAway: prematchResult.expectedGoalsAway,
-            expectedGoalsTotal: prematchResult.expectedGoalsTotal,
-            expectedGoalsTotalMin: prematchResult.expectedGoalsTotalMin,
-            expectedGoalsTotalMax: prematchResult.expectedGoalsTotalMax,
-            over2Prob: prematchResult.over2Prob,
-            over3Prob: prematchResult.over3Prob,
-            under2Prob: prematchResult.under2Prob,
-            bttsProb: prematchResult.bttsProb,
-            weakerTeamScoringProb: prematchResult.weakerTeamScoringProb,
-            confidence: prematchResult.confidence,
-            predictedOutcome: prematchResult.predictedOutcome,
-            predictionId: prematchResult.predictionId,
-            modelVersion: prematchResult.modelVersion,
-            createdAt: prematchResult.createdAt,
-          }
-        : null,
-      livePrediction: liveResult
-        ? {
-            presentationKind: "LIVE_PROBABILITY" as const,
-            expectedGoalsAvailable:
-              liveResult.inputSnapshot.xgHome != null ||
-              liveResult.inputSnapshot.xgAway != null,
-            winProbabilities: liveResult.winProbabilities,
-            expectedGoalsHome: liveResult.expectedGoalsHome,
-            expectedGoalsAway: liveResult.expectedGoalsAway,
-            expectedGoalsTotal: liveResult.expectedGoalsTotal,
-            expectedGoalsTotalMin: liveResult.expectedGoalsTotalMin,
-            expectedGoalsTotalMax: liveResult.expectedGoalsTotalMax,
-            over2Prob: liveResult.over2Prob,
-            over3Prob: liveResult.over3Prob,
-            under2Prob: liveResult.under2Prob,
-            bttsProb: liveResult.bttsProb,
-            weakerTeamScoringProb: liveResult.weakerTeamScoringProb,
-            confidence: liveResult.confidence,
-            predictedOutcome: liveResult.predictedOutcome,
-            predictionId: liveResult.predictionId,
-            liveSnapshotId: liveResult.liveSnapshotId,
-            modelVersion: liveResult.modelVersion,
-            createdAt: liveResult.createdAt,
-          }
-        : null,
-    };
-
-    return NextResponse.json(body, { status: 200 });
+    return NextResponse.json(resolved.body, { status: 200 });
   } catch (error) {
     Sentry.captureException(error);
     console.error("[api/matches/live-probability-delta GET]", error);

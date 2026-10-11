@@ -67,6 +67,7 @@ export type FixtureReadinessArtifacts = {
   live?: {
     lastProviderSyncAt: string | null;
     stale: boolean;
+    pollingEnabled?: boolean;
   };
   historical?: {
     homeTeamState: string;

@@ -119,27 +119,11 @@ export async function ingestLiveFixtureTick(
   let fixturePayload: Awaited<ReturnType<typeof getFixtureByIdWithRaw>>;
   let events: Awaited<ReturnType<typeof getFixtureEventsEndpoint>>;
   let statistics: Awaited<ReturnType<typeof getFixtureStatisticsEndpoint>>;
+  let statisticsFetchFailed = false;
 
   try {
     await throttleProviderRequest();
     fixturePayload = await getFixtureByIdWithRaw(fixtureProviderId);
-    apiRequests += 1;
-
-    if (!fixturePayload) {
-      return {
-        ok: false,
-        fixtureProviderId,
-        reason: "fixture_not_found",
-        stats: { events: 0, statistics: 0, apiRequests },
-      };
-    }
-
-    await throttleProviderRequest();
-    events = await getFixtureEventsEndpoint(fixtureProviderId);
-    apiRequests += 1;
-
-    await throttleProviderRequest();
-    statistics = await getFixtureStatisticsEndpoint(fixtureProviderId);
     apiRequests += 1;
   } catch (error) {
     if (isOptionalProviderFailure(error)) {
@@ -155,6 +139,50 @@ export async function ingestLiveFixtureTick(
     }
 
     throw error;
+  }
+
+  if (!fixturePayload) {
+    return {
+      ok: false,
+      fixtureProviderId,
+      reason: "fixture_not_found",
+      stats: { events: 0, statistics: 0, apiRequests },
+    };
+  }
+
+  try {
+    await throttleProviderRequest();
+    events = await getFixtureEventsEndpoint(fixtureProviderId);
+    apiRequests += 1;
+  } catch (error) {
+    if (isOptionalProviderFailure(error)) {
+      console.warn(
+        `[ingest-live-tick] fixture ${fixtureProviderId} events fetch failed — ${formatApiFootballFailureReason(error)}`
+      );
+      return {
+        ok: false,
+        fixtureProviderId,
+        reason: "provider_unavailable",
+        stats: { events: 0, statistics: 0, apiRequests },
+      };
+    }
+    throw error;
+  }
+
+  try {
+    await throttleProviderRequest();
+    statistics = await getFixtureStatisticsEndpoint(fixtureProviderId);
+    apiRequests += 1;
+  } catch (error) {
+    statisticsFetchFailed = true;
+    if (isOptionalProviderFailure(error)) {
+      console.warn(
+        `[ingest-live-tick] fixture ${fixtureProviderId} statistics fetch failed — ${formatApiFootballFailureReason(error)}`
+      );
+      statistics = (await readFixtureStatisticsFromDb(fixtureProviderId)) ?? [];
+    } else {
+      throw error;
+    }
   }
 
   const syncedAt = new Date().toISOString();
@@ -219,13 +247,22 @@ export async function ingestLiveFixtureTick(
     eventsCount = await upsertFixtureEvents(client, fixtureUuid, events);
   }
 
-  if (changeFlags.statistics) {
+  if (changeFlags.statistics && !statisticsFetchFailed) {
     const statsResult = await upsertFixtureStatistics(
       client,
       fixtureUuid,
       statistics
     );
     statisticsCount = statsResult.upserted;
+  } else if (statisticsFetchFailed) {
+    console.info(
+      JSON.stringify({
+        scope: "live/ingest-live-tick",
+        message: "statistics_fetch_isolated_failure",
+        fixtureProviderId,
+        preservedPreviousStatistics: true,
+      })
+    );
   }
 
   await writeProviderCaches(fixtureProviderId, nextState, syncedAt);

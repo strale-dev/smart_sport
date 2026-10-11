@@ -19,6 +19,9 @@ const deltaWithLive = {
   live: { home: 0.55, draw: 0.25, away: 0.2 },
   liveKind: "LIVE_PROBABILITY",
   liveMinute: 67,
+  liveAvailable: true,
+  unavailableReason: null,
+  sourceSnapshot: null,
   prematchPrediction: {
     presentationKind: "PRE_MATCH_PROBABILITY",
     modelTier: "FIXTURE_SPECIFIC",
@@ -128,6 +131,32 @@ describe("resolveLivePhaseViewModel", () => {
     });
 
     expect(vm.state).toBe("loading");
+  });
+
+  it("clears liveWinProbabilities when delta marks live unavailable", () => {
+    const staleDelta = {
+      ...deltaWithLive,
+      live: { home: 0.93, draw: 0.05, away: 0.02 },
+      liveAvailable: false,
+      unavailableReason: "SCORE_MISMATCH" as const,
+    };
+
+    const vm = resolveLivePhaseViewModel({
+      fixtureId: 123,
+      fixtureStatus: "2H",
+      liveInsightData: undefined,
+      liveInsightError: null,
+      liveInsightPending: false,
+      historicalPrematchData: {
+        status: "MISS",
+        fixtureExternalId: 123,
+        prediction,
+      },
+      historicalPrematchPending: false,
+      liveDelta: staleDelta,
+    });
+
+    expect(vm.liveWinProbabilities).toBeNull();
   });
 
   it("prefers delta over error when live insight fetch fails", () => {

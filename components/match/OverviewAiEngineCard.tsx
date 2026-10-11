@@ -357,11 +357,28 @@ export function OverviewAiEngineCard({
   const prematch = deltaQuery.data?.prematch ?? null;
   const live = deltaQuery.data?.live ?? null;
   const liveInsight = prematchInsight.insight;
-  const livePrediction = prematchInsight.prediction;
+
+  const validatedLivePrediction =
+    deltaQuery.data?.liveAvailable !== false && deltaQuery.data?.livePrediction
+      ? {
+          winProbabilities: deltaQuery.data.livePrediction.winProbabilities,
+          predictedOutcome: deltaQuery.data.livePrediction.predictedOutcome,
+          confidence: deltaQuery.data.livePrediction.confidence,
+          expectedGoalsTotalMin:
+            deltaQuery.data.livePrediction.expectedGoalsTotalMin,
+          expectedGoalsTotalMax:
+            deltaQuery.data.livePrediction.expectedGoalsTotalMax,
+          expectedGoalsTotal: deltaQuery.data.livePrediction.expectedGoalsTotal,
+          over2Prob: deltaQuery.data.livePrediction.over2Prob,
+          over3Prob: deltaQuery.data.livePrediction.over3Prob,
+          weakerTeamScoringProb:
+            deltaQuery.data.livePrediction.weakerTeamScoringProb,
+        }
+      : null;
 
   const liveMetrics =
-    liveInsight && livePrediction
-      ? resolveInsightDisplayMetrics(liveInsight, livePrediction)
+    liveInsight && validatedLivePrediction
+      ? resolveInsightDisplayMetrics(liveInsight, validatedLivePrediction)
       : null;
 
   const hasLiveNarrative =

@@ -1,3 +1,5 @@
+import type { LivePredictionSourceSnapshot } from "@/lib/predictions/live-prediction-validation";
+import type { LivePredictionUnavailableReason } from "@/lib/predictions/live-prediction-validation";
 import type { ProbabilityPresentationKind } from "@/types/probability-presentation";
 import type {
   PrematchModelTier,
@@ -29,6 +31,9 @@ export type LiveProbabilityDeltaResponse = {
   live: WinProbabilities | null;
   liveKind: ProbabilityPresentationKind | null;
   liveMinute: number | null;
+  liveAvailable: boolean;
+  unavailableReason: LivePredictionUnavailableReason | null;
+  sourceSnapshot: LivePredictionSourceSnapshot | null;
   prematchPrediction: PrematchPredictionDeltaSnapshot | null;
   livePrediction: LivePredictionDeltaSnapshot | null;
 };

@@ -59,6 +59,8 @@ export type FixtureEvaluationInput = {
   } | null;
   currentContextHash: string | null;
   contextHashComputeFailed?: boolean;
+  /** When false during LIVE phase, live_sync is unavailable (not silently healthy). */
+  livePollingEnabled?: boolean;
 };
 
 function item(
@@ -241,15 +243,26 @@ export function buildReadinessItems(
   }
 
   if (live) {
-    const stale = isProviderSyncStale(input.lastProviderSyncAt, nowMs);
-    items.push(
-      item(
-        "live_sync",
-        stale ? "stale" : "not_yet_available",
-        undefined,
-        input.lastProviderSyncAt ?? undefined
-      )
-    );
+    if (input.livePollingEnabled === false) {
+      items.push(
+        item(
+          "live_sync",
+          "unavailable",
+          "live_polling_disabled",
+          new Date(nowMs).toISOString()
+        )
+      );
+    } else {
+      const stale = isProviderSyncStale(input.lastProviderSyncAt, nowMs);
+      items.push(
+        item(
+          "live_sync",
+          stale ? "stale" : "not_yet_available",
+          stale ? "provider_sync_stale" : undefined,
+          input.lastProviderSyncAt ?? undefined
+        )
+      );
+    }
   }
 
   if (finished) {
@@ -321,7 +334,9 @@ export function computeReadinessGates(
     (!input.prematchInsight || !insightMatches);
 
   const liveDataCurrent =
-    live && !isProviderSyncStale(input.lastProviderSyncAt, nowMs);
+    live &&
+    input.livePollingEnabled !== false &&
+    !isProviderSyncStale(input.lastProviderSyncAt, nowMs);
 
   const historicalDataSufficient =
     homeHist !== "DATA_INSUFFICIENT" && awayHist !== "DATA_INSUFFICIENT";
@@ -379,7 +394,10 @@ export function evaluateFixtureReadiness(
   if (isLiveFixtureStatus(input.status)) {
     artifacts.live = {
       lastProviderSyncAt: input.lastProviderSyncAt,
-      stale: isProviderSyncStale(input.lastProviderSyncAt, nowMs),
+      stale:
+        input.livePollingEnabled === false ||
+        isProviderSyncStale(input.lastProviderSyncAt, nowMs),
+      pollingEnabled: input.livePollingEnabled !== false,
     };
   }
 

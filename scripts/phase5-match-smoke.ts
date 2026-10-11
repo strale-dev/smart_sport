@@ -69,6 +69,9 @@ const deltaFixture: LiveProbabilityDeltaResponse = {
   live: { home: 0.58, draw: 0.22, away: 0.2 },
   liveKind: "LIVE_PROBABILITY",
   liveMinute: 67,
+  liveAvailable: true,
+  unavailableReason: null,
+  sourceSnapshot: null,
   prematchPrediction: null,
   livePrediction: null,
 };

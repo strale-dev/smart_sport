@@ -473,12 +473,30 @@ export async function updateLiveProbability(input: {
           inputSnapshot: features,
         });
 
-        return mapLivePredictionRowToResult(
+        const mapped = mapLivePredictionRowToResult(
           row,
           input.fixtureExternalId,
           modelVersion.version,
           false
         );
+
+        console.info(
+          JSON.stringify({
+            scope: "predictionService/live",
+            message: "live_probability_computed",
+            fixtureExternalId: input.fixtureExternalId,
+            scoreHome: features.scoreHome,
+            scoreAway: features.scoreAway,
+            minute: features.minute,
+            status: input.snapshot.status,
+            winProbabilities: output.winProbabilities,
+            liveSnapshotId: mapped.liveSnapshotId,
+            predictionId: mapped.predictionId,
+            createdAt: mapped.createdAt,
+          })
+        );
+
+        return mapped;
       }
     );
   } catch (error) {

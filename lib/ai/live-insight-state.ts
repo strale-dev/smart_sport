@@ -86,7 +86,10 @@ export type LivePhaseQueriesSnapshot = {
 
 function hasRenderablePartialState(input: LivePhaseQueriesSnapshot): boolean {
   const { liveDelta, historicalPrematchData } = input;
-  if (liveDelta?.live != null || liveDelta?.prematchPrediction != null) {
+  if (
+    (liveDelta?.liveAvailable !== false && liveDelta?.live != null) ||
+    liveDelta?.prematchPrediction != null
+  ) {
     return true;
   }
   if (historicalPrematchData != null) {
@@ -116,7 +119,8 @@ export function resolveLivePhaseViewModel(
     liveDelta,
   } = input;
 
-  const liveWinProbabilities = liveDelta?.live ?? null;
+  const liveWinProbabilities =
+    liveDelta?.liveAvailable === false ? null : (liveDelta?.live ?? null);
   const empty = () => ({
     ...createEmptyPrematchInsightViewModel(fixtureStatus),
     liveWinProbabilities,
@@ -134,13 +138,22 @@ export function resolveLivePhaseViewModel(
       liveInsightData,
       fixtureStatus
     );
+    const prediction =
+      liveInsightData.predictionStale || liveDelta?.liveAvailable === false
+        ? null
+        : liveInsightData.prediction;
     return {
       ...empty(),
       ...mapped,
-      prediction: liveInsightData.prediction,
+      prediction,
       limit: null,
       used: null,
-      fallbackMessage: null,
+      fallbackMessage:
+        liveDelta?.liveAvailable === false && liveDelta.unavailableReason
+          ? `Live model unavailable (${liveDelta.unavailableReason}). Pre-match reference below when available.`
+          : liveInsightData.predictionStale
+            ? LIVE_UPDATES_HINT
+            : null,
       liveWinProbabilities,
     };
   }

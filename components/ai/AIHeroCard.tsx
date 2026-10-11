@@ -57,7 +57,17 @@ export function AIHeroCard({
   isRefreshing = false,
 }: AIHeroCardProps) {
   const metrics = resolveInsightDisplayMetrics(insight, prediction);
-  const showModelStripe = prediction != null;
+  const liveBarProbabilities =
+    insightMode === "live" && liveWinProbabilities
+      ? liveWinProbabilities
+      : metrics.winProbabilities;
+  const liveBarOutcome =
+    insightMode === "live" && liveWinProbabilities
+      ? predictedOutcomeFromProbabilities(liveWinProbabilities)
+      : metrics.winOutcome;
+  const showModelStripe =
+    prediction != null ||
+    (insightMode === "live" && liveWinProbabilities != null);
 
   return (
     <AIHeroShell variant="default">
@@ -100,8 +110,8 @@ export function AIHeroCard({
         {showModelStripe ? (
           <AIHeroMotionSection motionKey={`${insight.id}-probs`}>
             <WinProbabilitiesBar
-              probabilities={metrics.winProbabilities}
-              winOutcome={metrics.winOutcome}
+              probabilities={liveBarProbabilities}
+              winOutcome={liveBarOutcome}
               homeTeam={homeTeam}
               awayTeam={awayTeam}
             />
