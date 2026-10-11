@@ -41,6 +41,7 @@ type AIHeroCardProps = {
   awayTeam: Pick<TeamRef, "name" | "code">;
   liveWinProbabilities?: WinProbabilities | null;
   supplementalMessage?: string | null;
+  generationFailureMessage?: string | null;
   contextStale?: boolean;
   isRefreshing?: boolean;
 };
@@ -53,6 +54,7 @@ export function AIHeroCard({
   awayTeam,
   liveWinProbabilities = null,
   supplementalMessage = null,
+  generationFailureMessage = null,
   contextStale = false,
   isRefreshing = false,
 }: AIHeroCardProps) {
@@ -95,6 +97,12 @@ export function AIHeroCard({
           {contextStale && isRefreshing ? (
             <Badge variant="outline">Updating for latest match data…</Badge>
           ) : null}
+          {generationFailureMessage ? (
+            <Badge variant="destructive">Update failed</Badge>
+          ) : null}
+          {contextStale && !isRefreshing ? (
+            <Badge variant="outline">Based on earlier match data</Badge>
+          ) : null}
         </div>
         <AIHeroMotionSection motionKey={insight.id}>
           <CardDescription className="text-foreground/90 max-w-3xl text-base">
@@ -132,6 +140,11 @@ export function AIHeroCard({
           </div>
         ) : null}
 
+        {generationFailureMessage ? (
+          <p className="text-muted-foreground text-sm">
+            {generationFailureMessage}
+          </p>
+        ) : null}
         {supplementalMessage ? (
           <p className="text-muted-foreground text-sm">{supplementalMessage}</p>
         ) : null}

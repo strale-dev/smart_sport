@@ -46,6 +46,14 @@ import type { FixtureReadinessSnapshot } from "@/lib/fixtures/readiness/types";
 import { fetchLiveProbabilityDelta } from "@/lib/live/live-probability-delta";
 import { predictionFromDeltaSnapshot } from "@/lib/live/live-insight-display";
 import { liveKeys } from "@/lib/live/query-keys";
+import { resolveCanonicalPrematchInsightState } from "@/lib/ai/canonical-insight-state";
+import {
+  describeMatchAiUiState,
+  resolveMatchAiUiState,
+  type MatchAiUiCopy,
+  type MatchAiUiState,
+} from "@/lib/ai/match-ai-ui-state";
+import type { LiveProbabilityDeltaResponse } from "@/lib/live/live-probability-delta";
 import { captureClientEvent } from "@/lib/posthog/client";
 import { POSTHOG_EVENTS } from "@/lib/posthog/events";
 
@@ -60,11 +68,14 @@ type AIInsightProviderProps = {
   children: ReactNode;
 };
 
-type AIInsightContextValue = PrematchInsightViewModel & {
+export type AIInsightContextValue = PrematchInsightViewModel & {
   displayExperience: PrematchDisplayExperience;
   generate: () => Promise<void>;
   refetch: () => Promise<void>;
   isGenerating: boolean;
+  aiUiState: MatchAiUiState;
+  aiUiCopy: MatchAiUiCopy;
+  liveDelta: LiveProbabilityDeltaResponse | undefined;
 };
 
 const AIInsightContext = createContext<AIInsightContextValue | null>(null);
@@ -290,6 +301,94 @@ export function AIInsightProvider({
   ]);
 
   const viewModel = liveViewModel ?? prematchViewModel;
+
+  const liveDelta = liveDeltaQuery.data;
+
+  const canonicalPrematch = useMemo(() => {
+    if (isLivePhase || isGuest || !isAnalyzable) {
+      return null;
+    }
+    return resolveCanonicalPrematchInsightState({
+      response: prematchInsightQuery.data ?? null,
+      hookState: prematchViewModel.state,
+      fixturePhase: prematchViewModel.fixturePhase,
+      isGenerating,
+      readinessLoading: readinessQuery.isPending,
+      aiGenerationAllowed,
+      aiContextReady,
+    });
+  }, [
+    aiContextReady,
+    aiGenerationAllowed,
+    isAnalyzable,
+    isGuest,
+    isGenerating,
+    isLivePhase,
+    prematchInsightQuery.data,
+    prematchViewModel.fixturePhase,
+    prematchViewModel.state,
+    readinessQuery.isPending,
+  ]);
+
+  const aiUiState = useMemo(
+    () =>
+      resolveMatchAiUiState({
+        fixturePhase: viewModel.fixturePhase,
+        hookState: viewModel.state,
+        isGuest,
+        isGenerating,
+        hasInsight: viewModel.insight != null,
+        hasPrediction: viewModel.prediction != null,
+        hasLiveWinProbabilities: viewModel.liveWinProbabilities != null,
+        canonical: canonicalPrematch,
+        liveInsightStatus: liveInsightQuery.data?.status ?? null,
+        liveAvailable: isLivePhase ? (liveDelta?.liveAvailable ?? null) : null,
+        liveUnavailableReason: liveDelta?.unavailableReason ?? null,
+        networkErrorMessage: viewModel.errorMessage,
+        dailyLimitReached: viewModel.state === "limit",
+      }),
+    [
+      canonicalPrematch,
+      isGuest,
+      isGenerating,
+      isLivePhase,
+      liveDelta?.liveAvailable,
+      liveDelta?.unavailableReason,
+      liveInsightQuery.data?.status,
+      viewModel.errorMessage,
+      viewModel.fixturePhase,
+      viewModel.insight,
+      viewModel.liveWinProbabilities,
+      viewModel.prediction,
+      viewModel.state,
+    ]
+  );
+
+  const aiUiCopy = useMemo(
+    () =>
+      describeMatchAiUiState({
+        state: aiUiState,
+        fixturePhase: viewModel.fixturePhase,
+        reasonCode: canonicalPrematch?.reasonCode ?? null,
+        liveUnavailableReason: liveDelta?.unavailableReason ?? null,
+        hasPrediction: viewModel.prediction != null,
+        hasLiveWinProbabilities: viewModel.liveWinProbabilities != null,
+        generationFailureMessage: viewModel.generationFailureMessage,
+        contextStale: viewModel.contextStale,
+        networkErrorMessage: viewModel.errorMessage,
+      }),
+    [
+      aiUiState,
+      canonicalPrematch?.reasonCode,
+      liveDelta?.unavailableReason,
+      viewModel.contextStale,
+      viewModel.errorMessage,
+      viewModel.fixturePhase,
+      viewModel.generationFailureMessage,
+      viewModel.liveWinProbabilities,
+      viewModel.prediction,
+    ]
+  );
 
   const displayExperience = useMemo(
     () =>
@@ -578,8 +677,20 @@ export function AIInsightProvider({
       generate,
       refetch,
       isGenerating,
+      aiUiState,
+      aiUiCopy,
+      liveDelta,
     }),
-    [viewModel, displayExperience, generate, refetch, isGenerating]
+    [
+      viewModel,
+      displayExperience,
+      generate,
+      refetch,
+      isGenerating,
+      aiUiState,
+      aiUiCopy,
+      liveDelta,
+    ]
   );
 
   return (

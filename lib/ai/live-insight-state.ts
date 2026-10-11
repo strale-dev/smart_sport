@@ -11,6 +11,7 @@ import {
   type PrematchInsightViewModel,
 } from "@/lib/ai/prematch-insight-state";
 import type { PrematchInsightMode, StoredAIInsight } from "@/lib/ai/schemas";
+import { formatLivePredictionUnavailableReason } from "@/lib/ai/match-ai-ui-state";
 import { resolveLivePhasePrediction } from "@/lib/live/live-insight-display";
 import type { LiveProbabilityDeltaResponse } from "@/lib/live/live-probability-delta";
 
@@ -150,7 +151,7 @@ export function resolveLivePhaseViewModel(
       used: null,
       fallbackMessage:
         liveDelta?.liveAvailable === false && liveDelta.unavailableReason
-          ? `Live model unavailable (${liveDelta.unavailableReason}). Pre-match reference below when available.`
+          ? `${formatLivePredictionUnavailableReason(liveDelta.unavailableReason)} Pre-match reference below when available.`
           : liveInsightData.predictionStale
             ? LIVE_UPDATES_HINT
             : null,
