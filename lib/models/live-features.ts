@@ -14,7 +14,11 @@ function findTeamStat(snapshot: LiveDetectorSnapshot, teamExternalId: number) {
 export function buildLiveFeaturesFromSnapshot(
   snapshot: LiveDetectorSnapshot,
   anchorWinProbabilities: WinProbabilities
-): LiveFeatureVector {
+): LiveFeatureVector | null {
+  if (snapshot.score.home == null || snapshot.score.away == null) {
+    return null;
+  }
+
   const homeStats = findTeamStat(snapshot, snapshot.homeTeamExternalId);
   const awayStats = findTeamStat(snapshot, snapshot.awayTeamExternalId);
 
@@ -28,8 +32,8 @@ export function buildLiveFeaturesFromSnapshot(
     fixtureExternalId: snapshot.fixtureProviderId,
     asOf: snapshot.capturedAt,
     minute: snapshot.minute,
-    scoreHome: snapshot.score.home ?? 0,
-    scoreAway: snapshot.score.away ?? 0,
+    scoreHome: snapshot.score.home,
+    scoreAway: snapshot.score.away,
     redCardsHome: homeStats?.redCards ?? 0,
     redCardsAway: awayStats?.redCards ?? 0,
     shotsOnTargetHome: null,

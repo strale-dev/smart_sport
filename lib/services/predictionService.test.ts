@@ -359,6 +359,19 @@ describe("predictionService", () => {
     expect(insertPrematchPrediction).not.toHaveBeenCalled();
   });
 
+  it("does not persist prematch when historical depth is insufficient", async () => {
+    evaluateFixtureReadinessForProvider.mockResolvedValue({
+      gates: { predictionReady: false, aiGenerationAllowed: false },
+      items: [{ key: "historical_depth", state: "insufficient" }],
+    });
+
+    const { getOrComputePrematch } =
+      await import("@/lib/services/predictionService");
+
+    await expect(getOrComputePrematch(123)).rejects.toThrow(/not ready/);
+    expect(insertPrematchPrediction).not.toHaveBeenCalled();
+  });
+
   it("treats missing features as not fresh for cache (FR-02)", async () => {
     resolveFixtureUuidByExternalId.mockResolvedValue({
       id: "fixture-uuid",

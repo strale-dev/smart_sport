@@ -6,7 +6,10 @@ import {
 } from "@/lib/competitions/capabilities";
 import { findCompetition } from "@/lib/competitions/index";
 import { createCronIngestBudget } from "@/lib/ingestion/cron-budget";
-import { getIngestionConfig } from "@/lib/ingestion/config";
+import {
+  getIngestionConfig,
+  resolveMatchDetailsKickoffCutoff,
+} from "@/lib/ingestion/config";
 import { ingestLineupsFromProvider } from "@/lib/ingestion/ingest-lineups";
 import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
 import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
@@ -57,7 +60,7 @@ export async function syncMatchDetails(): Promise<SyncMatchDetailsResult> {
   const config = getIngestionConfig();
   const client = createAdminClient();
   const batchSize = getMatchDetailsSyncBatch();
-  const cutoff = new Date(Date.now() - 48 * 3_600_000).toISOString();
+  const cutoff = resolveMatchDetailsKickoffCutoff();
 
   const detailLeagueProviderIds = config.leagueProviderIds.filter((id) =>
     competitionNeedsMatchDetailSync(id)

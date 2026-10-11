@@ -19,6 +19,7 @@ import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
 import { ingestFixtureFromRaw } from "@/lib/ingestion/upsert";
 import { getRedis } from "@/lib/redis/client";
 import { providerFixturesDateKey } from "@/lib/redis/keys";
+import { emitLivePollingDisabledWhenLiveFixturesExist } from "@/lib/live/live-polling-disabled-signal";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Fixture } from "@/types/domain";
 
@@ -152,6 +153,10 @@ export async function syncFixturesToday(
       );
     }
   }
+
+  await emitLivePollingDisabledWhenLiveFixturesExist({
+    jobName: "sync-fixtures-today",
+  });
 
   const outcome = resolveCronOutcome({
     failedCount: fixtureErrors,

@@ -1,4 +1,5 @@
 import { isLivePollingEnabled } from "@/lib/env";
+import { reconcileStuckIngestionSyncRuns } from "@/lib/ingestion/ingestion-sync-state";
 import {
   listReapMatchFixtureIds,
   shouldContinueFixturePoll,
@@ -35,6 +36,7 @@ export type ReapStaleLocksResult = {
     followNotifyCandidates: number;
     followNotifyScheduled: number;
     followNotifySkippedAtCap: number;
+    reconciledSyncRuns: number;
   };
 };
 
@@ -47,7 +49,11 @@ export async function reapStaleLiveLocks(): Promise<ReapStaleLocksResult> {
     followNotifyCandidates: 0,
     followNotifyScheduled: 0,
     followNotifySkippedAtCap: 0,
+    reconciledSyncRuns: 0,
   };
+
+  const { reconciledCount } = await reconcileStuckIngestionSyncRuns();
+  stats.reconciledSyncRuns = reconciledCount;
 
   if (!isLivePollingEnabled()) {
     return {

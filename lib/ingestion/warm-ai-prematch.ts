@@ -6,6 +6,7 @@ import { generatePrematchInsight } from "@/lib/services/aiService";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
 import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
+import { evaluateAndPersistFixtureReadiness } from "@/lib/fixtures/readiness/persist";
 import type { FixtureReadinessSnapshot } from "@/lib/fixtures/readiness";
 
 export type WarmAiPrematchScope = "daily" | "imminent" | "backfill";
@@ -55,9 +56,40 @@ type WarmFixtureRow = {
   kickoff_at: string;
 };
 
-function isAiGenerationAllowedFromRow(row: WarmFixtureRow): boolean {
+export function isAiGenerationAllowedFromRow(row: WarmFixtureRow): boolean {
   const gates = row.fixture_readiness?.gates;
   return gates?.aiGenerationAllowed === true;
+}
+
+export async function evaluateNullWarmReadinessRows(
+  rows: WarmFixtureRow[],
+  budget: number
+): Promise<{ rows: WarmFixtureRow[]; evaluated: number }> {
+  const updated = [...rows];
+  let evaluated = 0;
+
+  for (
+    let index = 0;
+    index < updated.length && evaluated < budget;
+    index += 1
+  ) {
+    if (updated[index].fixture_readiness != null) {
+      continue;
+    }
+
+    const snapshot = await evaluateAndPersistFixtureReadiness({
+      providerId: updated[index].provider_id,
+    });
+    evaluated += 1;
+    if (snapshot) {
+      updated[index] = {
+        ...updated[index],
+        fixture_readiness: snapshot,
+      };
+    }
+  }
+
+  return { rows: updated, evaluated };
 }
 
 function sortWarmCandidates(rows: WarmFixtureRow[]): WarmFixtureRow[] {
@@ -124,9 +156,12 @@ async function loadBackfillFixturesWithoutInsight(
 
 async function loadFixturesInScope(
   scope: WarmAiPrematchScope
-): Promise<number[]> {
+): Promise<{ providerIds: number[]; readinessEvaluated: number }> {
   if (scope === "backfill") {
-    return loadBackfillFixturesWithoutInsight(BACKFILL_MAX_FIXTURES);
+    const providerIds = await loadBackfillFixturesWithoutInsight(
+      BACKFILL_MAX_FIXTURES
+    );
+    return { providerIds, readinessEvaluated: 0 };
   }
 
   const client = createAdminClient();
@@ -149,11 +184,20 @@ async function loadFixturesInScope(
     );
   }
 
-  const sorted = sortWarmCandidates((data ?? []) as WarmFixtureRow[]);
-  return sorted
+  const readinessBudget = Math.min(limit, 10);
+  const { rows: withReadiness, evaluated } =
+    await evaluateNullWarmReadinessRows(
+      (data ?? []) as WarmFixtureRow[],
+      readinessBudget
+    );
+
+  const sorted = sortWarmCandidates(withReadiness);
+  const providerIds = sorted
     .filter(isAiGenerationAllowedFromRow)
     .slice(0, limit)
     .map((row) => row.provider_id);
+
+  return { providerIds, readinessEvaluated: evaluated };
 }
 
 export async function warmAiPrematchInsights(
@@ -165,6 +209,7 @@ export async function warmAiPrematchInsights(
   stats: {
     scope: WarmAiPrematchScope;
     candidates: number;
+    readinessEvaluated: number;
     processed: number;
     stoppedEarly: boolean;
     generated: number;
@@ -174,7 +219,8 @@ export async function warmAiPrematchInsights(
     errors: number;
   };
 }> {
-  const fixtureIds = await loadFixturesInScope(scope);
+  const { providerIds: fixtureIds, readinessEvaluated } =
+    await loadFixturesInScope(scope);
 
   let generated = 0;
   let cached = 0;
@@ -246,6 +292,7 @@ export async function warmAiPrematchInsights(
   const stats = {
     scope,
     candidates: fixtureIds.length,
+    readinessEvaluated,
     processed,
     stoppedEarly,
     generated,

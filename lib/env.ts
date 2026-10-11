@@ -262,6 +262,7 @@ export function isApiFootballIngestOnly(
   return parsePublicEnv(source).NEXT_PUBLIC_APP_ENV === "development";
 }
 
+/** Live polling is opt-in: unset/false → off. Production must set LIVE_POLLING_ENABLED=true on Vercel. */
 export function isLivePollingEnabled(
   source: Record<string, string | undefined> = process.env
 ): boolean {

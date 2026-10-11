@@ -449,6 +449,9 @@ export async function updateLiveProbability(input: {
           input.snapshot,
           anchorInsideLock
         );
+        if (!features) {
+          return null;
+        }
         const output = scoreLiveFromFeatures(features);
 
         const row = await insertLivePrediction({
