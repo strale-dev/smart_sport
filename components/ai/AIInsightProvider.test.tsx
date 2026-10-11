@@ -1,8 +1,14 @@
 // @vitest-environment happy-dom
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, renderHook, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import {
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
+import { useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -363,6 +369,80 @@ describe("AIInsightProvider data flow", () => {
       expect(counts.deltaGet).toBe(1);
     });
     expect(counts.prematchGet).toBeGreaterThanOrEqual(1);
+  });
+
+  it("live auth: exactly one prematch-shaped GET for historical + deduped network", async () => {
+    const { counts } = createFetchRouter({});
+    renderProvider({ fixtureStatus: "1H" });
+    await waitFor(() => {
+      expect(counts.liveGet).toBe(1);
+      expect(counts.deltaGet).toBe(1);
+      expect(counts.prematchGet).toBe(1);
+    });
+    expect(counts.readinessGet).toBe(0);
+    expect(counts.prematchPost).toBe(0);
+  });
+
+  it("transitions to live phase without extra readiness fetches when live context updates", async () => {
+    const { counts } = createFetchRouter({});
+    liveContextRef.value = null;
+
+    function LivePhaseDriver({ children }: { children: ReactNode }) {
+      const [, setTick] = useState(0);
+      return (
+        <>
+          <button
+            type="button"
+            data-testid="go-live"
+            onClick={() => {
+              liveContextRef.value = {
+                fixture: { status: "1H", externalId: FIXTURE_ID },
+                isLive: true,
+              };
+              setTick((t) => t + 1);
+            }}
+          />
+          {children}
+        </>
+      );
+    }
+
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false } },
+          })
+        }
+      >
+        <LivePhaseDriver>
+          <AIInsightProvider
+            fixtureId={FIXTURE_ID}
+            fixtureStatus="NS"
+            kickoffAt={KICKOFF_SOON}
+            isGuest={false}
+          >
+            <Probe />
+          </AIInsightProvider>
+        </LivePhaseDriver>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(counts.prematchGet).toBe(1);
+      expect(counts.readinessGet).toBe(1);
+    });
+
+    fireEvent.click(screen.getByTestId("go-live"));
+
+    await waitFor(() => {
+      expect(counts.liveGet).toBe(1);
+      expect(counts.deltaGet).toBe(1);
+    });
+
+    expect(counts.readinessGet).toBe(1);
+    expect(counts.prematchPost).toBe(0);
+    expect(counts.prematchGet).toBeLessThanOrEqual(2);
   });
 
   it("uses live context status when SSR status is stale (NS → live)", async () => {

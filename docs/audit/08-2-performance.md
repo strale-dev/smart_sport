@@ -124,15 +124,17 @@ Global `QueryProvider` still sets `staleTime: 15s` and `refetchOnWindowFocus: tr
 
 ## 5. Tests
 
-| Scenario                                     | File                                       |
-| -------------------------------------------- | ------------------------------------------ |
-| Prematch/live/guest/finished fetch counts    | `components/ai/AIInsightProvider.test.tsx` |
-| SSR stale status + live context              | Same                                       |
-| Fixture cache isolation                      | Same                                       |
-| GET failure non-blocking                     | Same                                       |
-| Actions context stable on delta cache update | Same                                       |
-| Broadcast noop vs meaningful invalidation    | `hooks/useLiveMatch.invalidation.test.tsx` |
-| Regression suite                             | `npm.cmd run test:ci`                      |
+| Scenario                                        | File                                       |
+| ----------------------------------------------- | ------------------------------------------ |
+| Prematch/live/guest/finished fetch counts       | `components/ai/AIInsightProvider.test.tsx` |
+| SSR stale status + live context                 | Same                                       |
+| Live phase single deduped prematch-shaped GET   | Same                                       |
+| Live context transition without extra readiness | Same                                       |
+| Fixture cache isolation                         | Same                                       |
+| GET failure non-blocking                        | Same                                       |
+| Actions context stable on delta cache update    | Same                                       |
+| Broadcast noop vs meaningful invalidation       | `hooks/useLiveMatch.invalidation.test.tsx` |
+| Regression suite                                | `npm.cmd run test:ci`                      |
 
 ---
 
@@ -147,11 +149,11 @@ Global `QueryProvider` still sets `staleTime: 15s` and `refetchOnWindowFocus: tr
 
 ## 7. Verification
 
-| Command                 | Result (2026-10-11)                  |
-| ----------------------- | ------------------------------------ |
-| `npm.cmd run test:ci`   | **867 passed** (202 files)           |
-| `npm.cmd run typecheck` | Passed                               |
-| `npm.cmd run lint`      | 0 errors, 15 warnings (pre-existing) |
+| Command                 | Result (2026-10-11, plan verification) |
+| ----------------------- | -------------------------------------- |
+| `npm.cmd run test:ci`   | **869 passed** (202 files)             |
+| `npm.cmd run typecheck` | Passed                                 |
+| `npm.cmd run lint`      | 0 errors, 13 warnings (pre-existing)   |
 
 ---
 
