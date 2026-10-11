@@ -35,6 +35,14 @@ import {
   resolveFixturePhase,
 } from "@/lib/ai/status-map";
 import type { PrematchInsightResponse } from "@/lib/ai/schemas";
+import {
+  buildAutoEnsureKey,
+  recordAutoEnsureOutcome,
+  shouldStartAutoEnsure,
+  type AutoEnsurePostOutcome,
+} from "@/lib/ai/prematch-auto-ensure";
+import { parseFixtureReadinessSnapshot } from "@/lib/fixtures/readiness/gates";
+import type { FixtureReadinessSnapshot } from "@/lib/fixtures/readiness/types";
 import { fetchLiveProbabilityDelta } from "@/lib/live/live-probability-delta";
 import { predictionFromDeltaSnapshot } from "@/lib/live/live-insight-display";
 import { liveKeys } from "@/lib/live/query-keys";
@@ -93,7 +101,8 @@ export function AIInsightProvider({
   const [manualErrorMessage, setManualErrorMessage] = useState<string | null>(
     null
   );
-  const ensureAttemptedRef = useRef(false);
+  const lastLockedEnsureKeyRef = useRef<string | null>(null);
+  const lastPostOutcomeRef = useRef<AutoEnsurePostOutcome>(null);
   const ensureInFlightRef = useRef(false);
   const prevShouldAutoGenerateRef = useRef(false);
 
@@ -137,17 +146,45 @@ export function AIInsightProvider({
         return null;
       }
       const body = (await response.json()) as {
-        readiness?: { gates?: { aiGenerationAllowed?: boolean } };
+        readiness?: unknown;
       };
-      return body.readiness ?? null;
+      return parseFixtureReadinessSnapshot(body.readiness);
     },
     enabled: prematchQueryEnabled,
     staleTime: AI_READ_STALE_MS,
     refetchOnWindowFocus: false,
   });
 
+  const readinessSnapshot: FixtureReadinessSnapshot | null =
+    readinessQuery.data ?? null;
   const aiGenerationAllowed =
-    readinessQuery.data?.gates?.aiGenerationAllowed === true;
+    readinessSnapshot?.gates?.aiGenerationAllowed === true;
+  const aiContextReady = readinessSnapshot?.gates?.aiContextReady === true;
+
+  const autoEnsureKey = useMemo(() => {
+    const insightData = prematchInsightQuery.data;
+    const fingerprintFromInsight =
+      insightData?.status === "MISS" || insightData?.status === "OK"
+        ? insightData.prediction?.inputSnapshotFingerprint
+        : undefined;
+
+    return buildAutoEnsureKey({
+      fixtureId,
+      predictionFingerprint:
+        readinessSnapshot?.artifacts?.prediction?.fingerprint ??
+        fingerprintFromInsight,
+      contextHash: readinessSnapshot?.artifacts?.aiPrematch?.contextHash,
+      aiGenerationAllowed,
+      aiContextReady,
+    });
+  }, [
+    aiContextReady,
+    aiGenerationAllowed,
+    fixtureId,
+    prematchInsightQuery.data,
+    readinessSnapshot?.artifacts?.aiPrematch?.contextHash,
+    readinessSnapshot?.artifacts?.prediction?.fingerprint,
+  ]);
 
   const liveViewModel = useMemo((): PrematchInsightViewModel | null => {
     if (!isLivePhase) {
@@ -297,28 +334,38 @@ export function AIInsightProvider({
         { status: "MISS" }
       >["prediction"]
     ) => {
-      if (ensureAttemptedRef.current || ensureInFlightRef.current) {
+      if (
+        !shouldStartAutoEnsure({
+          inFlight: ensureInFlightRef.current,
+          lastLockedKey: lastLockedEnsureKeyRef.current,
+          currentKey: autoEnsureKey,
+          lastPostOutcome: lastPostOutcomeRef.current,
+        })
+      ) {
         return;
       }
 
-      ensureAttemptedRef.current = true;
       ensureInFlightRef.current = true;
       setIsGenerating(true);
 
       try {
         const response = await fetchPrematchInsightPost(fixtureId);
+        lastPostOutcomeRef.current = response.status;
+        lastLockedEnsureKeyRef.current = recordAutoEnsureOutcome({
+          currentKey: autoEnsureKey,
+          postOutcome: response.status,
+        });
         applyPrematchQueryData(response);
       } catch (error) {
+        lastPostOutcomeRef.current = "NETWORK_ERROR";
+        lastLockedEnsureKeyRef.current = recordAutoEnsureOutcome({
+          currentKey: autoEnsureKey,
+          postOutcome: "NETWORK_ERROR",
+        });
         const message =
           error instanceof Error ? error.message : "Failed to generate insight";
-        if (prediction) {
-          applyPrematchQueryData({
-            status: "FALLBACK",
-            fixtureExternalId: fixtureId,
-            prediction,
-            message,
-          });
-        } else {
+        void prematchInsightQuery.refetch();
+        if (!prediction) {
           setManualErrorMessage(message);
         }
       } finally {
@@ -326,7 +373,7 @@ export function AIInsightProvider({
         ensureInFlightRef.current = false;
       }
     },
-    [applyPrematchQueryData, fixtureId]
+    [applyPrematchQueryData, autoEnsureKey, fixtureId, prematchInsightQuery]
   );
 
   useEffect(() => {
@@ -334,7 +381,8 @@ export function AIInsightProvider({
     const next = displayExperience.shouldAutoGenerateNarrative;
     prevShouldAutoGenerateRef.current = next;
     if (!prev && next) {
-      ensureAttemptedRef.current = false;
+      lastLockedEnsureKeyRef.current = null;
+      lastPostOutcomeRef.current = null;
     }
   }, [displayExperience.shouldAutoGenerateNarrative]);
 
@@ -386,7 +434,8 @@ export function AIInsightProvider({
       return;
     }
 
-    ensureAttemptedRef.current = false;
+    lastLockedEnsureKeyRef.current = null;
+    lastPostOutcomeRef.current = null;
     const timer = window.setTimeout(() => {
       void ensurePrematchInsight(data.prediction ?? undefined);
     }, 0);
@@ -443,7 +492,8 @@ export function AIInsightProvider({
       return;
     }
 
-    ensureAttemptedRef.current = false;
+    lastLockedEnsureKeyRef.current = null;
+    lastPostOutcomeRef.current = null;
     setIsGenerating(false);
 
     if (isLivePhase) {

@@ -35,6 +35,8 @@ export type PrematchInsightViewModel = {
   liveWinProbabilities: WinProbabilities | null;
   /** Shown narrative may be from an older context_hash while refresh runs. */
   contextStale: boolean;
+  /** Latest generation attempt failed while showing a (possibly stale) narrative. */
+  generationFailureMessage: string | null;
 };
 
 export function resolveInitialPrematchInsightState(input: {
@@ -69,9 +71,10 @@ export function mapPrematchInsightResponseToViewModel(
         limit: null,
         used: null,
         errorMessage: null,
-        fallbackMessage: null,
+        fallbackMessage: response.generationFailure?.message ?? null,
         liveWinProbabilities: null,
         contextStale: response.contextStale === true,
+        generationFailureMessage: response.generationFailure?.message ?? null,
       };
     case "MISS":
       return {
@@ -86,12 +89,13 @@ export function mapPrematchInsightResponseToViewModel(
         fallbackMessage: null,
         liveWinProbabilities: null,
         contextStale: false,
+        generationFailureMessage: null,
       };
     case "UNAVAILABLE":
       return {
         state: "unavailable",
         insight: null,
-        prediction: null,
+        prediction: response.prediction ?? null,
         insightMode: null,
         fixturePhase,
         limit: null,
@@ -100,6 +104,22 @@ export function mapPrematchInsightResponseToViewModel(
         fallbackMessage: null,
         liveWinProbabilities: null,
         contextStale: false,
+        generationFailureMessage: null,
+      };
+    case "GENERATION_FAILED":
+      return {
+        state: "fallback",
+        insight: null,
+        prediction: response.prediction,
+        insightMode: null,
+        fixturePhase,
+        limit: null,
+        used: null,
+        errorMessage: null,
+        fallbackMessage: response.message,
+        liveWinProbabilities: null,
+        contextStale: false,
+        generationFailureMessage: response.message,
       };
     case "FALLBACK":
       return {
@@ -114,6 +134,7 @@ export function mapPrematchInsightResponseToViewModel(
         fallbackMessage: response.message,
         liveWinProbabilities: null,
         contextStale: false,
+        generationFailureMessage: response.message,
       };
     case "AI_LIMIT_REACHED":
       return {
@@ -128,6 +149,7 @@ export function mapPrematchInsightResponseToViewModel(
         fallbackMessage: null,
         liveWinProbabilities: null,
         contextStale: false,
+        generationFailureMessage: null,
       };
     case "GUEST_FORBIDDEN":
       return {
@@ -142,6 +164,7 @@ export function mapPrematchInsightResponseToViewModel(
         fallbackMessage: null,
         liveWinProbabilities: null,
         contextStale: false,
+        generationFailureMessage: null,
       };
     default:
       return {
@@ -156,6 +179,7 @@ export function mapPrematchInsightResponseToViewModel(
         fallbackMessage: null,
         liveWinProbabilities: null,
         contextStale: false,
+        generationFailureMessage: null,
       };
   }
 }
@@ -175,5 +199,6 @@ export function createEmptyPrematchInsightViewModel(
     fallbackMessage: null,
     liveWinProbabilities: null,
     contextStale: false,
+    generationFailureMessage: null,
   };
 }

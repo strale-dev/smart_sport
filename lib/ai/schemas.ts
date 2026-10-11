@@ -257,6 +257,28 @@ export type LiveInsightResponse =
       status: "GUEST_FORBIDDEN";
     };
 
+export type PrematchUnavailableReason =
+  | "NO_STORED_INSIGHT"
+  | "FIXTURE_NOT_ANALYZABLE"
+  | "GENERATION_NOT_ALLOWED"
+  | "STALE_PREMATCH_CONTEXT"
+  | "AI_CONTEXT_NOT_READY"
+  | "READINESS_NOT_MET";
+
+export type PrematchGenerationFailureCode =
+  | "OPENAI_NOT_CONFIGURED"
+  | "OPENAI_TIMEOUT"
+  | "OPENAI_PROVIDER_ERROR"
+  | "MALFORMED_OUTPUT"
+  | "RATE_LIMIT"
+  | "DAILY_LIMIT"
+  | "GENERATION_CONCURRENT";
+
+export type PrematchGenerationFailureInfo = {
+  code: PrematchGenerationFailureCode;
+  message: string;
+};
+
 export type PrematchInsightResponse =
   | {
       status: "OK";
@@ -266,21 +288,33 @@ export type PrematchInsightResponse =
       insightMode: PrematchInsightMode;
       /** True when a newer context_hash exists but an older stored narrative is shown. */
       contextStale?: boolean;
+      /** Set when refresh for current hash failed but an older narrative is shown. */
+      generationFailure?: PrematchGenerationFailureInfo;
+      canonicalState?: "AVAILABLE";
+      reasonCode?: string;
     }
   | {
       status: "MISS";
       fixtureExternalId: number;
       prediction?: import("@/types/prediction").PrematchPredictionResult;
+      canonicalState?: "GENERATION_PENDING" | "NOT_READY";
+      reasonCode?: string;
     }
   | {
       status: "UNAVAILABLE";
       fixtureExternalId: number;
-      reason?:
-        | "NO_STORED_INSIGHT"
-        | "FIXTURE_NOT_ANALYZABLE"
-        | "GENERATION_NOT_ALLOWED"
-        | "STALE_PREMATCH_CONTEXT";
+      reason?: PrematchUnavailableReason;
       prediction?: import("@/types/prediction").PrematchPredictionResult;
+      canonicalState?: "UNAVAILABLE" | "NOT_READY";
+      reasonCode?: string;
+    }
+  | {
+      status: "GENERATION_FAILED";
+      fixtureExternalId: number;
+      prediction: import("@/types/prediction").PrematchPredictionResult;
+      message: string;
+      reasonCode: PrematchGenerationFailureCode;
+      canonicalState?: "GENERATION_FAILED";
     }
   | {
       status: "FALLBACK";

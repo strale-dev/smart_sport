@@ -201,7 +201,10 @@ export async function warmAiPrematchInsights(
         cached += 1;
       } else if (result.status === "OK") {
         generated += 1;
-      } else if (result.status === "FALLBACK") {
+      } else if (
+        result.status === "FALLBACK" ||
+        result.status === "GENERATION_FAILED"
+      ) {
         fallback += 1;
         logIngestionEvent({
           job_name: "warm-ai-prematch",

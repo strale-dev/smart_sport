@@ -59,7 +59,7 @@ describe("aiService historical prematch readiness (FR-04)", () => {
     buildPrematchContext.mockResolvedValue({ contextHash: "current-hash" });
   });
 
-  it("returns UNAVAILABLE when context hash compute fails", async () => {
+  it("returns OK with contextStale when context hash compute fails (historical)", async () => {
     readLatestPrematchInsight.mockResolvedValue({
       id: "insight-1",
       context_hash: "any-hash",
@@ -69,13 +69,14 @@ describe("aiService historical prematch readiness (FR-04)", () => {
     const { readPrematchInsight } = await import("@/lib/services/aiService");
     const result = await readPrematchInsight(123);
 
-    expect(result.status).toBe("UNAVAILABLE");
-    if (result.status === "UNAVAILABLE") {
-      expect(result.reason).toBe("STALE_PREMATCH_CONTEXT");
+    expect(result.status).toBe("OK");
+    if (result.status === "OK") {
+      expect(result.contextStale).toBe(true);
+      expect(result.insightMode).toBe("historical");
     }
   });
 
-  it("returns UNAVAILABLE when stored insight context hash is stale", async () => {
+  it("returns OK with contextStale when stored insight context hash is stale (historical)", async () => {
     readLatestPrematchInsight.mockResolvedValue({
       id: "insight-1",
       context_hash: "stale-hash",
@@ -84,9 +85,10 @@ describe("aiService historical prematch readiness (FR-04)", () => {
     const { readPrematchInsight } = await import("@/lib/services/aiService");
     const result = await readPrematchInsight(123);
 
-    expect(result.status).toBe("UNAVAILABLE");
-    if (result.status === "UNAVAILABLE") {
-      expect(result.reason).toBe("STALE_PREMATCH_CONTEXT");
+    expect(result.status).toBe("OK");
+    if (result.status === "OK") {
+      expect(result.contextStale).toBe(true);
+      expect(result.insightMode).toBe("historical");
     }
   });
 });

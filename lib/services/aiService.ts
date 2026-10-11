@@ -26,6 +26,12 @@ import {
   liveLlmToNarrativePayload,
   prematchLlmToNarrativePayload,
 } from "@/lib/ai/compose-prematch-commentary";
+import { classifyGenerationFailure } from "@/lib/ai/generation-failure";
+import { assertFixtureSpecificNarrative } from "@/lib/ai/narrative-fixture-specificity";
+import type {
+  PrematchGenerationFailureCode,
+  PrematchGenerationFailureInfo,
+} from "@/lib/ai/schemas";
 import { toUserFacingAiErrorMessage } from "@/lib/ai/user-facing-ai-error";
 import {
   buildPrematchSystemPrompt,
@@ -102,17 +108,40 @@ function reportPrematchInsightOutcome(
   });
 }
 
-function buildFallbackResponse(
+function toGenerationFailureResponse(
   fixtureExternalId: number,
   prediction: NonNullable<Awaited<ReturnType<typeof getOrComputePrematch>>>,
-  message: string
+  detail: { reasonCode: PrematchGenerationFailureCode; message: string }
 ): PrematchInsightResponse {
   return {
-    status: "FALLBACK",
+    status: "GENERATION_FAILED",
     fixtureExternalId,
     prediction,
-    message,
+    message: detail.message,
+    reasonCode: detail.reasonCode,
+    canonicalState: "GENERATION_FAILED",
   };
+}
+
+function mapFailureCodeToSchema(
+  code: import("@/lib/ai/canonical-insight-state").AiInsightReasonCode
+): PrematchGenerationFailureCode {
+  switch (code) {
+    case "OPENAI_NOT_CONFIGURED":
+      return "OPENAI_NOT_CONFIGURED";
+    case "OPENAI_TIMEOUT":
+      return "OPENAI_TIMEOUT";
+    case "MALFORMED_OUTPUT":
+      return "MALFORMED_OUTPUT";
+    case "RATE_LIMIT":
+      return "RATE_LIMIT";
+    case "DAILY_LIMIT":
+      return "DAILY_LIMIT";
+    case "GENERATION_CONCURRENT":
+      return "GENERATION_CONCURRENT";
+    default:
+      return "OPENAI_PROVIDER_ERROR";
+  }
 }
 
 type PrematchContextHashResolution =
@@ -175,23 +204,19 @@ async function readHistoricalPrematchInsight(
 
   const hashResolution =
     await resolvePrematchContextHashForHistorical(fixtureExternalId);
-  if (hashResolution.status === "compute_failed") {
-    return {
-      status: "UNAVAILABLE",
-      fixtureExternalId,
-      reason: "STALE_PREMATCH_CONTEXT",
-      prediction,
-    };
-  }
   if (
-    hashResolution.status === "ok" &&
-    row.context_hash !== hashResolution.hash
+    hashResolution.status === "compute_failed" ||
+    (hashResolution.status === "ok" && row.context_hash !== hashResolution.hash)
   ) {
     return {
-      status: "UNAVAILABLE",
-      fixtureExternalId,
-      reason: "STALE_PREMATCH_CONTEXT",
+      status: "OK",
+      insight: mapAiInsightRowToStored(row, fixtureExternalId, true),
       prediction,
+      cached: true,
+      insightMode: "historical",
+      contextStale: true,
+      canonicalState: "AVAILABLE",
+      reasonCode: "STALE_CONTEXT_HASH",
     };
   }
 
@@ -423,6 +448,8 @@ export async function generatePrematchInsight(
         status: "UNAVAILABLE",
         fixtureExternalId,
         reason: "GENERATION_NOT_ALLOWED",
+        canonicalState: "UNAVAILABLE",
+        reasonCode: "GENERATION_NOT_ALLOWED",
       };
     }
   } else if (!canGeneratePrematchInsight(fixture.status)) {
@@ -430,6 +457,8 @@ export async function generatePrematchInsight(
       status: "UNAVAILABLE",
       fixtureExternalId,
       reason: "GENERATION_NOT_ALLOWED",
+      canonicalState: "UNAVAILABLE",
+      reasonCode: "GENERATION_NOT_ALLOWED",
     };
   }
 
@@ -447,7 +476,9 @@ export async function generatePrematchInsight(
       return {
         status: "UNAVAILABLE",
         fixtureExternalId,
-        reason: "GENERATION_NOT_ALLOWED",
+        reason: "READINESS_NOT_MET",
+        canonicalState: "NOT_READY",
+        reasonCode: "READINESS_NOT_MET",
       };
     }
   }
@@ -469,6 +500,8 @@ export async function generatePrematchInsight(
       status: "UNAVAILABLE",
       fixtureExternalId,
       reason: "GENERATION_NOT_ALLOWED",
+      canonicalState: "UNAVAILABLE",
+      reasonCode: "GENERATION_NOT_ALLOWED",
     };
   }
 
@@ -485,7 +518,9 @@ export async function generatePrematchInsight(
     return {
       status: "UNAVAILABLE",
       fixtureExternalId,
-      reason: "GENERATION_NOT_ALLOWED",
+      reason: "AI_CONTEXT_NOT_READY",
+      canonicalState: "NOT_READY",
+      reasonCode: "AI_CONTEXT_NOT_READY",
     };
   }
 
@@ -539,6 +574,14 @@ export async function generatePrematchInsight(
         });
 
         const narrative = prematchLlmToNarrativePayload(llm.parsed);
+
+        assertFixtureSpecificNarrative({
+          summary: narrative.summary,
+          commentary: narrative.commentary,
+          homeTeamName: context.homeTeam.name,
+          awayTeamName: context.awayTeam.name,
+          modelTier: prediction.modelTier,
+        });
 
         const payload = validateAIInsightPayload(
           mergeNarrativeWithPrediction(narrative, prediction, {
@@ -596,16 +639,42 @@ export async function generatePrematchInsight(
     };
   } catch (error) {
     console.error("[aiService] prematch generation failed:", error);
+    const classified = classifyGenerationFailure(error);
+    const failureInfo: PrematchGenerationFailureInfo = {
+      code: mapFailureCodeToSchema(classified.reasonCode),
+      message: toUserFacingAiErrorMessage(error),
+    };
+
+    const latestRow = await readLatestPrematchInsight(fixture.id);
+    if (latestRow) {
+      reportPrematchInsightOutcome("fallback", fixtureExternalId, {
+        trigger: options.trigger,
+        message: failureInfo.message,
+        errorName: error instanceof Error ? error.name : "unknown",
+        preservedPriorInsight: true,
+      });
+      return {
+        status: "OK",
+        insight: mapAiInsightRowToStored(latestRow, fixtureExternalId, true),
+        prediction,
+        cached: true,
+        insightMode,
+        contextStale: latestRow.context_hash !== contextHash,
+        generationFailure: failureInfo,
+        canonicalState: "AVAILABLE",
+        reasonCode: failureInfo.code,
+      };
+    }
+
     reportPrematchInsightOutcome("fallback", fixtureExternalId, {
       trigger: options.trigger,
-      message: toUserFacingAiErrorMessage(error),
+      message: failureInfo.message,
       errorName: error instanceof Error ? error.name : "unknown",
     });
-    return buildFallbackResponse(
-      fixtureExternalId,
-      prediction,
-      toUserFacingAiErrorMessage(error)
-    );
+    return toGenerationFailureResponse(fixtureExternalId, prediction, {
+      reasonCode: failureInfo.code,
+      message: failureInfo.message,
+    });
   }
 }
 
