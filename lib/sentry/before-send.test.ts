@@ -38,4 +38,48 @@ describe("sentryBeforeSend", () => {
 
     expect(sentryBeforeSend(event, {})).toBeNull();
   });
+
+  it("drops Upstash quota exceeded errors", () => {
+    const error = new Error(
+      "Command failed: ERR max requests limit exceeded. Limit: 500000, Usage: 500000."
+    );
+    error.name = "UpstashError";
+
+    const event = {
+      transaction: "GET /api/cron/sync-fixtures-today",
+    } as Parameters<typeof sentryBeforeSend>[0];
+
+    expect(sentryBeforeSend(event, { originalException: error })).toBeNull();
+  });
+
+  it("drops prematch not-ready availability errors", () => {
+    const error = new Error("Fixture 123 not ready for prematch prediction");
+
+    const event = {
+      transaction: "GET /api/ai/prematch/123",
+    } as Parameters<typeof sentryBeforeSend>[0];
+
+    expect(sentryBeforeSend(event, { originalException: error })).toBeNull();
+  });
+
+  it("drops transient Supabase pool/timeout errors", () => {
+    const error = new Error(
+      "Failed to read fixtures for 2026-10-18: Timed out acquiring connection from connection pool."
+    );
+
+    const event = {
+      transaction: "GET /",
+    } as Parameters<typeof sentryBeforeSend>[0];
+
+    expect(sentryBeforeSend(event, { originalException: error })).toBeNull();
+  });
+
+  it("drops API-Football daily quota low messages", () => {
+    const event = {
+      message: "API-Football daily quota is low",
+      transaction: "GET /api/cron/sync-fixtures-future",
+    } as Parameters<typeof sentryBeforeSend>[0];
+
+    expect(sentryBeforeSend(event, {})).toBeNull();
+  });
 });

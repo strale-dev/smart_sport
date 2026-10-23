@@ -101,7 +101,7 @@ function sleep(ms: number): Promise<void> {
 async function computeAndPersistPrematch(
   fixtureExternalId: number,
   fixtureUuid: string
-): Promise<PrematchPredictionResult> {
+): Promise<PrematchPredictionResult | null> {
   const fixtureMeta = await resolveFixtureUuidByExternalId(fixtureExternalId);
   if (fixtureMeta && isKickoffReached(fixtureMeta.kickoff_at)) {
     const frozen = await readOfficialPrematchPrediction(
@@ -130,9 +130,7 @@ async function computeAndPersistPrematch(
   const readiness =
     await evaluateFixtureReadinessForProvider(fixtureExternalId);
   if (!readiness || !isFixtureReadyForPrediction(readiness)) {
-    throw new Error(
-      `Fixture ${fixtureExternalId} not ready for prematch prediction`
-    );
+    return null;
   }
 
   const modelVersion = await getActiveModelVersion();
@@ -141,9 +139,7 @@ async function computeAndPersistPrematch(
   });
 
   if (!features) {
-    throw new Error(
-      `Unable to build features for fixture ${fixtureExternalId}`
-    );
+    return null;
   }
 
   const output = scorePrematchFromFeatures(features, modelVersion.coefficients);
@@ -324,7 +320,11 @@ export async function getOrComputePrematch(
           return freshInsideLock;
         }
 
-        return computeAndPersistPrematch(fixtureExternalId, fixture.id);
+        const computed = await computeAndPersistPrematch(
+          fixtureExternalId,
+          fixture.id
+        );
+        return computed;
       }
     );
   } catch (error) {

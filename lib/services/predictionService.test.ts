@@ -368,7 +368,7 @@ describe("predictionService", () => {
     const { getOrComputePrematch } =
       await import("@/lib/services/predictionService");
 
-    await expect(getOrComputePrematch(123)).rejects.toThrow(/not ready/);
+    await expect(getOrComputePrematch(123)).resolves.toBeNull();
     expect(insertPrematchPrediction).not.toHaveBeenCalled();
   });
 
@@ -400,9 +400,8 @@ describe("predictionService", () => {
     const { getOrComputePrematch } =
       await import("@/lib/services/predictionService");
 
-    await expect(getOrComputePrematch(123)).rejects.toThrow(
-      /Unable to build features/
-    );
+    await expect(getOrComputePrematch(123)).resolves.toBeNull();
+    expect(insertPrematchPrediction).not.toHaveBeenCalled();
   });
 
   it("returns official prematch snapshot after kickoff without inserting", async () => {

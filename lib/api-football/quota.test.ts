@@ -8,18 +8,9 @@ import {
   shouldRefuseNonCriticalRequest,
 } from "@/lib/api-football/quota";
 
-const { captureMessage } = vi.hoisted(() => ({
-  captureMessage: vi.fn(),
-}));
-
-vi.mock("@sentry/nextjs", () => ({
-  captureMessage,
-}));
-
 describe("quota tracker", () => {
   beforeEach(() => {
     resetInMemoryQuotaForTests();
-    captureMessage.mockClear();
     process.env.API_FOOTBALL_DAILY_LIMIT = "7500";
   });
 
@@ -39,7 +30,9 @@ describe("quota tracker", () => {
     expect(shouldRefuseNonCriticalRequest(snapshot)).toBe(true);
   });
 
-  it("reports Sentry warning and refuses requests when quota is exhausted", async () => {
+  it("logs low-budget warning and refuses requests when quota is exhausted", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
     await recordQuotaFromHeaders(
       new Headers({
         "x-ratelimit-requests-remaining": "0",
@@ -50,10 +43,12 @@ describe("quota tracker", () => {
     expect(snapshot.dayRemaining).toBe(0);
     expect(snapshot.isLowBudget).toBe(true);
     expect(shouldRefuseNonCriticalRequest(snapshot)).toBe(true);
-    expect(captureMessage).toHaveBeenCalledWith(
-      "API-Football daily quota is low",
-      expect.objectContaining({ level: "warning" })
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[api-football] daily quota is low",
+      expect.objectContaining({ dayRemaining: 0 })
     );
+
+    warnSpy.mockRestore();
   });
 
   it("allows critical traffic when budget is healthy", async () => {

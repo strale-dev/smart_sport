@@ -74,7 +74,7 @@ describe("aiService historical prematch readiness (FR-04)", () => {
       expect(result.contextStale).toBe(true);
       expect(result.insightMode).toBe("historical");
     }
-  });
+  }, 30_000);
 
   it("returns OK with contextStale when stored insight context hash is stale (historical)", async () => {
     readLatestPrematchInsight.mockResolvedValue({

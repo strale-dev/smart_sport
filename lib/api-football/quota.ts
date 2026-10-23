@@ -1,5 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
-
 import { API_FOOTBALL_CONFIG } from "@/lib/api-football/config";
 import { getRedis } from "@/lib/redis/client";
 
@@ -48,13 +46,10 @@ function reportLowBudgetIfNeeded(snapshot: QuotaSnapshot): void {
   }
 
   hasReportedLowBudget = true;
-  Sentry.captureMessage("API-Football daily quota is low", {
-    level: "warning",
-    extra: {
-      dayRemaining: snapshot.dayRemaining,
-      minuteRemaining: snapshot.minuteRemaining,
-      dailyLimit: API_FOOTBALL_CONFIG.quota.defaultDailyLimit,
-    },
+  console.warn("[api-football] daily quota is low", {
+    dayRemaining: snapshot.dayRemaining,
+    minuteRemaining: snapshot.minuteRemaining,
+    dailyLimit: API_FOOTBALL_CONFIG.quota.defaultDailyLimit,
   });
 }
 
