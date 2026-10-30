@@ -1,6 +1,6 @@
 # 09-2 — Fixes for 09-1 audit findings
 
-**Date:** 2026-10-11  
+**Date:** 2026-10-27 (verification re-run; implementation landed 2026-10-11)  
 **Scope:** P0-1, P0-2, P1-1 … P1-6 from [09-1-final-audit.md](./09-1-final-audit.md). P2 unchanged.
 
 ---
@@ -33,19 +33,22 @@
 - `lib/ingestion/warm-ai-prematch.test.ts`
 - `lib/models/live-features.test.ts`
 - `lib/services/predictionService.test.ts` (insufficient history)
+- `lib/services/aiService.readiness.test.ts` — Sentry mock to avoid flaky timeout under full CI load
 
-**CI:** `npm.cmd run test:ci` — **207 files, 879 tests passed**. `npm.cmd run lint` — 0 errors (existing warnings only). `npm.cmd run typecheck` — pass.
+**CI (2026-10-27):** `npm.cmd run test:ci` — **207 files, 883 tests passed**. `npm.cmd run lint` — 0 errors (12 warnings). `npm.cmd run typecheck` — pass.
 
 ---
 
 ## Three-fixture verification (post-change, read-only SQL)
 
-| Provider ID | Role                        | Status             | Notes                                                                                    |
-| ----------- | --------------------------- | ------------------ | ---------------------------------------------------------------------------------------- |
-| **1558652** | Upcoming                    | NS                 | `fixture_readiness` still null until evaluate/warm; no prematch row yet (Westerlo depth) |
-| **1575183** | Live                        | 1H, `is_live=true` | `prediction_ready=false`; events 0 at query time — live UX still env-dependent           |
-| **1629006** | Finished                    | FT                 | 19 events, prematch prediction + insight present                                         |
-| **1635578** | Finished (detail gap class) | FT                 | 0 events — **candidate** for extended lookback after deploy + `sync-match-details` run   |
+| Provider ID | Role (09-1)                 | Status (2026-10-27) | Notes                                                                                    |
+| ----------- | --------------------------- | ------------------- | ---------------------------------------------------------------------------------------- |
+| **1558652** | Upcoming                    | **FT**              | Was NS at 09-1; now finished with 22 events, `aiGenerationAllowed=false` in readiness    |
+| **1575183** | Live                        | **FT**              | Was live 1–0 at 09-1; now FT with 17 events                                              |
+| **1629006** | Finished                    | FT                  | 19 events, prematch prediction + insight present                                         |
+| **1635578** | Finished (detail gap class) | FT                  | **Still 0 events** — in 7d lookback window; needs successful `sync-match-details` ingest |
+
+For **active** upcoming/live traces, pick current NS / `is_live` fixtures from the same leagues (same methodology as 09-1 § verification fixtures).
 
 ---
 

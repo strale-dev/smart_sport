@@ -48,6 +48,11 @@ vi.mock("@/lib/ai/cache", () => ({
   withLiveInsightLock: vi.fn(),
 }));
 
+vi.mock("@sentry/nextjs", () => ({
+  captureMessage: vi.fn(),
+  addBreadcrumb: vi.fn(),
+}));
+
 describe("aiService historical prematch readiness (FR-04)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -74,7 +79,7 @@ describe("aiService historical prematch readiness (FR-04)", () => {
       expect(result.contextStale).toBe(true);
       expect(result.insightMode).toBe("historical");
     }
-  }, 30_000);
+  });
 
   it("returns OK with contextStale when stored insight context hash is stale (historical)", async () => {
     readLatestPrematchInsight.mockResolvedValue({
