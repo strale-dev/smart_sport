@@ -34,6 +34,8 @@ type MatchFixtureScoreboardProps = {
   logoSizes?: string;
   /** When set, scheduled rows show date+time for kickoffs after this viewer day. */
   todayDateKey?: string;
+  /** Keep the stored score, without a live pulse. */
+  freezeLive?: boolean;
 };
 
 const defaultTeamLinkClassName =
@@ -56,6 +58,7 @@ export function MatchFixtureScoreboard({
   logoPriority = false,
   logoSizes,
   todayDateKey,
+  freezeLive = false,
 }: MatchFixtureScoreboardProps) {
   const timeZone = useViewerTimezone();
   const isLive = isLiveFixtureStatus(fixture.status);
@@ -139,9 +142,9 @@ export function MatchFixtureScoreboard({
           <div className="space-y-0.5">
             <AnimatedScore
               score={scoreText}
-              isLive={isLive}
+              isLive={isLive && !freezeLive}
               className={scoreClassName}
-              animate={animateScore || isLive}
+              animate={!freezeLive && (animateScore || isLive)}
             />
             {showHalftimeLine &&
             isFinished &&

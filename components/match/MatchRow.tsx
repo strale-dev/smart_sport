@@ -20,6 +20,8 @@ type MatchRowProps = {
   showLeague?: boolean;
   anchorId?: string;
   todayDateKey?: string;
+  /** Stop the live pulse and keep the stored score and minute. */
+  freezeLive?: boolean;
 };
 
 const rowScoreboardPreset = getMatchScoreboardPreset("row");
@@ -31,6 +33,7 @@ export function MatchRow({
   showLeague = true,
   anchorId,
   todayDateKey,
+  freezeLive = false,
 }: MatchRowProps) {
   const isLive = isPresentationLiveFixture(fixture);
   const minuteLabel = formatFixtureMinute(fixture);
@@ -60,7 +63,10 @@ export function MatchRow({
                   </span>
                 ) : null}
                 {isLive ? (
-                  <LiveStatusChip minuteLabel={minuteLabel} animate />
+                  <LiveStatusChip
+                    minuteLabel={minuteLabel}
+                    animate={!freezeLive}
+                  />
                 ) : null}
               </>
             }
@@ -77,6 +83,7 @@ export function MatchRow({
           fixture={fixture}
           {...rowScoreboardPreset}
           todayDateKey={todayDateKey}
+          freezeLive={freezeLive}
         />
       </Link>
     </div>

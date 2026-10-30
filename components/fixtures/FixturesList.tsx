@@ -25,11 +25,13 @@ function FixturesDayGroupsSection({
   todayDateKey,
   nowAnchorFixtureId,
   muted = false,
+  freezeLive = false,
 }: {
   dayGroups: FixturesDayGroup[];
   todayDateKey: string;
   nowAnchorFixtureId: number | null;
   muted?: boolean;
+  freezeLive?: boolean;
 }) {
   return (
     <div className={muted ? "space-y-6 opacity-90" : "space-y-8"}>
@@ -79,6 +81,7 @@ function FixturesDayGroupsSection({
                         fixture={fixture}
                         showLeague={false}
                         todayDateKey={todayDateKey}
+                        freezeLive={freezeLive}
                         anchorId={anchorIdForFixture(
                           fixture.externalId,
                           nowAnchorFixtureId
@@ -97,6 +100,7 @@ function FixturesDayGroupsSection({
                   fixture={fixture}
                   showLeague={false}
                   todayDateKey={todayDateKey}
+                  freezeLive={freezeLive}
                   anchorId={anchorIdForFixture(
                     fixture.externalId,
                     nowAnchorFixtureId
@@ -162,6 +166,7 @@ export function FixturesList({ data }: FixturesListProps) {
           dayGroups={data.upcomingDayGroups}
           todayDateKey={data.todayDateKey}
           nowAnchorFixtureId={data.nowAnchorFixtureId}
+          freezeLive={data.freshnessStale}
         />
 
         {data.pastDayGroups.length > 0 ? (
@@ -173,6 +178,7 @@ export function FixturesList({ data }: FixturesListProps) {
               dayGroups={data.pastDayGroups}
               todayDateKey={data.todayDateKey}
               nowAnchorFixtureId={null}
+              freezeLive={data.freshnessStale}
               muted
             />
           </div>
