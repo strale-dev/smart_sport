@@ -112,6 +112,39 @@ describe("buildUpcomingAndPastDayGroups", () => {
     expect(pastDayGroups.length).toBe(1);
   });
 
+  it("moves same-day NS after kickoff into past fixtures", () => {
+    const staleTodayNs = makeFixture(20, "2026-09-14T10:00:00.000Z", "NS");
+    const futureTodayNs = makeFixture(21, "2026-09-14T18:00:00.000Z", "NS");
+
+    const partitioned = partitionFixturesByTodayWindow(
+      [staleTodayNs, futureTodayNs],
+      todayDateKey,
+      timeZone,
+      now
+    );
+
+    expect(partitioned.pastFixtures.map((f) => f.externalId)).toEqual([20]);
+    expect(partitioned.upcomingFixtures.map((f) => f.externalId)).toEqual([21]);
+
+    const { upcomingDayGroups, pastDayGroups } = buildUpcomingAndPastDayGroups(
+      [staleTodayNs, futureTodayNs],
+      now,
+      timeZone,
+      todayDateKey
+    );
+
+    expect(
+      collectUpcomingFixturesFromDayGroups(upcomingDayGroups).map(
+        (f) => f.externalId
+      )
+    ).toEqual([21]);
+    expect(
+      pastDayGroups
+        .flatMap((g) => g.leagues?.[0]?.fixtures ?? [])
+        .map((f) => f.externalId)
+    ).toEqual([20]);
+  });
+
   it("sorts upcoming days ascending and past days descending", () => {
     const dayBefore = makeFixture(1, "2026-09-12T15:00:00.000Z", "FT");
     const yesterday = makeFixture(2, "2026-09-13T15:00:00.000Z", "FT");

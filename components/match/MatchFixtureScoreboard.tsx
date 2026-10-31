@@ -8,6 +8,7 @@ import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider
 import { Badge } from "@/components/ui/badge";
 import {
   formatFixtureRowCenterLabel,
+  formatFixtureTeamDisplayName,
   isFinishedFixtureStatus,
   shouldShowFixtureScore,
 } from "@/lib/fixtures/display";
@@ -65,6 +66,8 @@ export function MatchFixtureScoreboard({
   const isPausedLive = isPausedLiveFixtureStatus(fixture.status);
   const isFinished = isFinishedFixtureStatus(fixture.status);
   const showScore = shouldShowFixtureScore(fixture);
+  const homeTeamLabel = formatFixtureTeamDisplayName(fixture.homeTeam.name);
+  const awayTeamLabel = formatFixtureTeamDisplayName(fixture.awayTeam.name);
   const scoreText = formatFixtureRowCenterLabel(
     fixture,
     timeZone,
@@ -74,14 +77,14 @@ export function MatchFixtureScoreboard({
   const homeCell = (
     <>
       <TeamLogo
-        name={fixture.homeTeam.name}
+        name={homeTeamLabel}
         logoUrl={fixture.homeTeam.logoUrl}
         className={logoClassName}
         priority={logoPriority}
         sizes={logoSizes}
       />
       <span
-        title={fixture.homeTeam.name}
+        title={homeTeamLabel}
         className={cn(
           teamNameClassName,
           "min-w-0 flex-1 text-left",
@@ -90,7 +93,7 @@ export function MatchFixtureScoreboard({
             : "max-sm:truncate sm:leading-snug sm:break-words sm:whitespace-normal"
         )}
       >
-        {fixture.homeTeam.name}
+        {homeTeamLabel}
       </span>
     </>
   );
@@ -98,7 +101,7 @@ export function MatchFixtureScoreboard({
   const awayCell = (
     <>
       <span
-        title={fixture.awayTeam.name}
+        title={awayTeamLabel}
         className={cn(
           teamNameClassName,
           "min-w-0 flex-1 text-right",
@@ -107,10 +110,10 @@ export function MatchFixtureScoreboard({
             : "max-sm:truncate sm:leading-snug sm:break-words sm:whitespace-normal"
         )}
       >
-        {fixture.awayTeam.name}
+        {awayTeamLabel}
       </span>
       <TeamLogo
-        name={fixture.awayTeam.name}
+        name={awayTeamLabel}
         logoUrl={fixture.awayTeam.logoUrl}
         className={logoClassName}
         priority={logoPriority}

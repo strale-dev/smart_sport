@@ -5,7 +5,10 @@ import Link from "next/link";
 import { LiveStatusChip } from "@/components/match/LiveStatusChip";
 import { MatchFixtureScoreboard } from "@/components/match/MatchFixtureScoreboard";
 import { MatchMetaBar } from "@/components/match/MatchMetaBar";
-import { formatFixtureMinute } from "@/lib/fixtures/display";
+import {
+  formatFixtureLeagueDisplayName,
+  formatFixtureMinute,
+} from "@/lib/fixtures/display";
 import { isPresentationLiveFixture } from "@/lib/live/live-presentation";
 import { formatRelativeTime } from "@/lib/ai/format";
 import { isAiUpdatedMarkerFresh } from "@/lib/live/ai-updated-marker";
@@ -53,7 +56,7 @@ export function MatchRow({
           <MatchMetaBar
             density="row"
             leagueExternalId={fixture.league.externalId}
-            leagueName={fixture.league.name}
+            leagueName={formatFixtureLeagueDisplayName(fixture.league.name)}
             leagueLogoUrl={fixture.league.logoUrl}
             trailing={
               <>

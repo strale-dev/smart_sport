@@ -3,6 +3,7 @@ import {
   formatDateKeyInTimezone,
   formatDayLabelInTimezone,
 } from "@/lib/datetime/timezone";
+import { isStalePrematchAfterKickoff } from "@/lib/fixtures/display";
 import {
   LIVE_LEAGUE_MORE,
   LIVE_LEAGUE_TABS,
@@ -239,7 +240,8 @@ function buildSortedDayGroupsInTimezone(
 export function partitionFixturesByTodayWindow(
   fixtures: Fixture[],
   todayDateKey: string,
-  timeZone: string
+  timeZone: string,
+  now = new Date()
 ): { upcomingFixtures: Fixture[]; pastFixtures: Fixture[] } {
   const upcomingFixtures: Fixture[] = [];
   const pastFixtures: Fixture[] = [];
@@ -247,6 +249,11 @@ export function partitionFixturesByTodayWindow(
   for (const fixture of fixtures) {
     if (isLiveFixtureStatus(fixture.status)) {
       upcomingFixtures.push(fixture);
+      continue;
+    }
+
+    if (isStalePrematchAfterKickoff(fixture, now)) {
+      pastFixtures.push(fixture);
       continue;
     }
 
@@ -274,7 +281,8 @@ export function buildUpcomingAndPastDayGroups(
   const { upcomingFixtures, pastFixtures } = partitionFixturesByTodayWindow(
     fixtures,
     todayDateKey,
-    timeZone
+    timeZone,
+    now
   );
 
   const upcomingDayGroups = buildSortedDayGroupsInTimezone(upcomingFixtures, {
