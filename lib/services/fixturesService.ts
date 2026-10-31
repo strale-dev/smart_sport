@@ -22,7 +22,6 @@ import {
   parseFixturesParams,
   type FixturesSearchParams,
 } from "@/lib/fixtures/url";
-import { finalizeExpiredStaleLiveFixturesInDb } from "@/lib/live/finalize-expired-stale-live";
 import { resolvePresentationFixtures } from "@/lib/live/live-presentation";
 import type { CacheMeta } from "@/lib/redis/cache";
 import { getMatchesInRange } from "@/lib/services/footballService";
@@ -194,8 +193,6 @@ export async function getFixturesData(
   timeZone: string,
   now = new Date()
 ): Promise<FixturesData> {
-  await finalizeExpiredStaleLiveFixturesInDb(now);
-
   const { fromUtc, toUtcExclusive, todayDateKey } = buildTimezoneWindow(
     now,
     timeZone,

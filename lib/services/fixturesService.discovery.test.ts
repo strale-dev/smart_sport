@@ -114,5 +114,22 @@ describe("getFixturesData league discovery", () => {
     expect(
       data.upcomingDayGroups.flatMap((group) => group.fixtures ?? [])
     ).toHaveLength(1);
+    expect(finalizeExpiredStaleLiveFixturesInDb).not.toHaveBeenCalled();
+  });
+
+  it("does not finalize stale live fixtures on list read", async () => {
+    const emptyMeta = {
+      cached: false,
+      stale: false,
+      cachedAt: null,
+    };
+
+    getMatchesInRange.mockResolvedValue({ data: [], meta: emptyMeta });
+
+    const { getFixturesData } = await import("@/lib/services/fixturesService");
+    const now = new Date("2026-10-04T12:00:00.000Z");
+    await getFixturesData({}, "UTC", now);
+
+    expect(finalizeExpiredStaleLiveFixturesInDb).not.toHaveBeenCalled();
   });
 });
