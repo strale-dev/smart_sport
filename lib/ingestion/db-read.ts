@@ -159,6 +159,53 @@ function mapFixtureRow(row: FixtureRow): Fixture {
   };
 }
 
+const FIXTURE_LIST_SELECT = `
+  provider_id,
+  kickoff_at,
+  status,
+  minute,
+  status_extra_minute,
+  period_first_start_at,
+  period_second_start_at,
+  last_provider_sync_at,
+  referee,
+  round,
+  score_home,
+  score_away,
+  ht_home,
+  ht_away,
+  ft_home,
+  ft_away,
+  et_home,
+  et_away,
+  pen_home,
+  pen_away,
+  home_team:teams!fixtures_home_team_id_fkey (
+    provider_id,
+    name,
+    code,
+    logo_url,
+    is_national
+  ),
+  away_team:teams!fixtures_away_team_id_fkey (
+    provider_id,
+    name,
+    code,
+    logo_url,
+    is_national
+  ),
+  league:leagues (
+    provider_id,
+    name,
+    type,
+    country_name,
+    logo_url
+  ),
+  season:seasons (
+    year
+  )
+`;
+
 const FIXTURE_SELECT = `
   provider_id,
   kickoff_at,
@@ -308,7 +355,7 @@ async function readFixtureRowsInRangePaginated(
   while (true) {
     const { data, error } = await client
       .from("fixtures")
-      .select(FIXTURE_SELECT)
+      .select(FIXTURE_LIST_SELECT)
       .in("league_id", leagueIds)
       .gte("kickoff_at", normalizeRangeBound(fromDate))
       .lt("kickoff_at", normalizeRangeBound(toDateExclusive))

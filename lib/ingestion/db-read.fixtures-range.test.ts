@@ -136,6 +136,29 @@ describe("readFixturesInRangeFromDb", () => {
     expect(range.mock.calls[1]).toEqual([1000, 1999]);
   });
 
+  it("uses slim list select without venue join for range reads", async () => {
+    const rows = [minimalFixtureRow(1)];
+    const { from, fixturesChain } = buildFixturesRangeMock([
+      { data: rows, error: null },
+    ]);
+
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    vi.mocked(createAdminClient).mockReturnValue({ from } as never);
+
+    const { readFixturesInRangeFromDb } =
+      await import("@/lib/ingestion/db-read");
+    const fixtures = await readFixturesInRangeFromDb(
+      "2026-09-01T00:00:00.000Z",
+      "2026-11-01T00:00:00.000Z"
+    );
+
+    const selectArg = fixturesChain.select.mock.calls[0]?.[0] as string;
+    expect(selectArg).not.toContain("venue:venues");
+    expect(fixtures[0]?.league.name).toBe("Premier League");
+    expect(fixtures[0]?.homeTeam.name).toBe("Home");
+    expect(fixtures[0]?.venue).toBeNull();
+  });
+
   it("filters by league provider id in SQL when requested", async () => {
     const rows = [minimalFixtureRow(9001), minimalFixtureRow(9002)];
     const { from, fixturesChain, leaguesChain } = buildFixturesRangeMock([
@@ -159,5 +182,39 @@ describe("readFixturesInRangeFromDb", () => {
       "league-uuid-pl",
     ]);
     expect(fixtures).toHaveLength(2);
+  });
+});
+
+describe("readFixtureByProviderIdFromDb", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  it("uses full fixture select including venue for match detail read", async () => {
+    const maybeSingle = vi
+      .fn()
+      .mockResolvedValue({ data: minimalFixtureRow(42), error: null });
+    const fixturesChain = {
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({ maybeSingle }),
+      }),
+    };
+    const from = vi.fn((table: string) => {
+      if (table === "fixtures") {
+        return fixturesChain;
+      }
+      throw new Error(`Unexpected table ${table}`);
+    });
+
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    vi.mocked(createAdminClient).mockReturnValue({ from } as never);
+
+    const { readFixtureByProviderIdFromDb } =
+      await import("@/lib/ingestion/db-read");
+    await readFixtureByProviderIdFromDb(42);
+
+    const selectArg = fixturesChain.select.mock.calls[0]?.[0] as string;
+    expect(selectArg).toContain("venue:venues");
   });
 });
