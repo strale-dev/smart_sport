@@ -1,6 +1,7 @@
 import { CalendarDaysIcon } from "lucide-react";
 
 import { FixturesNowAnchor } from "@/components/fixtures/FixturesNowAnchor";
+import { FixturesUnavailableState } from "@/components/fixtures/FixturesUnavailableState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { MatchRow } from "@/components/match/MatchRow";
 import { LeagueFilterLogo } from "@/components/live/LeagueFilterLogo";
@@ -116,6 +117,10 @@ function FixturesDayGroupsSection({
 }
 
 export function FixturesList({ data }: FixturesListProps) {
+  if (data.isEmpty && data.providerUnavailable) {
+    return <FixturesUnavailableState />;
+  }
+
   if (data.isEmpty) {
     return (
       <div className="space-y-4">
