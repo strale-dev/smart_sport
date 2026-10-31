@@ -13,12 +13,12 @@ function readRedisEnv(
 }
 
 export function getRedis(): Redis | null {
-  if (cachedRedis !== undefined) {
-    return cachedRedis;
-  }
-
   if (!hasRedisConfig(process.env)) {
     cachedRedis = null;
+    return null;
+  }
+
+  if (cachedRedis !== undefined) {
     return cachedRedis;
   }
 

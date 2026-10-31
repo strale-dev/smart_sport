@@ -3,14 +3,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { API_FOOTBALL_CONFIG } from "@/lib/api-football/config";
 import {
   getInMemoryQuotaSnapshot,
+  hydrateQuotaFromRedis,
   recordQuotaFromHeaders,
   resetInMemoryQuotaForTests,
   shouldRefuseNonCriticalRequest,
 } from "@/lib/api-football/quota";
 
+const getRedisMock = vi.hoisted(() => vi.fn<() => unknown>(() => null));
+
+vi.mock("@/lib/redis/client", () => ({
+  getRedis: () => getRedisMock(),
+  resetRedisClientForTests: () => undefined,
+  pingRedis: async () => false,
+}));
+
 describe("quota tracker", () => {
   beforeEach(() => {
     resetInMemoryQuotaForTests();
+    getRedisMock.mockReturnValue(null);
     process.env.API_FOOTBALL_DAILY_LIMIT = "7500";
   });
 
@@ -49,6 +59,16 @@ describe("quota tracker", () => {
     );
 
     warnSpy.mockRestore();
+  });
+
+  it("continues with in-memory quota when Redis hydrate fails", async () => {
+    getRedisMock.mockReturnValue({
+      get: vi.fn().mockRejectedValue(new TypeError("fetch failed")),
+      set: vi.fn().mockRejectedValue(new TypeError("fetch failed")),
+    });
+
+    await expect(hydrateQuotaFromRedis()).resolves.toBeUndefined();
+    expect(getInMemoryQuotaSnapshot().dayRemaining).toBeNull();
   });
 
   it("allows critical traffic when budget is healthy", async () => {

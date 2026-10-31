@@ -69,18 +69,26 @@ export async function hydrateQuotaFromRedis(date = new Date()): Promise<void> {
     return;
   }
 
-  const [dayRemainingRaw, minuteRemainingRaw] = await Promise.all([
-    redis.get<number | string>(getDayKey(date)),
-    redis.get<number | string>(getMinuteKey(date)),
-  ]);
+  try {
+    const [dayRemainingRaw, minuteRemainingRaw] = await Promise.all([
+      redis.get<number | string>(getDayKey(date)),
+      redis.get<number | string>(getMinuteKey(date)),
+    ]);
 
-  if (dayRemainingRaw !== null && dayRemainingRaw !== undefined) {
-    inMemoryQuota.dayRemaining = parseRemainingHeader(String(dayRemainingRaw));
-  }
+    if (dayRemainingRaw !== null && dayRemainingRaw !== undefined) {
+      inMemoryQuota.dayRemaining = parseRemainingHeader(
+        String(dayRemainingRaw)
+      );
+    }
 
-  if (minuteRemainingRaw !== null && minuteRemainingRaw !== undefined) {
-    inMemoryQuota.minuteRemaining = parseRemainingHeader(
-      String(minuteRemainingRaw)
+    if (minuteRemainingRaw !== null && minuteRemainingRaw !== undefined) {
+      inMemoryQuota.minuteRemaining = parseRemainingHeader(
+        String(minuteRemainingRaw)
+      );
+    }
+  } catch {
+    console.warn(
+      "[api-football] Redis quota hydrate failed; using in-memory quota."
     );
   }
 }
@@ -103,12 +111,18 @@ export async function recordQuotaFromHeaders(
 
   const redis = getRedis();
   if (redis) {
-    const ttlSeconds = 86_400;
-    if (dayRemaining !== null) {
-      await redis.set(getDayKey(date), dayRemaining, { ex: ttlSeconds });
-    }
-    if (minuteRemaining !== null) {
-      await redis.set(getMinuteKey(date), minuteRemaining, { ex: 120 });
+    try {
+      const ttlSeconds = 86_400;
+      if (dayRemaining !== null) {
+        await redis.set(getDayKey(date), dayRemaining, { ex: ttlSeconds });
+      }
+      if (minuteRemaining !== null) {
+        await redis.set(getMinuteKey(date), minuteRemaining, { ex: 120 });
+      }
+    } catch {
+      console.warn(
+        "[api-football] Redis quota persist failed; in-memory quota updated."
+      );
     }
   }
 
