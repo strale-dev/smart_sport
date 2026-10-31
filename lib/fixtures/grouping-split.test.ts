@@ -85,13 +85,15 @@ describe("buildUpcomingAndPastDayGroups", () => {
   });
 
   it("keeps LIVE fixtures with yesterday kickoff in upcoming (Today group)", () => {
+    const liveNow = new Date("2026-09-14T00:30:00.000Z");
     const liveLate = makeFixture(10, "2026-09-13T21:00:00.000Z", "2H");
     const yesterdayFt = makeFixture(11, "2026-09-13T18:00:00.000Z", "FT");
 
     const partitioned = partitionFixturesByTodayWindow(
       [liveLate, yesterdayFt],
       todayDateKey,
-      timeZone
+      timeZone,
+      liveNow
     );
 
     expect(partitioned.upcomingFixtures.map((f) => f.externalId)).toEqual([10]);
@@ -99,7 +101,7 @@ describe("buildUpcomingAndPastDayGroups", () => {
 
     const { upcomingDayGroups, pastDayGroups } = buildUpcomingAndPastDayGroups(
       [liveLate, yesterdayFt],
-      now,
+      liveNow,
       timeZone,
       todayDateKey
     );

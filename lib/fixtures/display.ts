@@ -2,7 +2,10 @@ import {
   formatDateKeyInTimezone,
   sanitizeTimezone,
 } from "@/lib/datetime/timezone";
-import { isAuthoritativeLivePresentation } from "@/lib/live/live-presentation";
+import {
+  isAuthoritativeLivePresentation,
+  isUnverifiedExpiredLivePresentation,
+} from "@/lib/live/live-presentation";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import type { Fixture, FixtureStatus } from "@/types/domain";
 
@@ -28,6 +31,8 @@ export const FIXTURE_KICKOFF_PASSED_AWAITING_LABEL =
   "Kickoff passed — awaiting official status";
 
 export const FIXTURE_SCORE_UNAVAILABLE_LABEL = "Score unavailable";
+
+export const FIXTURE_STATUS_UNVERIFIED_LABEL = "Status unverified";
 
 export const FIXTURE_UNKNOWN_TEAM_LABEL = "Unknown team";
 
@@ -105,6 +110,10 @@ function fixtureFinishedWithoutRecordedScore(fixture: Fixture): boolean {
 }
 
 export function formatFixtureScoreText(fixture: Fixture): string {
+  if (isUnverifiedExpiredLivePresentation(fixture)) {
+    return FIXTURE_STATUS_UNVERIFIED_LABEL;
+  }
+
   if (fixtureFinishedWithoutRecordedScore(fixture)) {
     return FIXTURE_SCORE_UNAVAILABLE_LABEL;
   }
@@ -115,6 +124,10 @@ export function formatFixtureScoreText(fixture: Fixture): string {
 }
 
 export function formatFixtureScore(fixture: Fixture, timeZone: string): string {
+  if (isUnverifiedExpiredLivePresentation(fixture)) {
+    return FIXTURE_STATUS_UNVERIFIED_LABEL;
+  }
+
   if (shouldShowFixtureScore(fixture)) {
     return formatFixtureScoreText(fixture);
   }
@@ -129,6 +142,10 @@ export function formatFixtureScheduledCenterLabel(
   todayDateKey: string,
   now = new Date()
 ): string {
+  if (isUnverifiedExpiredLivePresentation(fixture, now.getTime())) {
+    return FIXTURE_STATUS_UNVERIFIED_LABEL;
+  }
+
   if (shouldShowFixtureScore(fixture)) {
     return formatFixtureScoreText(fixture);
   }
@@ -243,8 +260,12 @@ export function formatMatchHeaderStatusLabel(
   timeZone: string,
   now = new Date()
 ): string {
-  if (isAuthoritativeLivePresentation(fixture)) {
+  if (isAuthoritativeLivePresentation(fixture, now.getTime())) {
     return formatFixtureMinute(fixture) ?? "Live";
+  }
+
+  if (isUnverifiedExpiredLivePresentation(fixture, now.getTime())) {
+    return FIXTURE_STATUS_UNVERIFIED_LABEL;
   }
 
   if (isLiveFixtureStatus(fixture.status)) {

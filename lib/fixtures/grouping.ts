@@ -4,6 +4,7 @@ import {
   formatDayLabelInTimezone,
 } from "@/lib/datetime/timezone";
 import { isStalePrematchAfterKickoff } from "@/lib/fixtures/display";
+import { isPresentationLiveFixture } from "@/lib/live/live-presentation";
 import {
   LIVE_LEAGUE_MORE,
   LIVE_LEAGUE_TABS,
@@ -247,7 +248,7 @@ export function partitionFixturesByTodayWindow(
   const pastFixtures: Fixture[] = [];
 
   for (const fixture of fixtures) {
-    if (isLiveFixtureStatus(fixture.status)) {
+    if (isPresentationLiveFixture(fixture, now.getTime())) {
       upcomingFixtures.push(fixture);
       continue;
     }

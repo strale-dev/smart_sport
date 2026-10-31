@@ -17,7 +17,7 @@ import {
   formatMatchHeaderStatusLabel,
 } from "@/lib/fixtures/display";
 import { getMatchScoreboardPreset } from "@/lib/match/scoreboard-presets";
-import { isLiveFixtureStatus } from "@/lib/redis/keys";
+import { isPresentationLiveFixture } from "@/lib/live/live-presentation";
 import type { ReactNode } from "react";
 
 import type { Fixture } from "@/types/domain";
@@ -48,7 +48,7 @@ export function MatchHeader({
   const liveContext = useMatchLiveContext();
   const fixture = liveContext?.fixture ?? fixtureProp;
   const timeZone = useViewerTimezone();
-  const isLive = isLiveFixtureStatus(fixture.status);
+  const isLive = isPresentationLiveFixture(fixture);
   const venueLabel = formatVenue(fixture);
   const statusLabel = formatMatchHeaderStatusLabel(fixture, timeZone);
   const leagueLabel = `${fixture.league.name}${fixture.round ? ` · ${fixture.round}` : ""}`;
