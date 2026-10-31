@@ -7,7 +7,10 @@ import * as teamEndpoints from "@/lib/api-football/endpoints/teams";
 import type { RawApiFootballFixture } from "@/lib/api-football/types";
 import * as dbRead from "@/lib/ingestion/db-read";
 import { resetCacheForTests } from "@/lib/redis/cache";
-import { providerFixturesDateKey } from "@/lib/redis/keys";
+import {
+  providerFixturesDateKey,
+  providerFixturesRangeKey,
+} from "@/lib/redis/keys";
 import { resetMemoryLocksForTests } from "@/lib/redis/lock";
 import * as footballService from "@/lib/services/footballService";
 import { loadApiFootballFixture } from "@/tests/helpers/load-api-football-fixture";
@@ -128,5 +131,30 @@ describe("footballService", () => {
     expect(result.data).toEqual([liveFixture]);
     expect(result.meta.stale).toBe(true);
     expect(dbSpy).toHaveBeenCalledOnce();
+  });
+
+  it("scopes getMatchesInRange cache and db read by league", async () => {
+    const dbSpy = vi
+      .spyOn(dbRead, "readFixturesInRangeFromDb")
+      .mockResolvedValue([sampleFixture]);
+
+    await footballService.getMatchesInRange(
+      "2026-09-01T00:00:00.000Z",
+      "2026-11-01T00:00:00.000Z",
+      39
+    );
+
+    expect(dbSpy).toHaveBeenCalledWith(
+      "2026-09-01T00:00:00.000Z",
+      "2026-11-01T00:00:00.000Z",
+      { leagueProviderId: 39 }
+    );
+    expect(
+      providerFixturesRangeKey(
+        "2026-09-01T00:00:00.000Z",
+        "2026-11-01T00:00:00.000Z",
+        39
+      )
+    ).toContain(":league:39");
   });
 });

@@ -256,39 +256,107 @@ function normalizeRangeBound(value: string): string {
   return value.includes("T") ? value : `${value}T00:00:00.000Z`;
 }
 
-export async function readFixturesInRangeFromDb(
-  fromDate: string,
-  toDateExclusive: string
-): Promise<Fixture[]> {
-  const client = createAdminClient();
+/** Matches hosted PostgREST default `max_rows` (see supabase/config.toml). */
+const FIXTURE_RANGE_PAGE_SIZE = 1000;
+
+export type ReadFixturesInRangeOptions = {
+  leagueProviderId?: number;
+};
+
+async function resolveLeagueIdsForFixtureRange(
+  client: ReturnType<typeof createAdminClient>,
+  leagueProviderId?: number
+): Promise<string[]> {
   const config = getIngestionConfig();
-  const { data: leagues } = await client
+
+  if (leagueProviderId != null) {
+    const { data, error } = await client
+      .from("leagues")
+      .select("id")
+      .eq("provider_id", leagueProviderId);
+
+    if (error) {
+      throw new Error(
+        `Failed to resolve league ${leagueProviderId}: ${error.message}`
+      );
+    }
+
+    return (data ?? []).map((league) => league.id);
+  }
+
+  const { data: leagues, error } = await client
     .from("leagues")
     .select("id")
     .in("provider_id", [...config.leagueProviderIds]);
 
-  if (!leagues?.length) {
+  if (error) {
+    throw new Error(`Failed to resolve ingestion leagues: ${error.message}`);
+  }
+
+  return (leagues ?? []).map((league) => league.id);
+}
+
+async function readFixtureRowsInRangePaginated(
+  client: ReturnType<typeof createAdminClient>,
+  leagueIds: string[],
+  fromDate: string,
+  toDateExclusive: string
+): Promise<FixtureRow[]> {
+  const rows: FixtureRow[] = [];
+  let offset = 0;
+
+  while (true) {
+    const { data, error } = await client
+      .from("fixtures")
+      .select(FIXTURE_SELECT)
+      .in("league_id", leagueIds)
+      .gte("kickoff_at", normalizeRangeBound(fromDate))
+      .lt("kickoff_at", normalizeRangeBound(toDateExclusive))
+      .order("kickoff_at", { ascending: true })
+      .range(offset, offset + FIXTURE_RANGE_PAGE_SIZE - 1);
+
+    if (error) {
+      throw new Error(
+        `Failed to read fixtures for range ${fromDate}..${toDateExclusive}: ${error.message}`
+      );
+    }
+
+    const page = (data ?? []) as FixtureRow[];
+    rows.push(...page);
+
+    if (page.length < FIXTURE_RANGE_PAGE_SIZE) {
+      break;
+    }
+
+    offset += FIXTURE_RANGE_PAGE_SIZE;
+  }
+
+  return rows;
+}
+
+export async function readFixturesInRangeFromDb(
+  fromDate: string,
+  toDateExclusive: string,
+  options?: ReadFixturesInRangeOptions
+): Promise<Fixture[]> {
+  const client = createAdminClient();
+  const leagueIds = await resolveLeagueIdsForFixtureRange(
+    client,
+    options?.leagueProviderId
+  );
+
+  if (!leagueIds.length) {
     return [];
   }
 
-  const { data, error } = await client
-    .from("fixtures")
-    .select(FIXTURE_SELECT)
-    .in(
-      "league_id",
-      leagues.map((league) => league.id)
-    )
-    .gte("kickoff_at", normalizeRangeBound(fromDate))
-    .lt("kickoff_at", normalizeRangeBound(toDateExclusive))
-    .order("kickoff_at", { ascending: true });
+  const rows = await readFixtureRowsInRangePaginated(
+    client,
+    leagueIds,
+    fromDate,
+    toDateExclusive
+  );
 
-  if (error) {
-    throw new Error(
-      `Failed to read fixtures for range ${fromDate}..${toDateExclusive}: ${error.message}`
-    );
-  }
-
-  return ((data ?? []) as FixtureRow[]).map(mapFixtureRow);
+  return rows.map(mapFixtureRow);
 }
 
 export type FollowedTeamRow = {

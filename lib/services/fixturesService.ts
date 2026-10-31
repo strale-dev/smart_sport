@@ -207,13 +207,22 @@ export async function getFixturesData(
     todayDateKey,
     FIXTURES_WINDOW_DAYS + 1
   );
-  const [result, runs] = await Promise.all([
-    getMatchesInRange(fromUtc, toUtcExclusive),
+  const leagueFilterActive = params.league != null;
+
+  const [result, discoveryResult, runs] = await Promise.all([
+    getMatchesInRange(fromUtc, toUtcExclusive, params.league),
+    leagueFilterActive
+      ? getMatchesInRange(fromUtc, toUtcExclusive)
+      : Promise.resolve(null),
     loadFixtureSyncRuns(),
   ]);
   const nowMs = now.getTime();
-  const allFixtures = resolvePresentationFixtures(result.data, nowMs);
-  const filtered = filterFixturesBySearchParams(allFixtures, params);
+  const listFixtures = resolvePresentationFixtures(result.data, nowMs);
+  const discoveryFixtures =
+    leagueFilterActive && discoveryResult != null
+      ? resolvePresentationFixtures(discoveryResult.data, nowMs)
+      : listFixtures;
+  const filtered = filterFixturesBySearchParams(listFixtures, params);
 
   const { upcomingDayGroups, pastDayGroups } = buildUpcomingAndPastDayGroups(
     filtered,
@@ -228,17 +237,17 @@ export async function getFixturesData(
   const anchorInput = {
     now,
     todayDateKey,
-    hasLiveFixture: allFixtures.some((fixture) =>
+    hasLiveFixture: discoveryFixtures.some((fixture) =>
       isLiveFixtureStatus(fixture.status)
     ),
     windowFromDate: fromDateKey,
     windowToDateExclusive: toDateKeyExclusive,
     runs,
-    fixtureLastProviderSyncAt: allFixtures.map(
+    fixtureLastProviderSyncAt: discoveryFixtures.map(
       (fixture) => fixture.liveClock?.lastProviderSyncAt
     ),
     envelopeCachedAt: result.meta.cachedAt ?? null,
-    persistedFixtureCount: allFixtures.length,
+    persistedFixtureCount: discoveryFixtures.length,
     metaStale: result.meta.stale,
   };
   let anchor = resolveProviderSyncedAt({
@@ -251,7 +260,7 @@ export async function getFixturesData(
     anchor.providerSyncSource === "cache_envelope"
   ) {
     const leagueLastSyncAt = await loadLeagueLastSyncAt(
-      leagueIdsForSyncFallback(allFixtures, params.league)
+      leagueIdsForSyncFallback(discoveryFixtures, params.league)
     );
 
     if (leagueLastSyncAt.length > 0) {
@@ -266,8 +275,8 @@ export async function getFixturesData(
     upcomingDayGroups,
     pastDayGroups,
     dayGroups: upcomingDayGroups,
-    liveLeagueIds: collectLiveLeagueIds(allFixtures),
-    activeLeagueIds: collectActiveLeagueIds(allFixtures),
+    liveLeagueIds: collectLiveLeagueIds(discoveryFixtures),
+    activeLeagueIds: collectActiveLeagueIds(discoveryFixtures),
     nowAnchorFixtureId: findNowAnchorFixtureId(upcomingFixtures),
     todayDateKey,
     filters: { league: params.league },

@@ -60,9 +60,14 @@ export function providerFixturesDateKey(date: string): string {
 /** UTC date strings only (YYYY-MM-DD), not request timestamps. */
 export function providerFixturesRangeKey(
   fromDate: string,
-  toDateExclusive: string
+  toDateExclusive: string,
+  leagueProviderId?: number
 ): string {
-  return `provider:fixtures:range:${fromDate}:${toDateExclusive}`;
+  const base = `provider:fixtures:range:${fromDate}:${toDateExclusive}`;
+  if (leagueProviderId == null) {
+    return base;
+  }
+  return `${base}:league:${leagueProviderId}`;
 }
 
 export function providerFixtureKey(id: number): string {

@@ -93,6 +93,17 @@ describe("buildFixturesWindow", () => {
   });
 });
 
+describe("providerFixturesRangeKey", () => {
+  it("includes league provider id when scoped", () => {
+    expect(providerFixturesRangeKey("2026-09-01", "2026-10-02", 39)).toBe(
+      "provider:fixtures:range:2026-09-01:2026-10-02:league:39"
+    );
+    expect(providerFixturesRangeKey("2026-09-01", "2026-10-02")).toBe(
+      "provider:fixtures:range:2026-09-01:2026-10-02"
+    );
+  });
+});
+
 describe("buildFixturesRangeCacheKey", () => {
   it("uses day-rounded dates, not request timestamps", () => {
     const morning = new Date("2026-09-02T08:00:00.000Z");
