@@ -1,14 +1,12 @@
 "use client";
 
 import { usePrematchInsight } from "@/components/ai/AIInsightProvider";
-import { AIEngineAnalysisNotice } from "@/components/ai/AIEngineAnalysisNotice";
 import { AIHeroCard } from "@/components/ai/AIHeroCard";
 import { AIHeroFallbackCard } from "@/components/ai/AIHeroFallbackCard";
 import { AIHeroLimitState } from "@/components/ai/AIHeroLimitState";
 import { AIHeroLockedCard } from "@/components/ai/AIHeroLockedCard";
 import { AIHeroSkeleton } from "@/components/ai/AIHeroSkeleton";
 import { AIHeroUnavailableState } from "@/components/ai/AIHeroUnavailableState";
-import { AIHeroShell } from "@/components/ai/AIHeroShell";
 import { WinProbabilitiesBar } from "@/components/ai/WinProbabilitiesBar";
 import { ErrorState } from "@/components/common/ErrorState";
 import { predictedOutcomeFromProbabilities } from "@/lib/models/confidence";
@@ -120,7 +118,7 @@ export function AIHeroSection({
     return (
       <AIHeroUnavailableState
         title={aiUiCopy.title}
-        description={aiUiCopy.description ?? undefined}
+        description={aiUiCopy.description}
       />
     );
   }
@@ -149,7 +147,7 @@ export function AIHeroSection({
         ) : (
           <ErrorState
             title={aiUiCopy.title}
-            description={aiUiCopy.description ?? undefined}
+            description={aiUiCopy.description}
             onRetry={aiUiCopy.showRetry ? () => void refetch() : undefined}
           />
         )}
@@ -191,12 +189,10 @@ export function AIHeroSection({
     (!displayExperience.showModelPrediction && !displayExperience.showNarrative)
   ) {
     return (
-      <AIHeroShell variant="plain">
-        <AIEngineAnalysisNotice
-          experience={displayExperience}
-          className="border-0 bg-transparent py-6"
-        />
-      </AIHeroShell>
+      <AIHeroUnavailableState
+        title={aiUiCopy.title}
+        description={aiUiCopy.description}
+      />
     );
   }
 
@@ -233,30 +229,19 @@ export function AIHeroSection({
 
   if (aiUiState === "AI_NOT_READY") {
     return (
-      <AIHeroShell variant="plain">
-        <AIHeroUnavailableState
-          title={aiUiCopy.title}
-          description={aiUiCopy.description ?? undefined}
-        />
-      </AIHeroShell>
+      <AIHeroUnavailableState
+        title={aiUiCopy.title}
+        description={aiUiCopy.description}
+      />
     );
   }
 
   if (aiUiState === "AI_UNAVAILABLE" || aiUiState === "NO_DATA") {
     return (
-      <AIHeroShell variant="plain">
-        {aiUiState === "NO_DATA" && displayExperience.headline ? (
-          <AIEngineAnalysisNotice
-            experience={displayExperience}
-            className="border-0 bg-transparent py-6"
-          />
-        ) : (
-          <AIHeroUnavailableState
-            title={aiUiCopy.title}
-            description={aiUiCopy.description ?? undefined}
-          />
-        )}
-      </AIHeroShell>
+      <AIHeroUnavailableState
+        title={aiUiCopy.title}
+        description={aiUiCopy.description}
+      />
     );
   }
 
@@ -264,7 +249,7 @@ export function AIHeroSection({
     return (
       <AIHeroUnavailableState
         title={aiUiCopy.title}
-        description={aiUiCopy.description ?? undefined}
+        description={aiUiCopy.description}
       />
     );
   }
@@ -274,11 +259,9 @@ export function AIHeroSection({
   }
 
   return (
-    <AIHeroShell variant="plain">
-      <AIEngineAnalysisNotice
-        experience={displayExperience}
-        className="border-0 bg-transparent py-6"
-      />
-    </AIHeroShell>
+    <AIHeroUnavailableState
+      title={aiUiCopy.title}
+      description={aiUiCopy.description}
+    />
   );
 }

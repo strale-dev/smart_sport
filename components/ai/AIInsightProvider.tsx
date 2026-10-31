@@ -49,6 +49,7 @@ import { liveKeys } from "@/lib/live/query-keys";
 import { resolveCanonicalPrematchInsightState } from "@/lib/ai/canonical-insight-state";
 import {
   describeMatchAiUiState,
+  inferMatchAiReasonCode,
   resolveMatchAiUiState,
   type MatchAiUiCopy,
   type MatchAiUiState,
@@ -382,12 +383,20 @@ export function AIInsightProvider({
     ]
   );
 
+  const inferredReasonCode = inferMatchAiReasonCode({
+    canonicalReason: canonicalPrematch?.reasonCode ?? null,
+    isGuest,
+    hookState: viewModel.state,
+    fixturePhase: viewModel.fixturePhase,
+    hasInsight: viewModel.insight != null,
+  });
+
   const aiUiCopy = useMemo(
     () =>
       describeMatchAiUiState({
         state: aiUiState,
         fixturePhase: viewModel.fixturePhase,
-        reasonCode: canonicalPrematch?.reasonCode ?? null,
+        reasonCode: inferredReasonCode,
         liveUnavailableReason: liveDelta?.unavailableReason ?? null,
         hasPrediction: viewModel.prediction != null,
         hasLiveWinProbabilities: viewModel.liveWinProbabilities != null,
@@ -397,7 +406,7 @@ export function AIInsightProvider({
       }),
     [
       aiUiState,
-      canonicalPrematch?.reasonCode,
+      inferredReasonCode,
       liveDelta?.unavailableReason,
       viewModel.contextStale,
       viewModel.errorMessage,

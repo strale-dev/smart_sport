@@ -18,7 +18,7 @@ export type MatchAiUiState =
 
 export type MatchAiUiCopy = {
   title: string;
-  description: string | null;
+  description: string;
   showSkeleton: boolean;
   showRetry: boolean;
 };
@@ -39,27 +39,104 @@ export type ResolveMatchAiUiStateInput = {
   dailyLimitReached: boolean;
 };
 
+function liveReasonToCopy(reason: LivePredictionUnavailableReason): {
+  title: string;
+  description: string;
+} {
+  switch (reason) {
+    case "NO_LIVE_PREDICTION":
+      return {
+        title: "No in-match update yet",
+        description:
+          "The in-match model has not produced an update for this scoreline yet.",
+      };
+    case "SCORE_MISMATCH":
+      return {
+        title: "Live probabilities paused",
+        description:
+          "Live win probabilities are paused until they match the score on the pitch.",
+      };
+    case "MINUTE_BEHIND":
+      return {
+        title: "Live probabilities catching up",
+        description:
+          "Live win probabilities are catching up to the current minute.",
+      };
+    case "STATUS_MISMATCH":
+      return {
+        title: "Live probabilities paused",
+        description:
+          "Live win probabilities are paused while we reconcile match status.",
+      };
+    case "SCORE_UNAVAILABLE":
+      return {
+        title: "Waiting for a confirmed score",
+        description:
+          "Live win probabilities need a confirmed score before they can update.",
+      };
+    case "FIXTURE_ID_MISMATCH":
+      return {
+        title: "Live model could not be matched",
+        description: "Live model data could not be matched to this fixture.",
+      };
+    case "LIVE_POLLING_DISABLED":
+      return {
+        title: "Live updates paused",
+        description:
+          "Live updates are temporarily disabled; pre-kickoff numbers may still appear below.",
+      };
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
 export function formatLivePredictionUnavailableReason(
   reason: LivePredictionUnavailableReason | null | undefined
 ): string {
-  switch (reason) {
-    case "NO_LIVE_PREDICTION":
-      return "The in-match model has not produced an update for this scoreline yet.";
-    case "SCORE_MISMATCH":
-      return "Live win probabilities are paused until they match the score on the pitch.";
-    case "MINUTE_BEHIND":
-      return "Live win probabilities are catching up to the current minute.";
-    case "STATUS_MISMATCH":
-      return "Live win probabilities are paused while we reconcile match status.";
-    case "SCORE_UNAVAILABLE":
-      return "Live win probabilities need a confirmed score before they can update.";
-    case "FIXTURE_ID_MISMATCH":
-      return "Live model data could not be matched to this fixture.";
-    case "LIVE_POLLING_DISABLED":
-      return "Live updates are temporarily disabled; pre-kickoff numbers may still appear below.";
-    default:
-      return "Live win probabilities are not available for this moment in the match.";
+  if (reason == null) {
+    return "Live win probabilities are not available for this moment in the match.";
   }
+
+  return liveReasonToCopy(reason).description;
+}
+
+export function inferMatchAiReasonCode(input: {
+  canonicalReason: AiInsightReasonCode | null | undefined;
+  isGuest: boolean;
+  hookState: PrematchInsightHookState;
+  fixturePhase: FixturePhase;
+  hasInsight: boolean;
+}): AiInsightReasonCode | null {
+  if (input.canonicalReason) {
+    return input.canonicalReason;
+  }
+
+  if (input.isGuest || input.hookState === "guest") {
+    return "GUEST_FORBIDDEN";
+  }
+
+  if (input.hookState === "limit") {
+    return "DAILY_LIMIT";
+  }
+
+  if (input.hookState === "neither") {
+    return "FIXTURE_NOT_ANALYZABLE";
+  }
+
+  if (input.hookState === "error") {
+    return "NETWORK_ERROR";
+  }
+
+  if (
+    !input.hasInsight &&
+    (input.fixturePhase === "LIVE" || input.fixturePhase === "FINISHED")
+  ) {
+    return "NO_STORED_INSIGHT";
+  }
+
+  return null;
 }
 
 function mapCanonicalToMatchAiUiState(
@@ -231,7 +308,10 @@ export function resolveMatchAiUiState(
   return "AI_LOADING";
 }
 
-function reasonToUnavailableCopy(code: AiInsightReasonCode): {
+function reasonToUnavailableCopy(
+  code: AiInsightReasonCode,
+  fixturePhase: FixturePhase
+): {
   title: string;
   description: string;
 } {
@@ -270,20 +350,114 @@ function reasonToUnavailableCopy(code: AiInsightReasonCode): {
       return {
         title: "No stored analysis",
         description:
-          "We do not have a saved AI narrative for this fixture. Model probabilities may still appear when ready.",
+          fixturePhase === "FINISHED"
+            ? "This match finished without a saved AI narrative. We do not generate a new write-up after full time."
+            : fixturePhase === "LIVE"
+              ? "No pre-match AI narrative was stored before kickoff. Live commentary cannot start from a saved baseline."
+              : "We do not have a saved AI narrative for this fixture. Model probabilities may still appear when ready.",
       };
     case "GENERATION_NOT_ALLOWED":
       return {
         title: "Analysis not offered",
         description:
-          "This fixture is outside the window or policy where we generate AI commentary.",
+          "This fixture is outside the 36-hour window where we generate AI commentary.",
       };
-    default:
+    case "LOADING":
+      return {
+        title: "Loading AI analysis",
+        description: "Fetching prediction and AI commentary for this fixture.",
+      };
+    case "STALE_CONTEXT_HASH":
+      return {
+        title: "Refreshing match analysis",
+        description:
+          "Match data changed. We are refreshing the saved analysis to match the latest context.",
+      };
+    case "OPENAI_NOT_CONFIGURED":
+      return {
+        title: "AI analysis unavailable",
+        description:
+          "The analysis service is not configured for this environment, so no narrative can be generated.",
+      };
+    case "OPENAI_TIMEOUT":
+      return {
+        title: "Analysis timed out",
+        description:
+          "The AI request timed out before a narrative was ready. Model probabilities may still appear when available.",
+      };
+    case "OPENAI_PROVIDER_ERROR":
+      return {
+        title: "Analysis service error",
+        description:
+          "The AI provider could not generate commentary for this fixture. Model probabilities may still appear when available.",
+      };
+    case "MALFORMED_OUTPUT":
+      return {
+        title: "Analysis could not be shown",
+        description:
+          "The generated commentary was incomplete or invalid, so we are not showing it for this fixture.",
+      };
+    case "RATE_LIMIT":
+      return {
+        title: "AI temporarily rate limited",
+        description:
+          "Too many analysis requests are in flight. Try again shortly; stored analysis still appears when available.",
+      };
+    case "GENERATION_CONCURRENT":
+      return {
+        title: "Analysis already running",
+        description:
+          "Another generation is already in progress for this fixture. The shared analysis will appear here when it finishes.",
+      };
+    case "NETWORK_ERROR":
+      return {
+        title: "Could not load AI analysis",
+        description:
+          "A network error interrupted the analysis request. Retry when your connection is stable.",
+      };
+    case "UNKNOWN":
       return {
         title: "Pre-match analysis unavailable",
         description: "We cannot show AI commentary for this fixture right now.",
       };
+    default: {
+      const _exhaustive: never = code;
+      return _exhaustive;
+    }
   }
+}
+
+function resolveUnavailableCopy(input: {
+  fixturePhase: FixturePhase;
+  reasonCode?: AiInsightReasonCode | null;
+  liveUnavailableReason?: LivePredictionUnavailableReason | null;
+}): {
+  title: string;
+  description: string;
+} {
+  if (input.liveUnavailableReason != null) {
+    return liveReasonToCopy(input.liveUnavailableReason);
+  }
+
+  if (input.reasonCode) {
+    return reasonToUnavailableCopy(input.reasonCode, input.fixturePhase);
+  }
+
+  if (input.fixturePhase === "LIVE" || input.fixturePhase === "FINISHED") {
+    return reasonToUnavailableCopy("NO_STORED_INSIGHT", input.fixturePhase);
+  }
+
+  if (input.fixturePhase === "NEITHER") {
+    return reasonToUnavailableCopy(
+      "FIXTURE_NOT_ANALYZABLE",
+      input.fixturePhase
+    );
+  }
+
+  return {
+    title: "Analysis unavailable",
+    description: "AI commentary is not available for this fixture.",
+  };
 }
 
 export function describeMatchAiUiState(input: {
@@ -316,7 +490,7 @@ export function describeMatchAiUiState(input: {
           generationFailureMessage ??
           (contextStale
             ? "Showing the last saved analysis while we refresh for the latest match data."
-            : null),
+            : "Shared pre-match analysis for this fixture."),
         showSkeleton: false,
         showRetry: Boolean(generationFailureMessage),
       };
@@ -331,53 +505,59 @@ export function describeMatchAiUiState(input: {
         showSkeleton: !hasPrediction,
         showRetry: false,
       };
-    case "AI_NOT_READY":
+    case "AI_NOT_READY": {
+      const notReady = reasonCode
+        ? reasonToUnavailableCopy(reasonCode, fixturePhase)
+        : {
+            title: "Analysis not ready yet",
+            description:
+              "We are still gathering the data required before AI can analyze this match.",
+          };
       return {
-        title: "Analysis not ready yet",
-        description:
-          reasonCode === "READINESS_NOT_MET"
-            ? reasonToUnavailableCopy("READINESS_NOT_MET").description
-            : "We are still gathering the data required before AI can analyze this match.",
-        showSkeleton: false,
-        showRetry: false,
-      };
-    case "AI_UNAVAILABLE": {
-      const fromReason = reasonCode
-        ? reasonToUnavailableCopy(reasonCode)
-        : null;
-      const liveLine =
-        liveUnavailableReason != null
-          ? formatLivePredictionUnavailableReason(liveUnavailableReason)
-          : null;
-      return {
-        title: fromReason?.title ?? "Analysis unavailable",
-        description:
-          liveLine ??
-          fromReason?.description ??
-          "AI commentary is not available for this fixture.",
+        ...notReady,
         showSkeleton: false,
         showRetry: false,
       };
     }
-    case "AI_FAILED":
+    case "AI_UNAVAILABLE": {
+      const unavailable = resolveUnavailableCopy({
+        fixturePhase,
+        reasonCode,
+        liveUnavailableReason,
+      });
       return {
-        title: "Could not load AI analysis",
+        ...unavailable,
+        showSkeleton: false,
+        showRetry: false,
+      };
+    }
+    case "AI_FAILED": {
+      const failedReason =
+        !networkErrorMessage && reasonCode
+          ? reasonToUnavailableCopy(reasonCode, fixturePhase)
+          : null;
+      return {
+        title: failedReason?.title ?? "Could not load AI analysis",
         description:
           networkErrorMessage ??
+          failedReason?.description ??
           "The narrative analysis failed to generate. Model probabilities may still be shown when available.",
         showSkeleton: false,
         showRetry: fixturePhase !== "LIVE",
       };
-    case "NO_DATA":
+    }
+    case "NO_DATA": {
+      const noData = resolveUnavailableCopy({
+        fixturePhase,
+        reasonCode,
+        liveUnavailableReason,
+      });
       return {
-        title: "No model baseline yet",
-        description:
-          fixturePhase === "LIVE"
-            ? "Pre-kickoff and live model outputs are not available for this moment."
-            : "Pre-match win probabilities and AI commentary will appear here once this fixture is analyzed.",
+        ...noData,
         showSkeleton: false,
         showRetry: false,
       };
+    }
     default: {
       const _exhaustive: never = state;
       return _exhaustive;

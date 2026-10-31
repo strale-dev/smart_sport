@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AIHeroSection } from "@/components/ai/AIHeroSection";
 import type { AIInsightContextValue } from "@/components/ai/AIInsightProvider";
@@ -47,6 +47,10 @@ vi.mock("@/components/ai/AIInsightProvider", () => ({
 
 import { usePrematchInsight } from "@/components/ai/AIInsightProvider";
 
+afterEach(() => {
+  cleanup();
+});
+
 describe("AIHeroSection", () => {
   it("shows skeleton when AI_LOADING with showSkeleton", () => {
     vi.mocked(usePrematchInsight).mockReturnValue(
@@ -54,7 +58,8 @@ describe("AIHeroSection", () => {
         aiUiState: "AI_LOADING",
         aiUiCopy: {
           title: "Loading",
-          description: null,
+          description:
+            "Fetching prediction and AI commentary for this fixture.",
           showSkeleton: true,
           showRetry: false,
         },
@@ -108,7 +113,7 @@ describe("AIHeroSection", () => {
         aiUiState: "AI_READY",
         aiUiCopy: {
           title: "AI match analysis",
-          description: null,
+          description: "Shared pre-match analysis for this fixture.",
           showSkeleton: false,
           showRetry: false,
         },
@@ -292,5 +297,152 @@ describe("AIHeroSection", () => {
 
     expect(screen.getByText("Live model")).toBeInTheDocument();
     expect(screen.getByText("Model probabilities")).toBeInTheDocument();
+  });
+
+  it("shows READINESS_NOT_MET copy instead of an empty hero", () => {
+    vi.mocked(usePrematchInsight).mockReturnValue(
+      buildContext({
+        state: "unavailable",
+        aiUiState: "AI_NOT_READY",
+        aiUiCopy: {
+          title: "Not enough data yet",
+          description:
+            "Prediction and AI need more reliable inputs for this fixture. Check back closer to kickoff.",
+          showSkeleton: false,
+          showRetry: false,
+        },
+        displayExperience: {
+          tier: "scheduled",
+          headline: null,
+          description: null,
+          showModelPrediction: false,
+          showNarrative: false,
+          shouldAutoGenerateNarrative: false,
+        },
+      })
+    );
+
+    render(
+      <AIHeroSection
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        returnTo="/matches/1"
+      />
+    );
+
+    expect(screen.getByText("Not enough data yet")).toBeInTheDocument();
+    expect(screen.getByText(/more reliable inputs/)).toBeInTheDocument();
+  });
+
+  it("shows NO_STORED_INSIGHT copy for a finished match", () => {
+    vi.mocked(usePrematchInsight).mockReturnValue(
+      buildContext({
+        state: "miss",
+        fixturePhase: "FINISHED",
+        aiUiState: "NO_DATA",
+        aiUiCopy: {
+          title: "No stored analysis",
+          description:
+            "This match finished without a saved AI narrative. We do not generate a new write-up after full time.",
+          showSkeleton: false,
+          showRetry: false,
+        },
+        displayExperience: {
+          tier: "none",
+          headline: null,
+          description: null,
+          showModelPrediction: false,
+          showNarrative: false,
+          shouldAutoGenerateNarrative: false,
+        },
+      })
+    );
+
+    render(
+      <AIHeroSection
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        returnTo="/matches/1"
+      />
+    );
+
+    expect(screen.getByText("No stored analysis")).toBeInTheDocument();
+    expect(
+      screen.getByText(/finished without a saved AI narrative/)
+    ).toBeInTheDocument();
+  });
+
+  it("shows LIVE_POLLING_DISABLED copy on live without stored insight", () => {
+    vi.mocked(usePrematchInsight).mockReturnValue(
+      buildContext({
+        state: "miss",
+        fixturePhase: "LIVE",
+        aiUiState: "NO_DATA",
+        aiUiCopy: {
+          title: "Live updates paused",
+          description:
+            "Live updates are temporarily disabled; pre-kickoff numbers may still appear below.",
+          showSkeleton: false,
+          showRetry: false,
+        },
+        displayExperience: {
+          tier: "none",
+          headline: null,
+          description: null,
+          showModelPrediction: false,
+          showNarrative: false,
+          shouldAutoGenerateNarrative: false,
+        },
+      })
+    );
+
+    render(
+      <AIHeroSection
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        returnTo="/matches/1"
+      />
+    );
+
+    expect(screen.getByText("Live updates paused")).toBeInTheDocument();
+    expect(
+      screen.getByText(/live updates are temporarily disabled/i)
+    ).toBeInTheDocument();
+  });
+
+  it("shows GENERATION_NOT_ALLOWED copy outside the 36h window", () => {
+    vi.mocked(usePrematchInsight).mockReturnValue(
+      buildContext({
+        state: "unavailable",
+        fixturePhase: "PREMATCH",
+        aiUiState: "AI_UNAVAILABLE",
+        aiUiCopy: {
+          title: "Analysis not offered",
+          description:
+            "This fixture is outside the 36-hour window where we generate AI commentary.",
+          showSkeleton: false,
+          showRetry: false,
+        },
+        displayExperience: {
+          tier: "scheduled",
+          headline: null,
+          description: null,
+          showModelPrediction: false,
+          showNarrative: false,
+          shouldAutoGenerateNarrative: false,
+        },
+      })
+    );
+
+    render(
+      <AIHeroSection
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        returnTo="/matches/1"
+      />
+    );
+
+    expect(screen.getByText("Analysis not offered")).toBeInTheDocument();
+    expect(screen.getByText(/36-hour window/)).toBeInTheDocument();
   });
 });
