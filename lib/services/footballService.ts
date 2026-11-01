@@ -255,6 +255,10 @@ async function readFixturesInRangeWithProviderFill(
   const fromDb = await readFixturesInRangeFromDb(fromDate, toDateExclusive, {
     leagueProviderId,
   });
+  // League-filtered fixtures pages must never block on multi-day provider backfill.
+  if (leagueProviderId != null) {
+    return fromDb;
+  }
   if (fromDb.length > 0 || !isApiFootballIngestOnly()) {
     return fromDb;
   }
