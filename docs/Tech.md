@@ -533,6 +533,8 @@ Configuration constants live in `lib/api-football/config.ts` and `lib/ingestion/
 - Client: `@upstash/redis`.
 - Rate limiter: `@upstash/ratelimit` for LLM & AI endpoints.
 
+**Production ops:** If Upstash REST host is misconfigured or deleted, app code **fail-opens** ([`lib/redis/cache.ts`](../lib/redis/cache.ts)) — pages stay up but shared cache, distributed locks, and quota counters degrade. Symptom: slow SSR/dashboard and `[cache] Redis read failed` in Vercel logs. Fix: restore Upstash, rotate `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` on Vercel Production, redeploy. Verify with `GET /api/cron/health` (`Authorization: Bearer CRON_SECRET`) — expect `checks.redis.ok` and `cacheRoundTrip` true.
+
 ### 10.2 Cache key conventions
 
 ```

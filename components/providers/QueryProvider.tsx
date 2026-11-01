@@ -18,7 +18,8 @@ export function QueryProvider({ children }: QueryProviderProps) {
           queries: {
             staleTime: 15_000,
             retry: 1,
-            refetchOnWindowFocus: true,
+            refetchOnWindowFocus:
+              publicEnv.NEXT_PUBLIC_APP_ENV !== "production",
           },
         },
       })

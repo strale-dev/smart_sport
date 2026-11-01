@@ -1,0 +1,6 @@
+=== https://scorence.app/ ===
+ttfb:0.757411s total:0.906706s size:91738
+=== https://scorence.app/matches/1570355 ===
+ttfb:0.391528s total:0.825724s size:241927
+=== https://scorence.app/live ===
+ttfb:0.417349s total:1.387237s size:199228

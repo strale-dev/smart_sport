@@ -28,12 +28,20 @@ export function MatchViewAnalytics({
 
     captured.current = true;
 
-    void captureClientEvent(POSTHOG_EVENTS.matchViewed, {
-      fixture_id: fixture.externalId,
-      league_id: fixture.league.externalId,
-      status: fixture.status,
-      is_guest: isGuest,
-    });
+    const send = () => {
+      void captureClientEvent(POSTHOG_EVENTS.matchViewed, {
+        fixture_id: fixture.externalId,
+        league_id: fixture.league.externalId,
+        status: fixture.status,
+        is_guest: isGuest,
+      });
+    };
+
+    if (typeof requestIdleCallback === "function") {
+      requestIdleCallback(send, { timeout: 3000 });
+    } else {
+      setTimeout(send, 0);
+    }
   }, [consent, fixture, isGuest, isReady]);
 
   return null;

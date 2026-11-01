@@ -10,6 +10,7 @@ import {
   isAuthPagePath,
   isAuthRequiredPath,
   isUpdatePasswordPath,
+  middlewareNeedsSessionUser,
 } from "@/lib/auth/routes";
 import { env } from "@/lib/env.server";
 import type { Database } from "@/types/supabase";
@@ -42,22 +43,6 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  let user = null;
-  try {
-    const {
-      data: { user: sessionUser },
-      error,
-    } = await supabase.auth.getUser();
-
-    if (error) {
-      console.warn("[auth] middleware getUser failed:", error.message);
-    } else {
-      user = sessionUser;
-    }
-  } catch (error) {
-    console.warn("[auth] middleware getUser failed:", error);
-  }
-
   const pathname = request.nextUrl.pathname;
   const returnToParam = request.nextUrl.searchParams.get("returnTo");
 
@@ -69,6 +54,24 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/api/auth/callback/recovery";
     return copyCookies(NextResponse.redirect(url), supabaseResponse);
+  }
+
+  let user = null;
+  if (middlewareNeedsSessionUser(pathname)) {
+    try {
+      const {
+        data: { user: sessionUser },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (error) {
+        console.warn("[auth] middleware getUser failed:", error.message);
+      } else {
+        user = sessionUser;
+      }
+    } catch (error) {
+      console.warn("[auth] middleware getUser failed:", error);
+    }
   }
 
   if (isUpdatePasswordPath(pathname)) {
