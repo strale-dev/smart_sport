@@ -44,3 +44,12 @@ export function isAuthPagePath(pathname: string): boolean {
 export function isUpdatePasswordPath(pathname: string): boolean {
   return matchesPrefix(pathname, UPDATE_PASSWORD_PATH);
 }
+
+/** Middleware only needs Supabase user when a redirect decision depends on it. */
+export function middlewareNeedsSessionUser(pathname: string): boolean {
+  return (
+    isAuthRequiredPath(pathname) ||
+    isAuthPagePath(pathname) ||
+    isUpdatePasswordPath(pathname)
+  );
+}

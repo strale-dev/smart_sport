@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import {
   rankFixturesByImportance,
   type ImportanceContext,
@@ -35,7 +37,7 @@ function emptyContext(now: Date): ImportanceContext {
   };
 }
 
-export async function loadLandingShowcaseFixture(): Promise<LandingShowcaseData | null> {
+async function loadLandingShowcaseFixtureUncached(): Promise<LandingShowcaseData | null> {
   const now = new Date();
   const today = utcToday();
   const fixtures = await readFixturesForDateFromDb(today);
@@ -102,3 +104,8 @@ export async function loadLandingShowcaseFixture(): Promise<LandingShowcaseData 
     modelProbability,
   };
 }
+
+/** Per-request dedupe when Hero + ProductScreens both load showcase data. */
+export const loadLandingShowcaseFixture = cache(
+  loadLandingShowcaseFixtureUncached
+);

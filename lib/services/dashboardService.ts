@@ -37,7 +37,7 @@ import {
 } from "@/lib/ingestion/db-read";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import {
-  getMatchesForDate,
+  getMatchesInRange,
   listLiveFixtures,
 } from "@/lib/services/footballService";
 import type { Fixture } from "@/types/domain";
@@ -63,31 +63,12 @@ function addLifecycleDays(dateKey: string, days: number): string {
   return addDaysToDateKey(dateKey, days);
 }
 
-function lifecycleDateKeysInRange(
-  fromDateKey: string,
-  toDateKeyExclusive: string
-): string[] {
-  const keys: string[] = [];
-  let current = fromDateKey;
-
-  while (current < toDateKeyExclusive) {
-    keys.push(current);
-    current = addDaysToDateKey(current, 1);
-  }
-
-  return keys;
-}
-
 async function loadDashboardRangeFixtures(
   fromDateKey: string,
   toDateKeyExclusive: string
 ): Promise<Fixture[]> {
-  const dateKeys = lifecycleDateKeysInRange(fromDateKey, toDateKeyExclusive);
-  const results = await Promise.all(
-    dateKeys.map((dateKey) => getMatchesForDate(dateKey))
-  );
-
-  return dedupeFixtures(results.flatMap((result) => result.data));
+  const { data } = await getMatchesInRange(fromDateKey, toDateKeyExclusive);
+  return dedupeFixtures(data);
 }
 
 function fixtureLifecycleDateKey(fixture: Fixture): string {

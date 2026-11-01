@@ -4,6 +4,8 @@ import { LandingAnalytics } from "@/components/marketing/LandingAnalytics";
 import { ProductScreensSection } from "@/components/marketing/ProductScreensSection";
 import { WaitlistSection } from "@/components/marketing/WaitlistSection";
 
+export const revalidate = 60;
+
 export default function LandingPage() {
   return (
     <>

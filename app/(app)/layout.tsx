@@ -4,7 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { BRAND } from "@/lib/marketing/copy";
 import { resolveViewerTimezone } from "@/lib/datetime/viewer-timezone.server";
 import { getSoundPreferences } from "@/lib/preferences/sound.server";
-import { getAuthUserViewForSession, getCurrentUser } from "@/lib/supabase/user";
+import { getAuthUserViewForSession } from "@/lib/supabase/user";
 
 export const metadata: Metadata = {
   title: {
@@ -18,13 +18,11 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [authUser, sessionUser] = await Promise.all([
-    getAuthUserViewForSession(),
-    getCurrentUser(),
-  ]);
+  const authUser = await getAuthUserViewForSession();
+  const sessionUserId = authUser?.id ?? null;
   const [viewerTimeZone, initialSoundPreferences] = await Promise.all([
-    resolveViewerTimezone(sessionUser?.id ?? null),
-    sessionUser ? getSoundPreferences(sessionUser.id) : Promise.resolve(null),
+    resolveViewerTimezone(sessionUserId),
+    sessionUserId ? getSoundPreferences(sessionUserId) : Promise.resolve(null),
   ]);
 
   return (
