@@ -178,6 +178,25 @@ describe("evaluateFixtureReadiness", () => {
     );
   });
 
+  it("blocks AI generation when context hash compute failed", () => {
+    const snap = evaluateFixtureReadiness(
+      baseInput({
+        contextHashComputeFailed: true,
+        currentContextHash: null,
+        prediction: {
+          id: "p1",
+          createdAt: "2026-09-26T09:00:00.000Z",
+          inputSnapshot: baseFeatures,
+        },
+      })
+    );
+    expect(snap.gates.aiContextReady).toBe(false);
+    expect(snap.gates.aiGenerationAllowed).toBe(false);
+    expect(snap.items.find((item) => item.key === "ai_context")?.state).toBe(
+      "unavailable"
+    );
+  });
+
   it("stale AI insight on context hash mismatch", () => {
     const snap = evaluateFixtureReadiness(
       baseInput({
@@ -208,6 +227,21 @@ describe("evaluateFixtureReadiness", () => {
     );
     expect(snap.phase).toBe("LIVE");
     expect(snap.liveSubState).toBe("paused");
+  });
+
+  it("live_sync unavailable when live polling disabled", () => {
+    const snap = evaluateFixtureReadiness(
+      baseInput({
+        status: "2H",
+        lastProviderSyncAt: new Date().toISOString(),
+        livePollingEnabled: false,
+      })
+    );
+    const liveSync = snap.items.find((item) => item.key === "live_sync");
+    expect(liveSync?.state).toBe("unavailable");
+    expect(liveSync?.reason).toBe("live_polling_disabled");
+    expect(snap.gates.liveDataCurrent).toBe(false);
+    expect(snap.artifacts.live?.pollingEnabled).toBe(false);
   });
 
   it("halftime is active live", () => {
@@ -252,6 +286,7 @@ describe("evaluateFixtureReadiness", () => {
           createdAt: "2026-09-26T09:55:00.000Z",
           inputSnapshot: baseFeatures,
         },
+        currentContextHash: "current-hash",
       })
     );
     expect(isAiGenerationAllowed(snap)).toBe(true);

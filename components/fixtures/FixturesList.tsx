@@ -1,6 +1,7 @@
 import { CalendarDaysIcon } from "lucide-react";
 
 import { FixturesNowAnchor } from "@/components/fixtures/FixturesNowAnchor";
+import { FixturesUnavailableState } from "@/components/fixtures/FixturesUnavailableState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { MatchRow } from "@/components/match/MatchRow";
 import { LeagueFilterLogo } from "@/components/live/LeagueFilterLogo";
@@ -25,11 +26,13 @@ function FixturesDayGroupsSection({
   todayDateKey,
   nowAnchorFixtureId,
   muted = false,
+  freezeLive = false,
 }: {
   dayGroups: FixturesDayGroup[];
   todayDateKey: string;
   nowAnchorFixtureId: number | null;
   muted?: boolean;
+  freezeLive?: boolean;
 }) {
   return (
     <div className={muted ? "space-y-6 opacity-90" : "space-y-8"}>
@@ -79,6 +82,7 @@ function FixturesDayGroupsSection({
                         fixture={fixture}
                         showLeague={false}
                         todayDateKey={todayDateKey}
+                        freezeLive={freezeLive}
                         anchorId={anchorIdForFixture(
                           fixture.externalId,
                           nowAnchorFixtureId
@@ -97,6 +101,7 @@ function FixturesDayGroupsSection({
                   fixture={fixture}
                   showLeague={false}
                   todayDateKey={todayDateKey}
+                  freezeLive={freezeLive}
                   anchorId={anchorIdForFixture(
                     fixture.externalId,
                     nowAnchorFixtureId
@@ -112,6 +117,10 @@ function FixturesDayGroupsSection({
 }
 
 export function FixturesList({ data }: FixturesListProps) {
+  if (data.isEmpty && data.providerUnavailable) {
+    return <FixturesUnavailableState />;
+  }
+
   if (data.isEmpty) {
     return (
       <div className="space-y-4">
@@ -162,6 +171,7 @@ export function FixturesList({ data }: FixturesListProps) {
           dayGroups={data.upcomingDayGroups}
           todayDateKey={data.todayDateKey}
           nowAnchorFixtureId={data.nowAnchorFixtureId}
+          freezeLive={data.freshnessStale}
         />
 
         {data.pastDayGroups.length > 0 ? (
@@ -173,6 +183,7 @@ export function FixturesList({ data }: FixturesListProps) {
               dayGroups={data.pastDayGroups}
               todayDateKey={data.todayDateKey}
               nowAnchorFixtureId={null}
+              freezeLive={data.freshnessStale}
               muted
             />
           </div>

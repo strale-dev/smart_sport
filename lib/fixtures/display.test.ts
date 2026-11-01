@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  FIXTURE_KICKOFF_PASSED_AWAITING_LABEL,
+  FIXTURE_SCORE_UNAVAILABLE_LABEL,
+  FIXTURE_UNKNOWN_TEAM_LABEL,
   formatFixtureKickoffDateTime,
   formatFixtureKickoffTime,
   formatFixtureScheduledCenterLabel,
   formatFixtureScore,
+  formatFixtureScoreText,
+  formatFixtureStatusLabel,
+  formatFixtureTeamDisplayName,
   formatMatchHeaderStatusLabel,
   shouldShowFixtureScore,
 } from "@/lib/fixtures/display";
@@ -81,12 +87,57 @@ function buildFixture(
   };
 }
 
+describe("stale prematch after kickoff (D1)", () => {
+  it("does not label NS after kickoff as Scheduled", () => {
+    const kickoff = "2026-09-14T10:00:00.000Z";
+    const now = new Date("2026-09-14T10:10:00.000Z");
+
+    expect(
+      formatFixtureStatusLabel("NS", null, { kickoffAt: kickoff, now })
+    ).toBe(FIXTURE_KICKOFF_PASSED_AWAITING_LABEL);
+    expect(
+      formatFixtureScheduledCenterLabel(
+        buildFixture(1, kickoff, { status: "NS" }),
+        BELGRADE,
+        "2026-09-14",
+        now
+      )
+    ).toBe(FIXTURE_KICKOFF_PASSED_AWAITING_LABEL);
+    expect(
+      formatMatchHeaderStatusLabel(
+        buildFixture(1, kickoff, { status: "NS" }),
+        BELGRADE,
+        now
+      )
+    ).toBe(FIXTURE_KICKOFF_PASSED_AWAITING_LABEL);
+  });
+});
+
+describe("finished and empty display guards (D3)", () => {
+  it("shows score unavailable for FT without goals", () => {
+    const fixture = buildFixture(1, "2026-09-08T16:45:00.000Z", {
+      status: "FT",
+    });
+    expect(formatFixtureScoreText(fixture)).toBe(
+      FIXTURE_SCORE_UNAVAILABLE_LABEL
+    );
+  });
+
+  it("shows unknown team for blank names", () => {
+    expect(formatFixtureTeamDisplayName("")).toBe(FIXTURE_UNKNOWN_TEAM_LABEL);
+    expect(formatFixtureTeamDisplayName("  ")).toBe(FIXTURE_UNKNOWN_TEAM_LABEL);
+  });
+});
+
 describe("formatMatchHeaderStatusLabel", () => {
   const kickoff = "2026-09-08T16:45:00.000Z";
 
   it("formats scheduled fixtures with kickoff datetime", () => {
     const fixture = buildFixture(1, kickoff, { status: "NS" });
-    expect(formatMatchHeaderStatusLabel(fixture, BELGRADE)).toContain("18:45");
+    const beforeKickoff = new Date("2026-09-08T12:00:00.000Z");
+    expect(
+      formatMatchHeaderStatusLabel(fixture, BELGRADE, beforeKickoff)
+    ).toContain("18:45");
   });
 
   it("formats live minute", () => {
@@ -184,8 +235,14 @@ describe("formatFixtureScheduledCenterLabel", () => {
     const fixture = buildFixture(1, "2026-09-14T16:00:00.000Z", {
       status: "NS",
     });
+    const beforeKickoff = new Date("2026-09-14T12:00:00.000Z");
     expect(
-      formatFixtureScheduledCenterLabel(fixture, BELGRADE, "2026-09-14")
+      formatFixtureScheduledCenterLabel(
+        fixture,
+        BELGRADE,
+        "2026-09-14",
+        beforeKickoff
+      )
     ).toMatch(/^\d{2}:\d{2}$/);
   });
 
@@ -193,10 +250,12 @@ describe("formatFixtureScheduledCenterLabel", () => {
     const fixture = buildFixture(1, "2026-09-15T18:30:00.000Z", {
       status: "NS",
     });
+    const beforeKickoff = new Date("2026-09-14T12:00:00.000Z");
     const label = formatFixtureScheduledCenterLabel(
       fixture,
       BELGRADE,
-      "2026-09-14"
+      "2026-09-14",
+      beforeKickoff
     );
     expect(label).toContain(",");
     expect(label).toMatch(/\d{2}:\d{2}/);

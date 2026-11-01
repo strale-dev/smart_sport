@@ -1,5 +1,11 @@
 import { getAiPromptVersion } from "@/lib/env";
-import { computeContextHash } from "@/lib/ai/hash";
+import {
+  assertLivePredictionMatchesFixture,
+  assertPrematchPredictionMatchesFixture,
+  hashLiveContext,
+  hashPrematchContext,
+  liveSnapshotIdFromPrediction,
+} from "@/lib/ai/context-hash-input";
 import { sanitizeProviderText } from "@/lib/ai/sanitize";
 import {
   buildDataAvailableManifest,
@@ -38,7 +44,7 @@ import { readLatestPrematchInsight } from "@/lib/ai/db";
 import type { MeaningfulEventKind } from "@/lib/live/event-detector-types";
 import {
   getActiveModelVersion,
-  mapPredictionRowToResult,
+  mapPrematchPredictionRowForFixture,
   readOfficialPrematchPrediction,
   readLatestPrematchPrediction,
   resolveFixtureUuidByExternalId,
@@ -149,6 +155,8 @@ async function buildPrematchContextUncached(
   fixtureExternalId: number,
   prediction: PrematchPredictionResult
 ): Promise<PrematchContextResult> {
+  assertPrematchPredictionMatchesFixture(fixtureExternalId, prediction);
+
   const fixture = await readFixtureByProviderIdFromDb(fixtureExternalId);
   if (!fixture) {
     throw new Error(`Fixture ${fixtureExternalId} not found for AI context`);
@@ -355,36 +363,7 @@ async function buildPrematchContextUncached(
     dataTimestamp: new Date().toISOString(),
   };
 
-  const contextHash = computeContextHash({
-    fixtureExternalId,
-    modelVersion: context.modelVersion,
-    promptVersion: context.promptVersion,
-    lineupsState: context.lineupsState,
-    kickoffAt: context.kickoffAt,
-    status: context.status,
-    league: context.league,
-    homeTeam: {
-      externalId: context.homeTeam.externalId,
-      isNational: context.homeTeam.isNational,
-    },
-    awayTeam: {
-      externalId: context.awayTeam.externalId,
-      isNational: context.awayTeam.isNational,
-    },
-    prediction: context.prediction,
-    form: context.form,
-    h2h: context.h2h,
-    standings: context.standings,
-    lineups: context.lineups,
-    sidelined: context.sidelined,
-    dataAvailable: context.dataAvailable,
-    dataMissing: context.dataMissing,
-    analyticsCompact: context.analyticsCompact,
-    referee: context.referee,
-    round: context.round,
-    historicalContext: context.historicalContext,
-    predictionFeatures: context.predictionFeatures,
-  });
+  const contextHash = hashPrematchContext(context);
 
   return { context, contextHash };
 }
@@ -409,8 +388,7 @@ async function resolvePrematchReferenceForLive(
 
   const kickoffReached = Date.now() >= new Date(kickoffAt).getTime();
   const prematchRow = kickoffReached
-    ? ((await readOfficialPrematchPrediction(fixtureRow.id, kickoffAt)) ??
-      (await readLatestPrematchPrediction(fixtureRow.id)))
+    ? await readOfficialPrematchPrediction(fixtureRow.id, kickoffAt)
     : await readLatestPrematchPrediction(fixtureRow.id);
 
   if (!prematchRow) {
@@ -418,12 +396,15 @@ async function resolvePrematchReferenceForLive(
   }
 
   const modelVersion = await getActiveModelVersion();
-  const prematchResult = mapPredictionRowToResult(
+  const prematchResult = await mapPrematchPredictionRowForFixture(
     prematchRow,
     fixtureExternalId,
     modelVersion.version,
     true
   );
+  if (!prematchResult) {
+    return null;
+  }
 
   const prematchInsight = await readLatestPrematchInsight(fixtureRow.id);
   const summary = prematchInsight?.summary?.trim() || null;
@@ -442,7 +423,10 @@ export async function buildLiveContext(input: {
   minute: number | null;
   score: { home: number | null; away: number | null };
   liveStats: LiveAiContext["liveStats"];
+  latestMatchEvents?: LiveAiContext["latestMatchEvents"];
 }): Promise<LiveContextResult> {
+  assertLivePredictionMatchesFixture(input.fixtureExternalId, input.prediction);
+
   const fixture = await readFixtureByProviderIdFromDb(input.fixtureExternalId);
   if (!fixture) {
     throw new Error(
@@ -579,6 +563,11 @@ export async function buildLiveContext(input: {
     modelVersion: input.prediction.modelVersion,
     promptVersion,
     meaningfulTriggers: [...input.meaningfulTriggers].sort(),
+    predictionBinding: {
+      predictionId: input.prediction.predictionId,
+      liveSnapshotId: liveSnapshotIdFromPrediction(input.prediction),
+    },
+    latestMatchEvents: input.latestMatchEvents ?? [],
     prediction: {
       winProbabilities: input.prediction.winProbabilities,
       expectedGoalsHome: input.prediction.expectedGoalsHome,
@@ -629,36 +618,7 @@ export async function buildLiveContext(input: {
     dataTimestamp: new Date().toISOString(),
   };
 
-  const contextHash = computeContextHash({
-    fixtureExternalId: input.fixtureExternalId,
-    modelVersion: context.modelVersion,
-    promptVersion: context.promptVersion,
-    minute: context.minute,
-    score: context.score,
-    league: context.league,
-    homeTeam: {
-      externalId: context.homeTeam.externalId,
-      isNational: context.homeTeam.isNational,
-    },
-    awayTeam: {
-      externalId: context.awayTeam.externalId,
-      isNational: context.awayTeam.isNational,
-    },
-    meaningfulTriggers: context.meaningfulTriggers,
-    prediction: context.prediction,
-    liveStats: context.liveStats,
-    prematchReference: context.prematchReference,
-    lineupsState: context.lineupsState,
-    sidelined: context.sidelined,
-    form: context.form,
-    standings: context.standings,
-    lineups: context.lineups,
-    h2h: context.h2h,
-    dataAvailable: context.dataAvailable,
-    dataMissing: context.dataMissing,
-    referee: context.referee,
-    round: context.round,
-  });
+  const contextHash = hashLiveContext(context, input.prediction);
 
   return { context, contextHash };
 }

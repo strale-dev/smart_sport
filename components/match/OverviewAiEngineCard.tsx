@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
 import { SparklesIcon, TrendingUpIcon } from "lucide-react";
 
 import { AIEngineAnalysisNotice } from "@/components/ai/AIEngineAnalysisNotice";
@@ -16,7 +15,6 @@ import {
   MatchCardHeader,
   MatchCardTitle,
 } from "@/components/match/MatchAnalyticsCard";
-import { useMatchLiveContext } from "@/components/match/MatchLiveSession";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,12 +27,8 @@ import {
 import type { PrematchPredictionDeltaSnapshot } from "@/lib/live/live-probability-delta";
 import { resolveInsightDisplayMetrics } from "@/lib/ai/insight-display-metrics";
 import { buildMatchHref } from "@/lib/fixtures/match-url";
-import { isFinishedFixtureStatus } from "@/lib/fixtures/display";
 import type { MatchOverviewRenderMode } from "@/lib/fixtures/overview-layout";
 import { evaluatePrematchPredictionAccuracy } from "@/lib/match/evaluate-prediction-accuracy";
-import { fetchLiveProbabilityDelta } from "@/lib/live/live-probability-delta";
-import { liveKeys } from "@/lib/live/query-keys";
-import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import type { Fixture } from "@/types/domain";
 import type { WinProbabilities } from "@/types/prediction";
 
@@ -193,10 +187,17 @@ function FinishedPredictionReview({
 function PreMatchAiEngineCard({ fixture }: { fixture: Fixture }) {
   const homeTeam = fixture.homeTeam;
   const awayTeam = fixture.awayTeam;
-  const { state, insight, insightMode, prediction, displayExperience } =
-    usePrematchInsight();
+  const {
+    state,
+    insight,
+    insightMode,
+    prediction,
+    displayExperience,
+    aiUiState,
+    aiUiCopy,
+  } = usePrematchInsight();
 
-  if (state === "loading") {
+  if (aiUiState === "AI_LOADING" && aiUiCopy.showSkeleton) {
     return (
       <MatchAnalyticsCard>
         <MatchCardHeader>
@@ -211,6 +212,34 @@ function PreMatchAiEngineCard({ fixture }: { fixture: Fixture }) {
         </MatchCardContent>
       </MatchAnalyticsCard>
     );
+  }
+
+  if (
+    aiUiState === "AI_UNAVAILABLE" ||
+    aiUiState === "AI_NOT_READY" ||
+    aiUiState === "NO_DATA"
+  ) {
+    if (
+      !displayExperience.showModelPrediction &&
+      !prediction &&
+      aiUiCopy.description
+    ) {
+      return (
+        <MatchAnalyticsCard>
+          <MatchCardHeader>
+            <MatchCardTitle className="flex items-center gap-2">
+              <SparklesIcon aria-hidden className="size-4" />
+              AI engine
+            </MatchCardTitle>
+          </MatchCardHeader>
+          <MatchCardContent>
+            <p className="text-muted-foreground text-sm">
+              {aiUiCopy.description}
+            </p>
+          </MatchCardContent>
+        </MatchAnalyticsCard>
+      );
+    }
   }
 
   if (!displayExperience.showNarrative || state !== "ok" || !insight) {
@@ -310,18 +339,9 @@ export function OverviewAiEngineCard({
   renderMode,
   returnTo,
 }: OverviewAiEngineCardProps) {
-  const liveContext = useMatchLiveContext();
   const prematchInsight = usePrematchInsight();
-  const isLive = isLiveFixtureStatus(fixture.status);
-  const isFinished = isFinishedFixtureStatus(fixture.status);
-
-  const deltaQuery = useQuery({
-    queryKey: liveKeys.probabilityDelta(fixture.externalId),
-    queryFn: () => fetchLiveProbabilityDelta(fixture.externalId),
-    enabled:
-      renderMode !== "pre" &&
-      (isLive || isFinished || liveContext?.isLive === true),
-  });
+  const deltaData = prematchInsight.liveDelta;
+  const { aiUiState, aiUiCopy } = prematchInsight;
 
   if (prematchInsight.state === "guest") {
     return (
@@ -354,14 +374,29 @@ export function OverviewAiEngineCard({
     return <PreMatchAiEngineCard fixture={fixture} />;
   }
 
-  const prematch = deltaQuery.data?.prematch ?? null;
-  const live = deltaQuery.data?.live ?? null;
+  const prematch = deltaData?.prematch ?? null;
+  const live =
+    deltaData?.liveAvailable === false ? null : (deltaData?.live ?? null);
   const liveInsight = prematchInsight.insight;
-  const livePrediction = prematchInsight.prediction;
+
+  const validatedLivePrediction =
+    deltaData?.liveAvailable !== false && deltaData?.livePrediction
+      ? {
+          winProbabilities: deltaData.livePrediction.winProbabilities,
+          predictedOutcome: deltaData.livePrediction.predictedOutcome,
+          confidence: deltaData.livePrediction.confidence,
+          expectedGoalsTotalMin: deltaData.livePrediction.expectedGoalsTotalMin,
+          expectedGoalsTotalMax: deltaData.livePrediction.expectedGoalsTotalMax,
+          expectedGoalsTotal: deltaData.livePrediction.expectedGoalsTotal,
+          over2Prob: deltaData.livePrediction.over2Prob,
+          over3Prob: deltaData.livePrediction.over3Prob,
+          weakerTeamScoringProb: deltaData.livePrediction.weakerTeamScoringProb,
+        }
+      : null;
 
   const liveMetrics =
-    liveInsight && livePrediction
-      ? resolveInsightDisplayMetrics(liveInsight, livePrediction)
+    liveInsight && validatedLivePrediction
+      ? resolveInsightDisplayMetrics(liveInsight, validatedLivePrediction)
       : null;
 
   const hasLiveNarrative =
@@ -369,7 +404,7 @@ export function OverviewAiEngineCard({
     prematchInsight.insightMode === "live" &&
     liveInsight != null;
 
-  if (!prematch && !live && deltaQuery.isLoading) {
+  if (!prematch && !live && deltaData == null && aiUiState === "AI_LOADING") {
     return (
       <MatchAnalyticsCard>
         <MatchCardHeader>
@@ -389,11 +424,17 @@ export function OverviewAiEngineCard({
           <MatchCardTitle>AI engine</MatchCardTitle>
         </MatchCardHeader>
         <MatchCardContent>
-          <MatchEmptyStateFromFixture
-            id="aiEngine"
-            fixture={fixture}
-            icon={TrendingUpIcon}
-          />
+          {aiUiCopy.description ? (
+            <p className="text-muted-foreground text-sm">
+              {aiUiCopy.description}
+            </p>
+          ) : (
+            <MatchEmptyStateFromFixture
+              id="aiEngine"
+              fixture={fixture}
+              icon={TrendingUpIcon}
+            />
+          )}
         </MatchCardContent>
       </MatchAnalyticsCard>
     );
@@ -415,13 +456,20 @@ export function OverviewAiEngineCard({
             Pre-match analysis and live probabilities — full live commentary on
             the AI Engine tab.
           </p>
-        ) : deltaQuery.data?.liveMinute != null ? (
+        ) : deltaData?.liveMinute != null ? (
           <p className="text-muted-foreground text-xs">
-            Live model updated at {deltaQuery.data.liveMinute}&apos;
+            Live model updated at {deltaData.liveMinute}&apos;
           </p>
         ) : null}
       </MatchCardHeader>
       <MatchCardContent className="space-y-4">
+        {renderMode === "live" &&
+        deltaData?.liveAvailable === false &&
+        aiUiCopy.description ? (
+          <p className="text-muted-foreground text-sm">
+            {aiUiCopy.description}
+          </p>
+        ) : null}
         {renderMode === "live" && liveInsight && liveMetrics ? (
           <div className="border-border/60 space-y-3 border-b pb-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -452,10 +500,10 @@ export function OverviewAiEngineCard({
             Open AI Engine
           </Button>
         ) : null}
-        {renderMode === "finished" && deltaQuery.data?.prematchPrediction ? (
+        {renderMode === "finished" && deltaData?.prematchPrediction ? (
           <FinishedPredictionReview
             fixture={fixture}
-            snapshot={deltaQuery.data.prematchPrediction}
+            snapshot={deltaData.prematchPrediction}
             insightSummary={prematchInsight.insight?.summary ?? null}
             insightCreatedAt={prematchInsight.insight?.createdAt ?? null}
           />

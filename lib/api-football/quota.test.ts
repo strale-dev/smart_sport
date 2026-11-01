@@ -3,23 +3,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { API_FOOTBALL_CONFIG } from "@/lib/api-football/config";
 import {
   getInMemoryQuotaSnapshot,
+  hydrateQuotaFromRedis,
   recordQuotaFromHeaders,
   resetInMemoryQuotaForTests,
   shouldRefuseNonCriticalRequest,
 } from "@/lib/api-football/quota";
 
-const { captureMessage } = vi.hoisted(() => ({
-  captureMessage: vi.fn(),
-}));
+const getRedisMock = vi.hoisted(() => vi.fn<() => unknown>(() => null));
 
-vi.mock("@sentry/nextjs", () => ({
-  captureMessage,
+vi.mock("@/lib/redis/client", () => ({
+  getRedis: () => getRedisMock(),
+  resetRedisClientForTests: () => undefined,
+  pingRedis: async () => false,
 }));
 
 describe("quota tracker", () => {
   beforeEach(() => {
     resetInMemoryQuotaForTests();
-    captureMessage.mockClear();
+    getRedisMock.mockReturnValue(null);
     process.env.API_FOOTBALL_DAILY_LIMIT = "7500";
   });
 
@@ -39,7 +40,9 @@ describe("quota tracker", () => {
     expect(shouldRefuseNonCriticalRequest(snapshot)).toBe(true);
   });
 
-  it("reports Sentry warning and refuses requests when quota is exhausted", async () => {
+  it("logs low-budget warning and refuses requests when quota is exhausted", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
     await recordQuotaFromHeaders(
       new Headers({
         "x-ratelimit-requests-remaining": "0",
@@ -50,10 +53,22 @@ describe("quota tracker", () => {
     expect(snapshot.dayRemaining).toBe(0);
     expect(snapshot.isLowBudget).toBe(true);
     expect(shouldRefuseNonCriticalRequest(snapshot)).toBe(true);
-    expect(captureMessage).toHaveBeenCalledWith(
-      "API-Football daily quota is low",
-      expect.objectContaining({ level: "warning" })
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[api-football] daily quota is low",
+      expect.objectContaining({ dayRemaining: 0 })
     );
+
+    warnSpy.mockRestore();
+  });
+
+  it("continues with in-memory quota when Redis hydrate fails", async () => {
+    getRedisMock.mockReturnValue({
+      get: vi.fn().mockRejectedValue(new TypeError("fetch failed")),
+      set: vi.fn().mockRejectedValue(new TypeError("fetch failed")),
+    });
+
+    await expect(hydrateQuotaFromRedis()).resolves.toBeUndefined();
+    expect(getInMemoryQuotaSnapshot().dayRemaining).toBeNull();
   });
 
   it("allows critical traffic when budget is healthy", async () => {

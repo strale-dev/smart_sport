@@ -47,22 +47,40 @@ export async function runCronRoute(
 
   const lockKey = `lock:cron:${options.jobName}`;
   const lockTtlSeconds = options.lockTtlSeconds ?? 300;
-  const acquired = await acquireLock(lockKey, lockTtlSeconds);
+  let lockHeld = false;
+  let runDegraded = false;
 
-  if (!acquired) {
+  try {
+    const acquired = await acquireLock(lockKey, lockTtlSeconds);
+    if (!acquired) {
+      logIngestionEvent({
+        job_name: options.jobName,
+        stage: "lock",
+        skipped: true,
+        ok: true,
+        error_type: "lock_not_acquired",
+        reason: "Another cron instance is already running.",
+      });
+      return NextResponse.json({
+        ok: true,
+        job: options.jobName,
+        skipped: true,
+        reason: "Another cron instance is already running.",
+      });
+    }
+    lockHeld = true;
+  } catch (error) {
+    runDegraded = true;
     logIngestionEvent({
       job_name: options.jobName,
       stage: "lock",
-      skipped: true,
       ok: true,
-      error_type: "lock_not_acquired",
-      reason: "Another cron instance is already running.",
-    });
-    return NextResponse.json({
-      ok: true,
-      job: options.jobName,
-      skipped: true,
-      reason: "Another cron instance is already running.",
+      degraded: true,
+      error_type: "unknown",
+      reason:
+        error instanceof Error
+          ? error.message
+          : "Redis lock unavailable; running without distributed lock.",
     });
   }
 
@@ -95,7 +113,10 @@ export async function runCronRoute(
             : "PostHog captureIngestionCronCompleted failed",
       });
     });
-    return NextResponse.json(result, { status: cronJobHttpStatus(result) });
+    return NextResponse.json(
+      runDegraded ? { ...result, degraded: true } : result,
+      { status: cronJobHttpStatus(result) }
+    );
   } catch (error) {
     console.error(`[cron/${options.jobName}]`, error);
     logIngestionEvent({
@@ -123,6 +144,8 @@ export async function runCronRoute(
 
     return NextResponse.json(payload, { status: 500 });
   } finally {
-    await releaseLock(lockKey);
+    if (lockHeld) {
+      await releaseLock(lockKey);
+    }
   }
 }

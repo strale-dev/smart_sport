@@ -249,9 +249,12 @@ export async function getMatchesForDate(
 
 async function readFixturesInRangeWithProviderFill(
   fromDate: string,
-  toDateExclusive: string
+  toDateExclusive: string,
+  leagueProviderId?: number
 ): Promise<Fixture[]> {
-  const fromDb = await readFixturesInRangeFromDb(fromDate, toDateExclusive);
+  const fromDb = await readFixturesInRangeFromDb(fromDate, toDateExclusive, {
+    leagueProviderId,
+  });
   if (fromDb.length > 0 || !isApiFootballIngestOnly()) {
     return fromDb;
   }
@@ -261,13 +264,19 @@ async function readFixturesInRangeWithProviderFill(
 
 export async function getMatchesInRange(
   fromDate: string,
-  toDateExclusive: string
+  toDateExclusive: string,
+  leagueProviderId?: number
 ): Promise<ServiceResult<Fixture[]>> {
   const result = await cached({
-    key: providerFixturesRangeKey(fromDate, toDateExclusive),
+    key: providerFixturesRangeKey(fromDate, toDateExclusive, leagueProviderId),
     freshTtlSeconds: CACHE_TTL.fixturesDateFresh,
     staleTtlSeconds: CACHE_TTL.fixturesDateStale,
-    fn: () => readFixturesInRangeWithProviderFill(fromDate, toDateExclusive),
+    fn: () =>
+      readFixturesInRangeWithProviderFill(
+        fromDate,
+        toDateExclusive,
+        leagueProviderId
+      ),
   });
 
   return toServiceResult(result);

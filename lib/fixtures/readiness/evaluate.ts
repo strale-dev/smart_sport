@@ -58,6 +58,9 @@ export type FixtureEvaluationInput = {
     createdAt: string;
   } | null;
   currentContextHash: string | null;
+  contextHashComputeFailed?: boolean;
+  /** When false during LIVE phase, live_sync is unavailable (not silently healthy). */
+  livePollingEnabled?: boolean;
 };
 
 function item(
@@ -211,7 +214,11 @@ export function buildReadinessItems(
     }
   }
 
-  if (!input.features || !hasMinimumModelSignal(input.features)) {
+  if (input.contextHashComputeFailed) {
+    items.push(
+      item("ai_context", "unavailable", "context_hash_compute_failed")
+    );
+  } else if (!input.features || !hasMinimumModelSignal(input.features)) {
     items.push(item("ai_context", "insufficient", "features_or_signal"));
   } else if (
     homeHist === "DATA_INSUFFICIENT" ||
@@ -224,6 +231,8 @@ export function buildReadinessItems(
 
   if (!input.prematchInsight) {
     items.push(item("ai_insight", "not_yet_available"));
+  } else if (input.contextHashComputeFailed) {
+    items.push(item("ai_insight", "unavailable", "context_hash_unknown"));
   } else if (
     input.currentContextHash &&
     input.prematchInsight.contextHash !== input.currentContextHash
@@ -234,15 +243,26 @@ export function buildReadinessItems(
   }
 
   if (live) {
-    const stale = isProviderSyncStale(input.lastProviderSyncAt, nowMs);
-    items.push(
-      item(
-        "live_sync",
-        stale ? "stale" : "not_yet_available",
-        undefined,
-        input.lastProviderSyncAt ?? undefined
-      )
-    );
+    if (input.livePollingEnabled === false) {
+      items.push(
+        item(
+          "live_sync",
+          "unavailable",
+          "live_polling_disabled",
+          new Date(nowMs).toISOString()
+        )
+      );
+    } else {
+      const stale = isProviderSyncStale(input.lastProviderSyncAt, nowMs);
+      items.push(
+        item(
+          "live_sync",
+          stale ? "stale" : "not_yet_available",
+          stale ? "provider_sync_stale" : undefined,
+          input.lastProviderSyncAt ?? undefined
+        )
+      );
+    }
   }
 
   if (finished) {
@@ -291,7 +311,8 @@ export function computeReadinessGates(
   const aiContextReady =
     featuresOk &&
     homeHist !== "DATA_INSUFFICIENT" &&
-    awayHist !== "DATA_INSUFFICIENT";
+    awayHist !== "DATA_INSUFFICIENT" &&
+    !input.contextHashComputeFailed;
 
   const insightMatches =
     input.prematchInsight != null &&
@@ -308,10 +329,14 @@ export function computeReadinessGates(
     predictionFresh &&
     aiContextReady &&
     inLlmWindow &&
+    !input.contextHashComputeFailed &&
+    input.currentContextHash != null &&
     (!input.prematchInsight || !insightMatches);
 
   const liveDataCurrent =
-    live && !isProviderSyncStale(input.lastProviderSyncAt, nowMs);
+    live &&
+    input.livePollingEnabled !== false &&
+    !isProviderSyncStale(input.lastProviderSyncAt, nowMs);
 
   const historicalDataSufficient =
     homeHist !== "DATA_INSUFFICIENT" && awayHist !== "DATA_INSUFFICIENT";
@@ -369,7 +394,10 @@ export function evaluateFixtureReadiness(
   if (isLiveFixtureStatus(input.status)) {
     artifacts.live = {
       lastProviderSyncAt: input.lastProviderSyncAt,
-      stale: isProviderSyncStale(input.lastProviderSyncAt, nowMs),
+      stale:
+        input.livePollingEnabled === false ||
+        isProviderSyncStale(input.lastProviderSyncAt, nowMs),
+      pollingEnabled: input.livePollingEnabled !== false,
     };
   }
 

@@ -1,6 +1,8 @@
 import type { Database } from "@/types/supabase";
+import type { ProbabilityPresentationKind } from "@/types/probability-presentation";
 
 export type AiConfidence = Database["public"]["Enums"]["ai_confidence"];
+export type PrematchModelTier = "GENERIC_BASELINE" | "FIXTURE_SPECIFIC";
 export type PredictionType = Database["public"]["Enums"]["prediction_type"];
 export type PredictionDataQuality = "COMPLETE" | "PARTIAL";
 
@@ -118,6 +120,11 @@ export type PrematchPredictionResult = PrematchModelOutput & {
   modelVersion: string;
   predictionId: string;
   type: "PREMATCH";
+  presentationKind: ProbabilityPresentationKind;
+  modelTier: PrematchModelTier;
+  inputSnapshotFingerprint: string;
+  /** False when stored xG components were missing (not coerced to zero). */
+  expectedGoalsAvailable: boolean;
   inputSnapshot: PrematchFeatureVector;
   createdAt: string;
   fromCache: boolean;
@@ -173,7 +180,10 @@ export type LivePredictionResult = PrematchModelOutput & {
   modelVersionId: string;
   modelVersion: string;
   predictionId: string;
+  /** Canonical live row identity (matches live AI context_hash binding). */
+  liveSnapshotId: string;
   type: "LIVE";
+  presentationKind: ProbabilityPresentationKind;
   minute: number | null;
   inputSnapshot: LiveFeatureVector;
   createdAt: string;

@@ -8,9 +8,14 @@ import type {
   MeaningfulEventKind,
 } from "@/lib/live/event-detector-types";
 import {
+  compactLatestMatchEvents,
   detectMeaningfulEvents,
   toMeaningfulEventBroadcastPayload,
 } from "@/lib/live/eventDetector";
+import {
+  evaluateLiveInsightGenerationGate,
+  markLiveInsightGenerationSuccess,
+} from "@/lib/live/live-insight-generation-gate";
 import {
   isLiveInsightGenerationInBackoff,
   markLiveInsightGenerationBackoff,
@@ -158,20 +163,22 @@ async function resolveScheduledTriggers(input: {
       input.nextSnapshot,
       baseline
     );
-    const preview = scoreLiveFromFeatures(features);
-    const storedContext = await readStoredLiveInsightContext(
-      input.fixtureProviderId
-    );
+    if (features) {
+      const preview = scoreLiveFromFeatures(features);
+      const storedContext = await readStoredLiveInsightContext(
+        input.fixtureProviderId
+      );
 
-    if (
-      shouldRunPeriodicLiveInsight({
-        lastInsightCreatedAt: latestLiveInsight.created_at,
-        storedContext,
-        snapshot: input.nextSnapshot,
-        previewProbabilities: preview.winProbabilities,
-      })
-    ) {
-      events = appendSyntheticEvent(events, "PERIODIC", input.nextSnapshot);
+      if (
+        shouldRunPeriodicLiveInsight({
+          lastInsightCreatedAt: latestLiveInsight.created_at,
+          storedContext,
+          snapshot: input.nextSnapshot,
+          previewProbabilities: preview.winProbabilities,
+        })
+      ) {
+        events = appendSyntheticEvent(events, "PERIODIC", input.nextSnapshot);
+      }
     }
   }
 
@@ -216,16 +223,20 @@ export async function runMeaningfulEventPipeline(input: {
           input.nextSnapshot,
           baseline
         );
-        const preview = scoreLiveFromFeatures(features);
-        const shift = Math.max(
-          Math.abs(preview.winProbabilities.home - baseline.home),
-          Math.abs(preview.winProbabilities.draw - baseline.draw),
-          Math.abs(preview.winProbabilities.away - baseline.away)
-        );
+        if (features) {
+          const preview = scoreLiveFromFeatures(features);
+          const shift = Math.max(
+            Math.abs(preview.winProbabilities.home - baseline.home),
+            Math.abs(preview.winProbabilities.draw - baseline.draw),
+            Math.abs(preview.winProbabilities.away - baseline.away)
+          );
 
-        if (isProbabilityShiftMeaningful(baseline, preview.winProbabilities)) {
-          shouldPersist = true;
-          events = appendProbabilityShiftEvent(events, shift);
+          if (
+            isProbabilityShiftMeaningful(baseline, preview.winProbabilities)
+          ) {
+            shouldPersist = true;
+            events = appendProbabilityShiftEvent(events, shift);
+          }
         }
       }
     }
@@ -271,17 +282,39 @@ export async function runMeaningfulEventPipeline(input: {
     };
   }
 
-  const insightResult = await generateLiveInsight({
-    fixtureExternalId: input.fixtureProviderId,
-    prediction: livePrediction,
-    meaningfulTriggers: [...new Set(triggerKinds)],
-    minute: input.nextSnapshot.minute,
-    score: input.nextSnapshot.score,
-    liveStats: buildLiveStatsFromSnapshot(input.nextSnapshot),
+  const latestMatchEvents = compactLatestMatchEvents(
+    input.prevSnapshot,
+    input.nextSnapshot
+  );
+
+  const gate = await evaluateLiveInsightGenerationGate({
+    fixtureProviderId: input.fixtureProviderId,
+    events,
+    triggerKinds,
   });
 
+  let insightResult: Awaited<ReturnType<typeof generateLiveInsight>>;
+  if (!gate.allow) {
+    insightResult = { ok: false, reason: gate.reason };
+  } else {
+    insightResult = await generateLiveInsight({
+      fixtureExternalId: input.fixtureProviderId,
+      prediction: livePrediction,
+      meaningfulTriggers: [...new Set(triggerKinds)],
+      minute: input.nextSnapshot.minute,
+      score: input.nextSnapshot.score,
+      liveStats: buildLiveStatsFromSnapshot(input.nextSnapshot),
+      latestMatchEvents,
+    });
+  }
+
   if (!insightResult.ok) {
-    await markLiveInsightGenerationBackoff(input.fixtureProviderId);
+    const skipBackoff =
+      insightResult.reason === "EVENTS_ALREADY_PROCESSED" ||
+      insightResult.reason === "SOFT_MIN_INTERVAL";
+    if (!skipBackoff) {
+      await markLiveInsightGenerationBackoff(input.fixtureProviderId);
+    }
     console.error(
       JSON.stringify({
         scope: "live/meaningful-event-pipeline",
@@ -297,6 +330,10 @@ export async function runMeaningfulEventPipeline(input: {
       input.fixtureProviderId,
       snapshotLiveContext(input.nextSnapshot, livePrediction.winProbabilities)
     );
+    await markLiveInsightGenerationSuccess({
+      fixtureProviderId: input.fixtureProviderId,
+      events,
+    });
   }
 
   return {

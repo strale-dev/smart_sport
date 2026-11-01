@@ -9,6 +9,11 @@ const LABELS: Record<MeaningfulEventKind, string> = {
   PROBABILITY_SHIFT: "Model shift",
   LIVE_BASELINE: "Live analysis started",
   HT: "Half-time update",
+  FT: "Full-time update",
+  AET: "Extra time ended",
+  PEN: "Penalties ended",
+  VAR_DECISION: "VAR decision",
+  MATCH_STATE: "Match phase change",
   PERIODIC: "Live refresh",
 };
 

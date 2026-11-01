@@ -15,9 +15,17 @@ const prediction = {
 
 const deltaWithLive = {
   prematch: { home: 0.4, draw: 0.3, away: 0.3 },
+  prematchKind: "PRE_MATCH_PROBABILITY",
   live: { home: 0.55, draw: 0.25, away: 0.2 },
+  liveKind: "LIVE_PROBABILITY",
   liveMinute: 67,
+  liveAvailable: true,
+  unavailableReason: null,
+  sourceSnapshot: null,
   prematchPrediction: {
+    presentationKind: "PRE_MATCH_PROBABILITY",
+    modelTier: "FIXTURE_SPECIFIC",
+    expectedGoalsAvailable: true,
     predictionId: "p1",
     modelVersion: "v1",
     createdAt: "2026-01-01T00:00:00.000Z",
@@ -123,6 +131,84 @@ describe("resolveLivePhaseViewModel", () => {
     });
 
     expect(vm.state).toBe("loading");
+  });
+
+  it("uses plain language when live prediction is unavailable on ok insight path", () => {
+    const vm = resolveLivePhaseViewModel({
+      fixtureId: 123,
+      fixtureStatus: "2H",
+      liveInsightData: {
+        status: "OK",
+        insight: {
+          id: "i1",
+          fixtureExternalId: 123,
+          fixtureId: "uuid",
+          predictionId: "p1",
+          contextHash: "h",
+          openaiModel: "gpt",
+          promptVersion: "1",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          cached: true,
+          summary: "Summary",
+          advantage: "HOME",
+          winOutcome: "1",
+          winProbabilities: { home: 0.5, draw: 0.25, away: 0.25 },
+          expectedGoalsRange: [2, 3],
+          weakerTeamScoringChance: 0.3,
+          confidence: "MEDIUM",
+          keyFactors: [],
+          scenarios: { likely: "a", best: "b", upset: "c" },
+          commentary: "c",
+          dataUsed: [],
+          dataTimestamp: "2026-01-01T00:00:00.000Z",
+          dataQuality: "COMPLETE",
+          dataCoverage: null,
+          analysis: null,
+        },
+        prediction: null,
+        cached: true,
+        insightMode: "live",
+        predictionStale: false,
+      },
+      liveInsightError: null,
+      liveInsightPending: false,
+      historicalPrematchData: undefined,
+      historicalPrematchPending: false,
+      liveDelta: {
+        ...deltaWithLive,
+        liveAvailable: false,
+        unavailableReason: "SCORE_MISMATCH",
+        live: null,
+      },
+    });
+
+    expect(vm.fallbackMessage).toContain("score on the pitch");
+  });
+
+  it("clears liveWinProbabilities when delta marks live unavailable", () => {
+    const staleDelta = {
+      ...deltaWithLive,
+      live: { home: 0.93, draw: 0.05, away: 0.02 },
+      liveAvailable: false,
+      unavailableReason: "SCORE_MISMATCH" as const,
+    };
+
+    const vm = resolveLivePhaseViewModel({
+      fixtureId: 123,
+      fixtureStatus: "2H",
+      liveInsightData: undefined,
+      liveInsightError: null,
+      liveInsightPending: false,
+      historicalPrematchData: {
+        status: "MISS",
+        fixtureExternalId: 123,
+        prediction,
+      },
+      historicalPrematchPending: false,
+      liveDelta: staleDelta,
+    });
+
+    expect(vm.liveWinProbabilities).toBeNull();
   });
 
   it("prefers delta over error when live insight fetch fails", () => {

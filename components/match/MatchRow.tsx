@@ -5,7 +5,10 @@ import Link from "next/link";
 import { LiveStatusChip } from "@/components/match/LiveStatusChip";
 import { MatchFixtureScoreboard } from "@/components/match/MatchFixtureScoreboard";
 import { MatchMetaBar } from "@/components/match/MatchMetaBar";
-import { formatFixtureMinute } from "@/lib/fixtures/display";
+import {
+  formatFixtureLeagueDisplayName,
+  formatFixtureMinute,
+} from "@/lib/fixtures/display";
 import { isPresentationLiveFixture } from "@/lib/live/live-presentation";
 import { formatRelativeTime } from "@/lib/ai/format";
 import { isAiUpdatedMarkerFresh } from "@/lib/live/ai-updated-marker";
@@ -20,6 +23,8 @@ type MatchRowProps = {
   showLeague?: boolean;
   anchorId?: string;
   todayDateKey?: string;
+  /** Stop the live pulse and keep the stored score and minute. */
+  freezeLive?: boolean;
 };
 
 const rowScoreboardPreset = getMatchScoreboardPreset("row");
@@ -31,6 +36,7 @@ export function MatchRow({
   showLeague = true,
   anchorId,
   todayDateKey,
+  freezeLive = false,
 }: MatchRowProps) {
   const isLive = isPresentationLiveFixture(fixture);
   const minuteLabel = formatFixtureMinute(fixture);
@@ -50,7 +56,7 @@ export function MatchRow({
           <MatchMetaBar
             density="row"
             leagueExternalId={fixture.league.externalId}
-            leagueName={fixture.league.name}
+            leagueName={formatFixtureLeagueDisplayName(fixture.league.name)}
             leagueLogoUrl={fixture.league.logoUrl}
             trailing={
               <>
@@ -60,7 +66,10 @@ export function MatchRow({
                   </span>
                 ) : null}
                 {isLive ? (
-                  <LiveStatusChip minuteLabel={minuteLabel} animate />
+                  <LiveStatusChip
+                    minuteLabel={minuteLabel}
+                    animate={!freezeLive}
+                  />
                 ) : null}
               </>
             }
@@ -77,6 +86,7 @@ export function MatchRow({
           fixture={fixture}
           {...rowScoreboardPreset}
           todayDateKey={todayDateKey}
+          freezeLive={freezeLive}
         />
       </Link>
     </div>

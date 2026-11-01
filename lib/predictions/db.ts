@@ -1,10 +1,13 @@
-import { predictedOutcomeFromProbabilities } from "@/lib/models/confidence";
+import { liveSnapshotIdFromPrediction } from "@/lib/ai/context-hash-input";
 import { parseModelCoefficients } from "@/lib/models/coefficients";
-import { normalizeWinProbabilitiesWithFloor } from "@/lib/models/normalize-probabilities";
 import {
   buildTotalGoalsDistribution,
   computeGoalMarketProbs,
 } from "@/lib/models/poisson";
+import {
+  mapValidatedPrematchRowToResult,
+  type FixtureSnapshotIdentity,
+} from "@/lib/predictions/prematch-validation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   LiveFeatureVector,
@@ -67,8 +70,10 @@ function resolveGoalMarketsFromRow(
   over3Prob: number;
   under2Prob: number;
 } {
-  const expectedGoalsHome = Number(row.expected_goals_home ?? 0);
-  const expectedGoalsAway = Number(row.expected_goals_away ?? 0);
+  const expectedGoalsHome =
+    row.expected_goals_home != null ? Number(row.expected_goals_home) : 0;
+  const expectedGoalsAway =
+    row.expected_goals_away != null ? Number(row.expected_goals_away) : 0;
   const expectedGoalsTotal =
     row.expected_goals_total != null
       ? Number(row.expected_goals_total)
@@ -249,42 +254,36 @@ export function mapPredictionRowToResult(
   row: PrematchPredictionRow,
   fixtureExternalId: number,
   modelVersion: string,
-  fromCache: boolean
-): PrematchPredictionResult {
-  const winProbabilities = normalizeWinProbabilitiesWithFloor({
-    home: Number(row.home_win_prob),
-    draw: Number(row.draw_prob),
-    away: Number(row.away_win_prob),
-  });
-
-  const predictedOutcome = predictedOutcomeFromProbabilities(winProbabilities);
-
-  const goalMarkets = resolveGoalMarketsFromRow(row);
-
-  return {
-    fixtureId: row.fixture_id,
+  fromCache: boolean,
+  identity: FixtureSnapshotIdentity
+): PrematchPredictionResult | null {
+  return mapValidatedPrematchRowToResult({
+    row,
     fixtureExternalId,
-    modelVersionId: row.model_version_id,
+    identity,
     modelVersion,
-    predictionId: row.id,
-    type: "PREMATCH",
-    winProbabilities,
-    expectedGoalsHome: Number(row.expected_goals_home ?? 0),
-    expectedGoalsAway: Number(row.expected_goals_away ?? 0),
-    expectedGoalsTotal: goalMarkets.expectedGoalsTotal,
-    expectedGoalsTotalMin: Number(row.expected_goals_total_min ?? 0),
-    expectedGoalsTotalMax: Number(row.expected_goals_total_max ?? 0),
-    bttsProb: Number(row.btts_prob ?? 0),
-    weakerTeamScoringProb: Number(row.weaker_team_scoring_prob ?? 0),
-    over2Prob: goalMarkets.over2Prob,
-    over3Prob: goalMarkets.over3Prob,
-    under2Prob: goalMarkets.under2Prob,
-    confidence: row.confidence,
-    predictedOutcome,
-    inputSnapshot: row.input_snapshot,
-    createdAt: row.created_at,
     fromCache,
-  };
+  });
+}
+
+export async function mapPrematchPredictionRowForFixture(
+  row: PrematchPredictionRow,
+  fixtureExternalId: number,
+  modelVersion: string,
+  fromCache: boolean
+): Promise<PrematchPredictionResult | null> {
+  const identity = await loadFixtureSnapshotIdentity(fixtureExternalId);
+  if (!identity) {
+    return null;
+  }
+
+  return mapPredictionRowToResult(
+    row,
+    fixtureExternalId,
+    modelVersion,
+    fromCache,
+    identity
+  );
 }
 
 export async function readLivePredictionById(
@@ -422,13 +421,15 @@ export function mapLivePredictionRowToResult(
 
   const goalMarkets = resolveGoalMarketsFromRow(row);
 
-  return {
+  const result: LivePredictionResult = {
     fixtureId: row.fixture_id,
     fixtureExternalId,
     modelVersionId: row.model_version_id,
     modelVersion,
     predictionId: row.id,
+    liveSnapshotId: "",
     type: "LIVE",
+    presentationKind: "LIVE_PROBABILITY",
     minute: row.minute,
     winProbabilities,
     expectedGoalsHome: Number(row.expected_goals_home ?? 0),
@@ -446,6 +447,54 @@ export function mapLivePredictionRowToResult(
     inputSnapshot: row.input_snapshot,
     createdAt: row.created_at,
     fromCache,
+  };
+
+  result.liveSnapshotId = liveSnapshotIdFromPrediction(result);
+  return result;
+}
+
+export type LiveFixtureDbState = {
+  id: string;
+  providerId: number;
+  status: string;
+  kickoff_at: string;
+  minute: number | null;
+  scoreHome: number | null;
+  scoreAway: number | null;
+  lastProviderSyncAt: string | null;
+};
+
+export async function resolveLiveFixtureStateByExternalId(
+  fixtureExternalId: number
+): Promise<LiveFixtureDbState | null> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("fixtures")
+    .select(
+      "id, provider_id, status, kickoff_at, minute, score_home, score_away, last_provider_sync_at"
+    )
+    .eq("provider_id", fixtureExternalId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Failed to resolve live fixture ${fixtureExternalId}: ${error.message}`
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return {
+    id: data.id,
+    providerId: data.provider_id,
+    status: data.status,
+    kickoff_at: data.kickoff_at,
+    minute: data.minute,
+    scoreHome: data.score_home,
+    scoreAway: data.score_away,
+    lastProviderSyncAt: data.last_provider_sync_at,
   };
 }
 
@@ -466,6 +515,55 @@ export async function resolveFixtureUuidByExternalId(
   }
 
   return data;
+}
+
+function unwrapRelation<T>(value: T | T[] | null): T | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+  return value;
+}
+
+export async function loadFixtureSnapshotIdentity(
+  fixtureExternalId: number
+): Promise<FixtureSnapshotIdentity | null> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("fixtures")
+    .select(
+      `
+      provider_id,
+      home_team:teams!fixtures_home_team_id_fkey (provider_id),
+      away_team:teams!fixtures_away_team_id_fkey (provider_id),
+      league:leagues (provider_id)
+    `
+    )
+    .eq("provider_id", fixtureExternalId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Failed to load fixture identity ${fixtureExternalId}: ${error.message}`
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const homeTeam = unwrapRelation(data.home_team);
+  const awayTeam = unwrapRelation(data.away_team);
+  const league = unwrapRelation(data.league);
+  if (!homeTeam || !awayTeam || !league) {
+    return null;
+  }
+
+  return {
+    fixtureExternalId: data.provider_id,
+    homeTeamProviderId: homeTeam.provider_id,
+    awayTeamProviderId: awayTeam.provider_id,
+    leagueProviderId: league.provider_id,
+  };
 }
 
 export async function batchUpdateTeamEloRatings(

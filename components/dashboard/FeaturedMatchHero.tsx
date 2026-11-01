@@ -15,13 +15,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  FIXTURE_STATUS_UNVERIFIED_LABEL,
   formatFixtureKickoffTime,
   formatFixtureMinute,
   formatFixtureScore,
   isFinishedFixtureStatus,
   shouldShowFixtureScore,
 } from "@/lib/fixtures/display";
-import { isLiveFixtureStatus } from "@/lib/redis/keys";
+import {
+  isPresentationLiveFixture,
+  isUnverifiedExpiredLivePresentation,
+} from "@/lib/live/live-presentation";
 import type { Fixture } from "@/types/domain";
 
 import { LiveStatusChip } from "@/components/match/LiveStatusChip";
@@ -32,7 +36,11 @@ type FeaturedMatchHeroProps = {
 };
 
 function featuredStatusLabel(fixture: Fixture, timeZone: string): string {
-  if (isLiveFixtureStatus(fixture.status)) {
+  if (isUnverifiedExpiredLivePresentation(fixture)) {
+    return FIXTURE_STATUS_UNVERIFIED_LABEL;
+  }
+
+  if (isPresentationLiveFixture(fixture)) {
     return formatFixtureMinute(fixture) ?? "Live";
   }
 
@@ -48,7 +56,7 @@ function featuredStatusLabel(fixture: Fixture, timeZone: string): string {
 
 export function FeaturedMatchHero({ fixture }: FeaturedMatchHeroProps) {
   const timeZone = useViewerTimezone();
-  const isLive = isLiveFixtureStatus(fixture.status);
+  const isLive = isPresentationLiveFixture(fixture);
   const showScore = shouldShowFixtureScore(fixture);
 
   return (

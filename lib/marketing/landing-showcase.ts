@@ -4,7 +4,7 @@ import {
 } from "@/lib/dashboard/importance-score";
 import { readFixturesForDateFromDb } from "@/lib/ingestion/db-read";
 import {
-  mapPredictionRowToResult,
+  mapPrematchPredictionRowForFixture,
   readLatestPrematchPrediction,
   resolveFixtureUuidByExternalId,
 } from "@/lib/predictions/db";
@@ -75,12 +75,21 @@ export async function loadLandingShowcaseFixture(): Promise<LandingShowcaseData 
     };
   }
 
-  const mapped = mapPredictionRowToResult(
+  const mapped = await mapPrematchPredictionRowForFixture(
     row,
     fixture.externalId,
     "1.0.0",
     true
   );
+  if (!mapped) {
+    return {
+      fixture,
+      winProbabilities: null,
+      predictedOutcome: null,
+      confidence: null,
+      modelProbability: null,
+    };
+  }
   const modelProbability = maxWinProbability(mapped.winProbabilities);
 
   return {

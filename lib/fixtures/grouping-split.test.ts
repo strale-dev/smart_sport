@@ -85,13 +85,15 @@ describe("buildUpcomingAndPastDayGroups", () => {
   });
 
   it("keeps LIVE fixtures with yesterday kickoff in upcoming (Today group)", () => {
+    const liveNow = new Date("2026-09-14T00:30:00.000Z");
     const liveLate = makeFixture(10, "2026-09-13T21:00:00.000Z", "2H");
     const yesterdayFt = makeFixture(11, "2026-09-13T18:00:00.000Z", "FT");
 
     const partitioned = partitionFixturesByTodayWindow(
       [liveLate, yesterdayFt],
       todayDateKey,
-      timeZone
+      timeZone,
+      liveNow
     );
 
     expect(partitioned.upcomingFixtures.map((f) => f.externalId)).toEqual([10]);
@@ -99,7 +101,7 @@ describe("buildUpcomingAndPastDayGroups", () => {
 
     const { upcomingDayGroups, pastDayGroups } = buildUpcomingAndPastDayGroups(
       [liveLate, yesterdayFt],
-      now,
+      liveNow,
       timeZone,
       todayDateKey
     );
@@ -110,6 +112,39 @@ describe("buildUpcomingAndPastDayGroups", () => {
       upcomingDayGroups[0]?.leagues?.[0]?.fixtures.map((f) => f.externalId)
     ).toEqual([10]);
     expect(pastDayGroups.length).toBe(1);
+  });
+
+  it("moves same-day NS after kickoff into past fixtures", () => {
+    const staleTodayNs = makeFixture(20, "2026-09-14T10:00:00.000Z", "NS");
+    const futureTodayNs = makeFixture(21, "2026-09-14T18:00:00.000Z", "NS");
+
+    const partitioned = partitionFixturesByTodayWindow(
+      [staleTodayNs, futureTodayNs],
+      todayDateKey,
+      timeZone,
+      now
+    );
+
+    expect(partitioned.pastFixtures.map((f) => f.externalId)).toEqual([20]);
+    expect(partitioned.upcomingFixtures.map((f) => f.externalId)).toEqual([21]);
+
+    const { upcomingDayGroups, pastDayGroups } = buildUpcomingAndPastDayGroups(
+      [staleTodayNs, futureTodayNs],
+      now,
+      timeZone,
+      todayDateKey
+    );
+
+    expect(
+      collectUpcomingFixturesFromDayGroups(upcomingDayGroups).map(
+        (f) => f.externalId
+      )
+    ).toEqual([21]);
+    expect(
+      pastDayGroups
+        .flatMap((g) => g.leagues?.[0]?.fixtures ?? [])
+        .map((f) => f.externalId)
+    ).toEqual([20]);
   });
 
   it("sorts upcoming days ascending and past days descending", () => {

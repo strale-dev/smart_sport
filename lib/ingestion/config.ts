@@ -144,3 +144,26 @@ export function isTodayOrTomorrowUtc(
 
   return date === today || date === tomorrow;
 }
+
+const DEFAULT_MATCH_DETAILS_SYNC_LOOKBACK_HOURS = 168;
+
+/** Finished-fixture kickoff window for sync-match-details (default 7 days). */
+export function resolveMatchDetailsSyncLookbackHours(
+  source: Record<string, string | undefined> = process.env
+): number {
+  const raw = source.MATCH_DETAILS_SYNC_LOOKBACK_HOURS;
+  const parsed = raw
+    ? Number.parseInt(raw, 10)
+    : DEFAULT_MATCH_DETAILS_SYNC_LOOKBACK_HOURS;
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_MATCH_DETAILS_SYNC_LOOKBACK_HOURS;
+}
+
+export function resolveMatchDetailsKickoffCutoff(
+  nowMs = Date.now(),
+  source: Record<string, string | undefined> = process.env
+): string {
+  const hours = resolveMatchDetailsSyncLookbackHours(source);
+  return new Date(nowMs - hours * 3_600_000).toISOString();
+}

@@ -108,6 +108,10 @@ import { readPrematchInsight } from "@/lib/services/aiService";
 
 const prematchPrediction = {
   type: "PREMATCH" as const,
+  presentationKind: "PRE_MATCH_PROBABILITY" as const,
+  modelTier: "FIXTURE_SPECIFIC" as const,
+  inputSnapshotFingerprint: "fp",
+  expectedGoalsAvailable: true,
   fixtureExternalId: 123,
   predictionId: "pred-1",
   modelVersion: "1.0.0",

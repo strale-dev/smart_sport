@@ -169,6 +169,19 @@ describe("aiContextService", () => {
       modelVersion: "1.0.0",
       promptVersion: "1.0.0",
       meaningfulTriggers: ["GOAL_HOME"],
+      predictionBinding: {
+        predictionId: "live-p1",
+        liveSnapshotId: "snap-1",
+      },
+      latestMatchEvents: [
+        {
+          minute: 34,
+          type: "Goal",
+          detail: "Normal Goal",
+          teamExternalId: 80,
+          externalEventId: "g-1",
+        },
+      ],
       prediction: {
         winProbabilities: { home: 0.55, draw: 0.25, away: 0.2 },
         expectedGoalsHome: 1.4,
@@ -225,6 +238,8 @@ describe("aiContextService", () => {
     const parsed = JSON.parse(prompt) as LiveAiContext;
     expect(parsed.dataAvailable).toContain("Live match statistics");
     expect(parsed.lineups?.[0]?.substitutes).toEqual([]);
+    expect(parsed.latestMatchEvents).toHaveLength(1);
+    expect(parsed.predictionBinding.predictionId).toBe("live-p1");
   });
 
   it("includes expanded historicalContext and predictionFeatures in prematch JSON (RC-8)", () => {

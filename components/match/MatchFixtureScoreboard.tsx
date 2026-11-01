@@ -8,6 +8,7 @@ import { useViewerTimezone } from "@/components/providers/ViewerTimezoneProvider
 import { Badge } from "@/components/ui/badge";
 import {
   formatFixtureRowCenterLabel,
+  formatFixtureTeamDisplayName,
   isFinishedFixtureStatus,
   shouldShowFixtureScore,
 } from "@/lib/fixtures/display";
@@ -34,6 +35,8 @@ type MatchFixtureScoreboardProps = {
   logoSizes?: string;
   /** When set, scheduled rows show date+time for kickoffs after this viewer day. */
   todayDateKey?: string;
+  /** Keep the stored score, without a live pulse. */
+  freezeLive?: boolean;
 };
 
 const defaultTeamLinkClassName =
@@ -56,12 +59,15 @@ export function MatchFixtureScoreboard({
   logoPriority = false,
   logoSizes,
   todayDateKey,
+  freezeLive = false,
 }: MatchFixtureScoreboardProps) {
   const timeZone = useViewerTimezone();
   const isLive = isLiveFixtureStatus(fixture.status);
   const isPausedLive = isPausedLiveFixtureStatus(fixture.status);
   const isFinished = isFinishedFixtureStatus(fixture.status);
   const showScore = shouldShowFixtureScore(fixture);
+  const homeTeamLabel = formatFixtureTeamDisplayName(fixture.homeTeam.name);
+  const awayTeamLabel = formatFixtureTeamDisplayName(fixture.awayTeam.name);
   const scoreText = formatFixtureRowCenterLabel(
     fixture,
     timeZone,
@@ -71,14 +77,14 @@ export function MatchFixtureScoreboard({
   const homeCell = (
     <>
       <TeamLogo
-        name={fixture.homeTeam.name}
+        name={homeTeamLabel}
         logoUrl={fixture.homeTeam.logoUrl}
         className={logoClassName}
         priority={logoPriority}
         sizes={logoSizes}
       />
       <span
-        title={fixture.homeTeam.name}
+        title={homeTeamLabel}
         className={cn(
           teamNameClassName,
           "min-w-0 flex-1 text-left",
@@ -87,7 +93,7 @@ export function MatchFixtureScoreboard({
             : "max-sm:truncate sm:leading-snug sm:break-words sm:whitespace-normal"
         )}
       >
-        {fixture.homeTeam.name}
+        {homeTeamLabel}
       </span>
     </>
   );
@@ -95,7 +101,7 @@ export function MatchFixtureScoreboard({
   const awayCell = (
     <>
       <span
-        title={fixture.awayTeam.name}
+        title={awayTeamLabel}
         className={cn(
           teamNameClassName,
           "min-w-0 flex-1 text-right",
@@ -104,10 +110,10 @@ export function MatchFixtureScoreboard({
             : "max-sm:truncate sm:leading-snug sm:break-words sm:whitespace-normal"
         )}
       >
-        {fixture.awayTeam.name}
+        {awayTeamLabel}
       </span>
       <TeamLogo
-        name={fixture.awayTeam.name}
+        name={awayTeamLabel}
         logoUrl={fixture.awayTeam.logoUrl}
         className={logoClassName}
         priority={logoPriority}
@@ -139,9 +145,9 @@ export function MatchFixtureScoreboard({
           <div className="space-y-0.5">
             <AnimatedScore
               score={scoreText}
-              isLive={isLive}
+              isLive={isLive && !freezeLive}
               className={scoreClassName}
-              animate={animateScore || isLive}
+              animate={!freezeLive && (animateScore || isLive)}
             />
             {showHalftimeLine &&
             isFinished &&

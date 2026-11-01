@@ -1,6 +1,7 @@
 import { apiFootballFetchAllPagesResponse } from "@/lib/api-football/client";
-import { ApiFootballError } from "@/lib/api-football/errors";
-import { formatApiFootballFailureReason } from "@/lib/api-football/safe-call";
+import { classifyProviderError } from "@/lib/ingestion/classify-provider-error";
+import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
+import type { IngestionErrorType } from "@/lib/ingestion/ingestion-observability";
 import type { RawApiFootballFixture } from "@/lib/api-football/types";
 import { cronIngestBudgetExceeded } from "@/lib/ingestion/cron-budget";
 import {
@@ -19,6 +20,7 @@ import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
 import { ingestFixtureFromRaw } from "@/lib/ingestion/upsert";
 import { getRedis } from "@/lib/redis/client";
 import { providerFixturesDateKey } from "@/lib/redis/keys";
+import { emitLivePollingDisabledWhenLiveFixturesExist } from "@/lib/live/live-polling-disabled-signal";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Fixture } from "@/types/domain";
 
@@ -28,6 +30,8 @@ export type SyncFixturesTodayResult = {
   skipped?: boolean;
   degraded?: boolean;
   reason?: string;
+  error_type?: IngestionErrorType;
+  retryable?: boolean;
   stats: {
     date: string;
     apiRequests: number;
@@ -70,22 +74,32 @@ export async function syncFixturesToday(
       { date }
     );
   } catch (error) {
-    const reason =
-      error instanceof ApiFootballError
-        ? formatApiFootballFailureReason(error)
-        : error instanceof Error
-          ? error.message
-          : "Unknown provider error";
-    console.error("[sync-fixtures-today] fixtures fetch failed", reason);
+    const classified = classifyProviderError(error);
+    console.error(
+      "[sync-fixtures-today] fixtures fetch failed",
+      classified.reason
+    );
+    logIngestionEvent({
+      job_name: "sync-fixtures-today",
+      stage: "provider_fetch",
+      ok: false,
+      error_type: classified.errorType,
+      reason: classified.reason,
+      retryable: classified.retryable,
+      provider_path: "/fixtures",
+    });
     return {
       ok: false,
       job: "sync-fixtures-today",
+      reason: classified.reason,
+      error_type: classified.errorType,
+      retryable: classified.retryable,
       stats: {
         date,
         apiRequests: 1,
         fixturesUpserted: 0,
         fixturesFilteredOut: 0,
-        lastFixtureError: reason,
+        lastFixtureError: classified.reason,
       },
     };
   }
@@ -152,6 +166,10 @@ export async function syncFixturesToday(
       );
     }
   }
+
+  await emitLivePollingDisabledWhenLiveFixturesExist({
+    jobName: "sync-fixtures-today",
+  });
 
   const outcome = resolveCronOutcome({
     failedCount: fixtureErrors,

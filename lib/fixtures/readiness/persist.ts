@@ -4,10 +4,11 @@ import { evaluateFixtureDependencyCompleteness } from "@/lib/ingestion/ingestion
 import { findCompetition } from "@/lib/competitions";
 import { buildPrematchFeatures } from "@/lib/models/features";
 import {
-  mapPredictionRowToResult,
+  mapPrematchPredictionRowForFixture,
   readLatestPrematchPrediction,
   resolveFixtureUuidByExternalId,
 } from "@/lib/predictions/db";
+import { isLivePollingEnabled } from "@/lib/env";
 import { buildPrematchContext } from "@/lib/services/aiContextService";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/types/supabase";
@@ -123,18 +124,26 @@ async function buildEvaluationInput(input: {
   );
 
   let currentContextHash: string | null = null;
+  let contextHashComputeFailed = false;
   if (features && predictionRow) {
     try {
-      const mapped = mapPredictionRowToResult(
+      const mapped = await mapPrematchPredictionRowForFixture(
         predictionRow,
         input.providerId,
         "1.0.0",
         true
       );
-      const ctx = await buildPrematchContext(input.providerId, mapped);
-      currentContextHash = ctx.contextHash;
-    } catch {
+      if (mapped) {
+        const ctx = await buildPrematchContext(input.providerId, mapped);
+        currentContextHash = ctx.contextHash;
+      }
+    } catch (error) {
+      contextHashComputeFailed = true;
       currentContextHash = null;
+      console.warn(
+        `[readiness] prematch context hash failed for fixture ${input.providerId}`,
+        error instanceof Error ? error.message : error
+      );
     }
   }
 
@@ -168,6 +177,8 @@ async function buildEvaluationInput(input: {
         }
       : null,
     currentContextHash,
+    contextHashComputeFailed,
+    livePollingEnabled: isLivePollingEnabled(),
   };
 }
 

@@ -4,13 +4,13 @@ import { AIHeroShell } from "@/components/ai/AIHeroShell";
 import { CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type AIHeroUnavailableStateProps = {
-  title?: string;
-  description?: string;
+  title: string;
+  description: string;
 };
 
 export function AIHeroUnavailableState({
-  title = "Pre-match analysis unavailable",
-  description = "We do not have a stored pre-match AI analysis for this fixture.",
+  title,
+  description,
 }: AIHeroUnavailableStateProps) {
   return (
     <AIHeroShell

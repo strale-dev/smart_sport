@@ -105,7 +105,14 @@ function toCachedResult<T>(value: T, meta: CacheMeta): CachedResult<T> {
 async function readEnvelope<T>(key: string): Promise<CacheEnvelope<T> | null> {
   const redis = getRedis();
   if (redis) {
-    const raw = await redis.get<string>(key);
+    let raw: string | CacheEnvelope<T> | null;
+    try {
+      raw = await redis.get<string>(key);
+    } catch {
+      console.warn("[cache] Redis read failed; treating as cache miss.");
+      return null;
+    }
+
     if (!raw) {
       return null;
     }
@@ -136,7 +143,14 @@ async function writeEnvelope<T>(
 ): Promise<boolean> {
   const redis = getRedis();
   if (redis) {
-    await redis.set(key, JSON.stringify(envelope), { ex: staleTtlSeconds });
+    try {
+      await redis.set(key, JSON.stringify(envelope), { ex: staleTtlSeconds });
+    } catch {
+      console.warn(
+        "[cache] Redis write failed; continuing without cache persistence."
+      );
+      return false;
+    }
     return true;
   }
 

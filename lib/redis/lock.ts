@@ -23,19 +23,7 @@ function pruneExpiredMemoryLock(key: string, now = Date.now()): void {
   }
 }
 
-export async function acquireLock(
-  key: string,
-  ttlSeconds: number
-): Promise<boolean> {
-  const redis = getRedis();
-  if (redis) {
-    const result = await redis.set(key, "1", {
-      nx: true,
-      ex: ttlSeconds,
-    });
-    return result === "OK";
-  }
-
+function acquireMemoryLock(key: string, ttlSeconds: number): boolean {
   const now = Date.now();
   pruneExpiredMemoryLock(key, now);
   const existing = memoryLocks.get(key);
@@ -47,27 +35,62 @@ export async function acquireLock(
   return true;
 }
 
-export async function releaseLock(key: string): Promise<void> {
+function isMemoryLockHeld(key: string): boolean {
+  const now = Date.now();
+  pruneExpiredMemoryLock(key, now);
+  const existing = memoryLocks.get(key);
+  return existing != null && existing.expiresAt > now;
+}
+
+export async function acquireLock(
+  key: string,
+  ttlSeconds: number
+): Promise<boolean> {
   const redis = getRedis();
   if (redis) {
-    await redis.del(key);
-    return;
+    try {
+      const result = await redis.set(key, "1", {
+        nx: true,
+        ex: ttlSeconds,
+      });
+      return result === "OK";
+    } catch {
+      console.warn(
+        "[lock] Redis lock acquire failed; using in-memory lock fallback."
+      );
+    }
   }
 
+  return acquireMemoryLock(key, ttlSeconds);
+}
+
+export async function releaseLock(key: string): Promise<void> {
   memoryLocks.delete(key);
+
+  const redis = getRedis();
+  if (redis) {
+    try {
+      await redis.del(key);
+    } catch {
+      console.warn("[lock] Redis lock release failed; in-memory lock cleared.");
+    }
+  }
 }
 
 export async function isLockHeld(key: string): Promise<boolean> {
   const redis = getRedis();
   if (redis) {
-    const value = await redis.get(key);
-    return value != null;
+    try {
+      const value = await redis.get(key);
+      return value != null;
+    } catch {
+      console.warn(
+        "[lock] Redis lock check failed; using in-memory lock state."
+      );
+    }
   }
 
-  const now = Date.now();
-  pruneExpiredMemoryLock(key, now);
-  const existing = memoryLocks.get(key);
-  return existing != null && existing.expiresAt > now;
+  return isMemoryLockHeld(key);
 }
 
 export async function renewLock(
@@ -76,8 +99,14 @@ export async function renewLock(
 ): Promise<boolean> {
   const redis = getRedis();
   if (redis) {
-    const result = await redis.expire(key, ttlSeconds);
-    return result === 1;
+    try {
+      const result = await redis.expire(key, ttlSeconds);
+      return result === 1;
+    } catch {
+      console.warn(
+        "[lock] Redis lock renew failed; using in-memory lock fallback."
+      );
+    }
   }
 
   const now = Date.now();

@@ -1,5 +1,10 @@
+import { isLivePollingEnabled } from "@/lib/env";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import type { Fixture } from "@/types/domain";
+
+export type LivePresentationOptions = {
+  livePollingEnabled?: boolean;
+};
 
 /** Covers regulation + extra time + penalties buffer. */
 export const LIVE_TAIL_POLL_MAX_AFTER_KICKOFF_MS = 5 * 60 * 60 * 1000;
@@ -57,19 +62,61 @@ export function isAuthoritativeLivePresentation(
   return !isProviderSyncStale(fixture.liveClock?.lastProviderSyncAt, nowMs);
 }
 
+function fixtureHasRecordedScore(fixture: Fixture): boolean {
+  const { home, away, fulltimeHome, fulltimeAway } = fixture.score;
+  if (home != null && away != null) {
+    return true;
+  }
+  return fulltimeHome != null && fulltimeAway != null;
+}
+
+function resolveLivePollingEnabled(options?: LivePresentationOptions): boolean {
+  return options?.livePollingEnabled ?? isLivePollingEnabled();
+}
+
+/**
+ * Stale live past the tail window, with polling off and no score/minute.
+ * Must not be shown as a clean finished match.
+ */
+export function isUnverifiedExpiredLivePresentation(
+  fixture: Fixture,
+  nowMs = Date.now(),
+  options?: LivePresentationOptions
+): boolean {
+  if (!isLiveFixtureStatus(fixture.status)) {
+    return false;
+  }
+
+  if (isAuthoritativeLivePresentation(fixture, nowMs)) {
+    return false;
+  }
+
+  if (resolveLivePollingEnabled(options)) {
+    return false;
+  }
+
+  return fixture.minute == null || !fixtureHasRecordedScore(fixture);
+}
+
 /**
  * Maps stale DB live rows to a finished presentation without mutating storage.
  * Authoritative correction still comes from ingest/reconcile; this prevents UI leaks.
+ * When polling is intentionally off, missing score/minute stay unverified instead of silent FT.
  */
 export function resolvePresentationFixture(
   fixture: Fixture,
-  nowMs = Date.now()
+  nowMs = Date.now(),
+  options?: LivePresentationOptions
 ): Fixture {
   if (!isLiveFixtureStatus(fixture.status)) {
     return fixture;
   }
 
   if (isAuthoritativeLivePresentation(fixture, nowMs)) {
+    return fixture;
+  }
+
+  if (isUnverifiedExpiredLivePresentation(fixture, nowMs, options)) {
     return fixture;
   }
 
@@ -87,9 +134,12 @@ export function resolvePresentationFixture(
 
 export function resolvePresentationFixtures(
   fixtures: Fixture[],
-  nowMs = Date.now()
+  nowMs = Date.now(),
+  options?: LivePresentationOptions
 ): Fixture[] {
-  return fixtures.map((fixture) => resolvePresentationFixture(fixture, nowMs));
+  return fixtures.map((fixture) =>
+    resolvePresentationFixture(fixture, nowMs, options)
+  );
 }
 
 export function isPresentationLiveFixture(

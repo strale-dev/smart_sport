@@ -54,7 +54,10 @@ describe("canGeneratePrematchNarrative", () => {
     expect(
       canGeneratePrematchNarrative(
         { ...baseFeatures, form5HomePpg: null, form5AwayPpg: 1.2 },
-        { winProbabilities: GENERIC_BASELINE_WIN_PROBABILITIES }
+        {
+          winProbabilities: GENERIC_BASELINE_WIN_PROBABILITIES,
+          modelTier: "GENERIC_BASELINE",
+        }
       )
     ).toBe(false);
   });
@@ -63,11 +66,13 @@ describe("canGeneratePrematchNarrative", () => {
     expect(
       canGeneratePrematchNarrative(baseFeatures, {
         winProbabilities: GENERIC_BASELINE_WIN_PROBABILITIES,
+        modelTier: "GENERIC_BASELINE",
       })
     ).toBe(true);
     expect(
       isFixtureSpecificPrematchModel(baseFeatures, {
         winProbabilities: GENERIC_BASELINE_WIN_PROBABILITIES,
+        modelTier: "GENERIC_BASELINE",
       })
     ).toBe(false);
   });
@@ -76,6 +81,7 @@ describe("canGeneratePrematchNarrative", () => {
     expect(
       canGeneratePrematchNarrative(baseFeatures, {
         winProbabilities: { home: 0.62, draw: 0.22, away: 0.16 },
+        modelTier: "FIXTURE_SPECIFIC",
       })
     ).toBe(true);
   });

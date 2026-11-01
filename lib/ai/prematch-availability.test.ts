@@ -62,6 +62,10 @@ function basePrediction(
 ): PrematchPredictionResult {
   return {
     type: "PREMATCH",
+    presentationKind: "PRE_MATCH_PROBABILITY",
+    modelTier: "GENERIC_BASELINE",
+    inputSnapshotFingerprint: "fp",
+    expectedGoalsAvailable: true,
     fixtureExternalId: 1,
     fixtureId: "uuid",
     modelVersionId: "mv",
@@ -113,6 +117,7 @@ describe("prematch availability", () => {
       form5AwayPpg: 1.1,
     });
     const prediction = basePrediction({
+      modelTier: "FIXTURE_SPECIFIC",
       inputSnapshot: features,
       winProbabilities: { home: 0.62, draw: 0.22, away: 0.16 },
     });
@@ -136,6 +141,7 @@ describe("prematch availability", () => {
       Date.now() + PREMATCH_LLM_ACTIVE_MS + 3_600_000
     ).toISOString();
     const prediction = basePrediction({
+      modelTier: "FIXTURE_SPECIFIC",
       inputSnapshot: baseFeatures({ form5HomePpg: 2, form5AwayPpg: 1 }),
       winProbabilities: { home: 0.55, draw: 0.25, away: 0.2 },
     });

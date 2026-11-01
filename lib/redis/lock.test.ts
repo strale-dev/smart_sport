@@ -9,13 +9,33 @@ import {
   withRenewableLock,
 } from "@/lib/redis/lock";
 
+const getRedisMock = vi.hoisted(() => vi.fn<() => unknown>(() => null));
+
+vi.mock("@/lib/redis/client", () => ({
+  getRedis: () => getRedisMock(),
+  resetRedisClientForTests: () => undefined,
+  pingRedis: async () => false,
+}));
+
+function brokenRedisLockClient() {
+  const transportError = new TypeError("fetch failed");
+  return {
+    get: vi.fn().mockRejectedValue(transportError),
+    set: vi.fn().mockRejectedValue(transportError),
+    del: vi.fn().mockRejectedValue(transportError),
+    expire: vi.fn().mockRejectedValue(transportError),
+  };
+}
+
 describe("lock (in-memory fallback)", () => {
   beforeEach(() => {
     resetMemoryLocksForTests();
+    getRedisMock.mockReturnValue(null);
   });
 
   afterEach(() => {
     resetMemoryLocksForTests();
+    getRedisMock.mockReturnValue(null);
     vi.restoreAllMocks();
   });
 
@@ -68,6 +88,26 @@ describe("lock (in-memory fallback)", () => {
       results.filter((result) => result.status === "rejected")
     ).toHaveLength(1);
     expect(maxActive).toBe(1);
+  });
+
+  it("falls back to in-memory locks when Redis set throws", async () => {
+    getRedisMock.mockReturnValue(brokenRedisLockClient());
+
+    expect(await acquireLock("lock:test:redis-down", 5)).toBe(true);
+    expect(await acquireLock("lock:test:redis-down", 5)).toBe(false);
+
+    await releaseLock("lock:test:redis-down");
+    expect(await acquireLock("lock:test:redis-down", 5)).toBe(true);
+  });
+
+  it("runs withLock when Redis transport fails", async () => {
+    getRedisMock.mockReturnValue(brokenRedisLockClient());
+    const fn = vi.fn().mockResolvedValue("ok");
+
+    const result = await withLock("lock:test:redis-with-lock", 5, fn);
+
+    expect(result).toBe("ok");
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 
   it("renews lock during withRenewableLock", async () => {

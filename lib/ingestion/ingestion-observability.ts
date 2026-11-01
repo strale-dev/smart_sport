@@ -5,6 +5,11 @@
 
 export type IngestionErrorType =
   | "provider_error"
+  | "network"
+  | "timeout"
+  | "quota_exhausted"
+  | "rate_limited"
+  | "permanent"
   | "upsert_error"
   | "budget_exceeded"
   | "live_polling_disabled"

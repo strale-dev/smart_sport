@@ -2,7 +2,7 @@ import { isFinishedFixtureStatus } from "@/lib/fixtures/display";
 import { evaluatePrematchPredictionAccuracy } from "@/lib/match/evaluate-prediction-accuracy";
 import {
   getActiveModelVersion,
-  mapPredictionRowToResult,
+  mapPrematchPredictionRowForFixture,
   readOfficialPrematchPrediction,
 } from "@/lib/predictions/db";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -43,12 +43,15 @@ export async function maybeRecordPredictionEvaluation(input: {
   }
 
   const modelVersion = await getActiveModelVersion();
-  const snapshot = mapPredictionRowToResult(
+  const snapshot = await mapPrematchPredictionRowForFixture(
     prematchRow,
     input.fixture.externalId,
     modelVersion.version,
     true
   );
+  if (!snapshot) {
+    return;
+  }
 
   const accuracyRows = evaluatePrematchPredictionAccuracy(
     input.fixture,

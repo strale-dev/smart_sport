@@ -1,18 +1,26 @@
 import type { ScoreSnapshot } from "@/types/domain";
 
-export const XG_DELTA_THRESHOLD = 0.5;
-export const SIGNIFICANT_SUB_MAX_MINUTE = 70;
-
 export type MeaningfulEventKind =
   | "GOAL"
   | "RED_CARD"
   | "PENALTY"
+  | "VAR_DECISION"
   | "XG_DELTA"
   | "SIGNIFICANT_SUBSTITUTION"
   | "PROBABILITY_SHIFT"
   | "LIVE_BASELINE"
   | "HT"
+  | "FT"
+  | "AET"
+  | "PEN"
+  | "MATCH_STATE"
   | "PERIODIC";
+
+/** Documented in docs/audit/07-1-live-ai.md — max team xG delta per poll tick. */
+export const XG_DELTA_THRESHOLD = 0.5;
+
+/** Starter sub before this minute is “significant” (PRD §7.7). */
+export const SIGNIFICANT_SUB_MAX_MINUTE = 70;
 
 /** Stable public contract for Realtime broadcast + future AI engine. */
 export type MeaningfulEventBroadcastPayload = {

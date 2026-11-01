@@ -2,7 +2,10 @@ import {
   formatDateKeyInTimezone,
   sanitizeTimezone,
 } from "@/lib/datetime/timezone";
-import { isAuthoritativeLivePresentation } from "@/lib/live/live-presentation";
+import {
+  isAuthoritativeLivePresentation,
+  isUnverifiedExpiredLivePresentation,
+} from "@/lib/live/live-presentation";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import type { Fixture, FixtureStatus } from "@/types/domain";
 
@@ -23,6 +26,42 @@ const KICKOFF_DATE_TIME_FORMAT: Intl.DateTimeFormatOptions = {
   minute: "2-digit",
   hourCycle: "h23",
 };
+
+export const FIXTURE_KICKOFF_PASSED_AWAITING_LABEL =
+  "Kickoff passed — awaiting official status";
+
+export const FIXTURE_SCORE_UNAVAILABLE_LABEL = "Score unavailable";
+
+export const FIXTURE_STATUS_UNVERIFIED_LABEL = "Status unverified";
+
+export const FIXTURE_UNKNOWN_TEAM_LABEL = "Unknown team";
+
+export const FIXTURE_UNKNOWN_LEAGUE_LABEL = "Unknown league";
+
+export function isStalePrematchAfterKickoff(
+  fixture: Fixture,
+  now = new Date()
+): boolean {
+  if (fixture.status !== "NS" && fixture.status !== "TBD") {
+    return false;
+  }
+
+  return now.getTime() > new Date(fixture.kickoffAt).getTime();
+}
+
+export function formatFixtureTeamDisplayName(
+  name: string | null | undefined
+): string {
+  const trimmed = name?.trim();
+  return trimmed ? trimmed : FIXTURE_UNKNOWN_TEAM_LABEL;
+}
+
+export function formatFixtureLeagueDisplayName(
+  name: string | null | undefined
+): string {
+  const trimmed = name?.trim();
+  return trimmed ? trimmed : FIXTURE_UNKNOWN_LEAGUE_LABEL;
+}
 
 export function formatFixtureKickoffTime(
   kickoffAt: string,
@@ -64,13 +103,31 @@ export function shouldShowFixtureScore(fixture: Fixture): boolean {
   return fixtureHasRecordedScore(fixture);
 }
 
-function formatFixtureScoreText(fixture: Fixture): string {
+function fixtureFinishedWithoutRecordedScore(fixture: Fixture): boolean {
+  return (
+    isFinishedFixtureStatus(fixture.status) && !fixtureHasRecordedScore(fixture)
+  );
+}
+
+export function formatFixtureScoreText(fixture: Fixture): string {
+  if (isUnverifiedExpiredLivePresentation(fixture)) {
+    return FIXTURE_STATUS_UNVERIFIED_LABEL;
+  }
+
+  if (fixtureFinishedWithoutRecordedScore(fixture)) {
+    return FIXTURE_SCORE_UNAVAILABLE_LABEL;
+  }
+
   const home = fixture.score.home ?? fixture.score.fulltimeHome ?? "–";
   const away = fixture.score.away ?? fixture.score.fulltimeAway ?? "–";
   return `${home} – ${away}`;
 }
 
 export function formatFixtureScore(fixture: Fixture, timeZone: string): string {
+  if (isUnverifiedExpiredLivePresentation(fixture)) {
+    return FIXTURE_STATUS_UNVERIFIED_LABEL;
+  }
+
   if (shouldShowFixtureScore(fixture)) {
     return formatFixtureScoreText(fixture);
   }
@@ -82,10 +139,19 @@ export function formatFixtureScore(fixture: Fixture, timeZone: string): string {
 export function formatFixtureScheduledCenterLabel(
   fixture: Fixture,
   timeZone: string,
-  todayDateKey: string
+  todayDateKey: string,
+  now = new Date()
 ): string {
+  if (isUnverifiedExpiredLivePresentation(fixture, now.getTime())) {
+    return FIXTURE_STATUS_UNVERIFIED_LABEL;
+  }
+
   if (shouldShowFixtureScore(fixture)) {
     return formatFixtureScoreText(fixture);
+  }
+
+  if (isStalePrematchAfterKickoff(fixture, now)) {
+    return FIXTURE_KICKOFF_PASSED_AWAITING_LABEL;
   }
 
   const kickoffDay = formatDateKeyInTimezone(fixture.kickoffAt, timeZone);
@@ -100,10 +166,16 @@ export function formatFixtureScheduledCenterLabel(
 export function formatFixtureRowCenterLabel(
   fixture: Fixture,
   timeZone: string,
-  todayDateKey?: string
+  todayDateKey?: string,
+  now = new Date()
 ): string {
   if (todayDateKey) {
-    return formatFixtureScheduledCenterLabel(fixture, timeZone, todayDateKey);
+    return formatFixtureScheduledCenterLabel(
+      fixture,
+      timeZone,
+      todayDateKey,
+      now
+    );
   }
 
   return formatFixtureScore(fixture, timeZone);
@@ -111,7 +183,8 @@ export function formatFixtureRowCenterLabel(
 
 export function formatFixtureStatusLabel(
   status: FixtureStatus,
-  minute: number | null
+  minute: number | null,
+  options?: { kickoffAt?: string; now?: Date }
 ): string {
   if (isLiveFixtureStatus(status)) {
     if (status === "HT") {
@@ -126,6 +199,14 @@ export function formatFixtureStatusLabel(
   }
 
   if (status === "NS" || status === "TBD") {
+    const now = options?.now ?? new Date();
+    if (
+      options?.kickoffAt != null &&
+      now.getTime() > new Date(options.kickoffAt).getTime()
+    ) {
+      return FIXTURE_KICKOFF_PASSED_AWAITING_LABEL;
+    }
+
     return "Scheduled";
   }
 
@@ -176,10 +257,15 @@ const INTERRUPTED_MATCH_HEADER_LABELS: Partial<Record<FixtureStatus, string>> =
 /** Human-readable status line for match page header meta row (non-live chip). */
 export function formatMatchHeaderStatusLabel(
   fixture: Fixture,
-  timeZone: string
+  timeZone: string,
+  now = new Date()
 ): string {
-  if (isAuthoritativeLivePresentation(fixture)) {
+  if (isAuthoritativeLivePresentation(fixture, now.getTime())) {
     return formatFixtureMinute(fixture) ?? "Live";
+  }
+
+  if (isUnverifiedExpiredLivePresentation(fixture, now.getTime())) {
+    return FIXTURE_STATUS_UNVERIFIED_LABEL;
   }
 
   if (isLiveFixtureStatus(fixture.status)) {
@@ -196,6 +282,10 @@ export function formatMatchHeaderStatusLabel(
   }
 
   if (fixture.status === "NS" || fixture.status === "TBD") {
+    if (isStalePrematchAfterKickoff(fixture, now)) {
+      return FIXTURE_KICKOFF_PASSED_AWAITING_LABEL;
+    }
+
     return formatFixtureKickoffDateTime(fixture.kickoffAt, timeZone);
   }
 

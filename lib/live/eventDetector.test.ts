@@ -6,6 +6,7 @@ import type {
 } from "@/lib/live/event-detector-types";
 import {
   detectMeaningfulEvents,
+  isMajorVarEvent,
   isRedCardDetail,
   toMeaningfulEventBroadcastPayload,
 } from "@/lib/live/eventDetector";
@@ -278,6 +279,36 @@ describe("detectMeaningfulEvents", () => {
   });
 });
 
+describe("isMajorVarEvent", () => {
+  it("matches goal disallowed and excludes penalty-only VAR", () => {
+    expect(
+      isMajorVarEvent({
+        externalEventId: "var-1",
+        type: "Var",
+        detail: "Goal disallowed",
+        comments: null,
+        minute: 33,
+        teamExternalId: 33,
+        playerExternalId: null,
+        assistPlayerExternalId: null,
+      })
+    ).toBe(true);
+
+    expect(
+      isMajorVarEvent({
+        externalEventId: "var-pen",
+        type: "Var",
+        detail: "Penalty confirmed",
+        comments: null,
+        minute: 33,
+        teamExternalId: 33,
+        playerExternalId: null,
+        assistPlayerExternalId: null,
+      })
+    ).toBe(false);
+  });
+});
+
 describe("isRedCardDetail", () => {
   it("matches red and second yellow variants", () => {
     expect(isRedCardDetail("Red Card")).toBe(true);
@@ -287,6 +318,74 @@ describe("isRedCardDetail", () => {
 });
 
 describe("fixture replay style diff", () => {
+  it("does not emit xG delta below threshold", () => {
+    const prev = snapshot({
+      fixtureProviderId: 1,
+      stats: [
+        { teamExternalId: 33, expectedGoals: 1.0, redCards: 0 },
+        { teamExternalId: 34, expectedGoals: 0.5, redCards: 0 },
+      ],
+    });
+    const next = snapshot({
+      fixtureProviderId: 1,
+      stats: [
+        { teamExternalId: 33, expectedGoals: 1.49, redCards: 0 },
+        { teamExternalId: 34, expectedGoals: 0.5, redCards: 0 },
+      ],
+    });
+
+    const result = detectMeaningfulEvents(prev, next);
+    expect(result.events.some((entry) => entry.kind === "XG_DELTA")).toBe(
+      false
+    );
+  });
+
+  it("detects final whistle when status moves from live to FT", () => {
+    const prev = snapshot({ fixtureProviderId: 1, status: "2H", minute: 90 });
+    const next = snapshot({ fixtureProviderId: 1, status: "FT", minute: 90 });
+
+    const result = detectMeaningfulEvents(prev, next);
+    expect(result.events.some((entry) => entry.kind === "FT")).toBe(true);
+  });
+
+  it("detects equalizer as a second distinct goal event", () => {
+    const prev = snapshot({
+      fixtureProviderId: 1,
+      score: { home: 1, away: 0 },
+      events: [
+        event({
+          externalEventId: "goal-1",
+          type: "Goal",
+          detail: "Normal Goal",
+          minute: 10,
+        }),
+      ],
+    });
+    const next = snapshot({
+      fixtureProviderId: 1,
+      score: { home: 1, away: 1 },
+      events: [
+        event({
+          externalEventId: "goal-1",
+          type: "Goal",
+          detail: "Normal Goal",
+          minute: 10,
+        }),
+        event({
+          externalEventId: "goal-eq",
+          type: "Goal",
+          detail: "Normal Goal",
+          minute: 80,
+        }),
+      ],
+    });
+
+    const result = detectMeaningfulEvents(prev, next);
+    const goals = result.events.filter((entry) => entry.kind === "GOAL");
+    expect(goals).toHaveLength(1);
+    expect(goals[0]?.externalEventId).toBe("goal-eq");
+  });
+
   it("detects a newly added goal from a second snapshot", () => {
     const prev = snapshot({
       fixtureProviderId: 1035037,

@@ -28,7 +28,7 @@ vi.mock("@/lib/predictions/db", () => ({
   insertPrematchPrediction,
   getActiveModelVersion,
   resolveFixtureUuidByExternalId,
-  mapPredictionRowToResult: (
+  mapPrematchPredictionRowForFixture: async (
     row: {
       id: string;
       fixture_id: string;
@@ -56,6 +56,10 @@ vi.mock("@/lib/predictions/db", () => ({
     modelVersion,
     predictionId: row.id,
     type: "PREMATCH" as const,
+    presentationKind: "PRE_MATCH_PROBABILITY" as const,
+    modelTier: "FIXTURE_SPECIFIC" as const,
+    inputSnapshotFingerprint: "fp-test",
+    expectedGoalsAvailable: true,
     winProbabilities: {
       home: row.home_win_prob,
       draw: row.draw_prob,
@@ -355,6 +359,19 @@ describe("predictionService", () => {
     expect(insertPrematchPrediction).not.toHaveBeenCalled();
   });
 
+  it("does not persist prematch when historical depth is insufficient", async () => {
+    evaluateFixtureReadinessForProvider.mockResolvedValue({
+      gates: { predictionReady: false, aiGenerationAllowed: false },
+      items: [{ key: "historical_depth", state: "insufficient" }],
+    });
+
+    const { getOrComputePrematch } =
+      await import("@/lib/services/predictionService");
+
+    await expect(getOrComputePrematch(123)).resolves.toBeNull();
+    expect(insertPrematchPrediction).not.toHaveBeenCalled();
+  });
+
   it("treats missing features as not fresh for cache (FR-02)", async () => {
     resolveFixtureUuidByExternalId.mockResolvedValue({
       id: "fixture-uuid",
@@ -383,9 +400,8 @@ describe("predictionService", () => {
     const { getOrComputePrematch } =
       await import("@/lib/services/predictionService");
 
-    await expect(getOrComputePrematch(123)).rejects.toThrow(
-      /Unable to build features/
-    );
+    await expect(getOrComputePrematch(123)).resolves.toBeNull();
+    expect(insertPrematchPrediction).not.toHaveBeenCalled();
   });
 
   it("returns official prematch snapshot after kickoff without inserting", async () => {

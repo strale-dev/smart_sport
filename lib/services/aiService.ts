@@ -26,6 +26,12 @@ import {
   liveLlmToNarrativePayload,
   prematchLlmToNarrativePayload,
 } from "@/lib/ai/compose-prematch-commentary";
+import { classifyGenerationFailure } from "@/lib/ai/generation-failure";
+import { assertFixtureSpecificNarrative } from "@/lib/ai/narrative-fixture-specificity";
+import type {
+  PrematchGenerationFailureCode,
+  PrematchGenerationFailureInfo,
+} from "@/lib/ai/schemas";
 import { toUserFacingAiErrorMessage } from "@/lib/ai/user-facing-ai-error";
 import {
   buildPrematchSystemPrompt,
@@ -102,36 +108,72 @@ function reportPrematchInsightOutcome(
   });
 }
 
-function buildFallbackResponse(
+function toGenerationFailureResponse(
   fixtureExternalId: number,
   prediction: NonNullable<Awaited<ReturnType<typeof getOrComputePrematch>>>,
-  message: string
+  detail: { reasonCode: PrematchGenerationFailureCode; message: string }
 ): PrematchInsightResponse {
   return {
-    status: "FALLBACK",
+    status: "GENERATION_FAILED",
     fixtureExternalId,
     prediction,
-    message,
+    message: detail.message,
+    reasonCode: detail.reasonCode,
+    canonicalState: "GENERATION_FAILED",
   };
 }
 
+function mapFailureCodeToSchema(
+  code: import("@/lib/ai/canonical-insight-state").AiInsightReasonCode
+): PrematchGenerationFailureCode {
+  switch (code) {
+    case "OPENAI_NOT_CONFIGURED":
+      return "OPENAI_NOT_CONFIGURED";
+    case "OPENAI_TIMEOUT":
+      return "OPENAI_TIMEOUT";
+    case "MALFORMED_OUTPUT":
+      return "MALFORMED_OUTPUT";
+    case "RATE_LIMIT":
+      return "RATE_LIMIT";
+    case "DAILY_LIMIT":
+      return "DAILY_LIMIT";
+    case "GENERATION_CONCURRENT":
+      return "GENERATION_CONCURRENT";
+    default:
+      return "OPENAI_PROVIDER_ERROR";
+  }
+}
+
+type PrematchContextHashResolution =
+  | { status: "ok"; hash: string }
+  | { status: "no_prediction" }
+  | { status: "compute_failed" };
+
 async function resolvePrematchContextHashForHistorical(
   fixtureExternalId: number
-): Promise<string | null> {
+): Promise<PrematchContextHashResolution> {
   const prediction =
     (await getLatestPrematch(fixtureExternalId)) ??
     (await getOrComputePrematch(fixtureExternalId));
   if (!prediction) {
-    return null;
+    return { status: "no_prediction" };
   }
   try {
     const { contextHash } = await buildPrematchContext(
       fixtureExternalId,
       prediction
     );
-    return contextHash;
-  } catch {
-    return null;
+    return { status: "ok", hash: contextHash };
+  } catch (error) {
+    console.warn(
+      `[aiService] historical prematch context hash failed for ${fixtureExternalId}`,
+      error instanceof Error ? error.message : error
+    );
+    Sentry.captureMessage("prematch_context_hash_compute_failed", {
+      level: "warning",
+      extra: { fixtureExternalId },
+    });
+    return { status: "compute_failed" };
   }
 }
 
@@ -160,14 +202,21 @@ async function readHistoricalPrematchInsight(
     };
   }
 
-  const currentHash =
+  const hashResolution =
     await resolvePrematchContextHashForHistorical(fixtureExternalId);
-  if (currentHash != null && row.context_hash !== currentHash) {
+  if (
+    hashResolution.status === "compute_failed" ||
+    (hashResolution.status === "ok" && row.context_hash !== hashResolution.hash)
+  ) {
     return {
-      status: "UNAVAILABLE",
-      fixtureExternalId,
-      reason: "STALE_PREMATCH_CONTEXT",
+      status: "OK",
+      insight: mapAiInsightRowToStored(row, fixtureExternalId, true),
       prediction,
+      cached: true,
+      insightMode: "historical",
+      contextStale: true,
+      canonicalState: "AVAILABLE",
+      reasonCode: "STALE_CONTEXT_HASH",
     };
   }
 
@@ -243,10 +292,17 @@ export async function readLiveInsight(
     predictionId: row.prediction_id,
   });
 
+  const latestLiveRow = await readLatestLivePrediction(fixture.id);
+  const predictionStale =
+    latestLiveRow != null &&
+    row.prediction_id != null &&
+    latestLiveRow.id !== row.prediction_id;
+
   return {
     status: "OK",
     insight: stored,
     prediction,
+    predictionStale: predictionStale || undefined,
     cached: true,
     insightMode: "live",
   };
@@ -352,10 +408,14 @@ export async function generatePrematchInsight(
     const stored = await readLatestPrematchInsight(fixture.id);
     let contextHashMatches: boolean | undefined;
     if (stored) {
-      const currentHash =
+      const hashResolution =
         await resolvePrematchContextHashForHistorical(fixtureExternalId);
       contextHashMatches =
-        currentHash == null ? undefined : stored.context_hash === currentHash;
+        hashResolution.status === "ok"
+          ? stored.context_hash === hashResolution.hash
+          : hashResolution.status === "compute_failed"
+            ? false
+            : undefined;
     }
     const action = historicalPrematchWriteAction({
       trigger: options.trigger,
@@ -395,6 +455,8 @@ export async function generatePrematchInsight(
         status: "UNAVAILABLE",
         fixtureExternalId,
         reason: "GENERATION_NOT_ALLOWED",
+        canonicalState: "UNAVAILABLE",
+        reasonCode: "GENERATION_NOT_ALLOWED",
       };
     }
   } else if (!canGeneratePrematchInsight(fixture.status)) {
@@ -402,6 +464,8 @@ export async function generatePrematchInsight(
       status: "UNAVAILABLE",
       fixtureExternalId,
       reason: "GENERATION_NOT_ALLOWED",
+      canonicalState: "UNAVAILABLE",
+      reasonCode: "GENERATION_NOT_ALLOWED",
     };
   }
 
@@ -419,7 +483,9 @@ export async function generatePrematchInsight(
       return {
         status: "UNAVAILABLE",
         fixtureExternalId,
-        reason: "GENERATION_NOT_ALLOWED",
+        reason: "READINESS_NOT_MET",
+        canonicalState: "NOT_READY",
+        reasonCode: "READINESS_NOT_MET",
       };
     }
   }
@@ -441,6 +507,8 @@ export async function generatePrematchInsight(
       status: "UNAVAILABLE",
       fixtureExternalId,
       reason: "GENERATION_NOT_ALLOWED",
+      canonicalState: "UNAVAILABLE",
+      reasonCode: "GENERATION_NOT_ALLOWED",
     };
   }
 
@@ -457,7 +525,9 @@ export async function generatePrematchInsight(
     return {
       status: "UNAVAILABLE",
       fixtureExternalId,
-      reason: "GENERATION_NOT_ALLOWED",
+      reason: "AI_CONTEXT_NOT_READY",
+      canonicalState: "NOT_READY",
+      reasonCode: "AI_CONTEXT_NOT_READY",
     };
   }
 
@@ -511,6 +581,14 @@ export async function generatePrematchInsight(
         });
 
         const narrative = prematchLlmToNarrativePayload(llm.parsed);
+
+        assertFixtureSpecificNarrative({
+          summary: narrative.summary,
+          commentary: narrative.commentary,
+          homeTeamName: context.homeTeam.name,
+          awayTeamName: context.awayTeam.name,
+          modelTier: prediction.modelTier,
+        });
 
         const payload = validateAIInsightPayload(
           mergeNarrativeWithPrediction(narrative, prediction, {
@@ -568,16 +646,42 @@ export async function generatePrematchInsight(
     };
   } catch (error) {
     console.error("[aiService] prematch generation failed:", error);
+    const classified = classifyGenerationFailure(error);
+    const failureInfo: PrematchGenerationFailureInfo = {
+      code: mapFailureCodeToSchema(classified.reasonCode),
+      message: toUserFacingAiErrorMessage(error),
+    };
+
+    const latestRow = await readLatestPrematchInsight(fixture.id);
+    if (latestRow) {
+      reportPrematchInsightOutcome("fallback", fixtureExternalId, {
+        trigger: options.trigger,
+        message: failureInfo.message,
+        errorName: error instanceof Error ? error.name : "unknown",
+        preservedPriorInsight: true,
+      });
+      return {
+        status: "OK",
+        insight: mapAiInsightRowToStored(latestRow, fixtureExternalId, true),
+        prediction,
+        cached: true,
+        insightMode,
+        contextStale: latestRow.context_hash !== contextHash,
+        generationFailure: failureInfo,
+        canonicalState: "AVAILABLE",
+        reasonCode: failureInfo.code,
+      };
+    }
+
     reportPrematchInsightOutcome("fallback", fixtureExternalId, {
       trigger: options.trigger,
-      message: toUserFacingAiErrorMessage(error),
+      message: failureInfo.message,
       errorName: error instanceof Error ? error.name : "unknown",
     });
-    return buildFallbackResponse(
-      fixtureExternalId,
-      prediction,
-      toUserFacingAiErrorMessage(error)
-    );
+    return toGenerationFailureResponse(fixtureExternalId, prediction, {
+      reasonCode: failureInfo.code,
+      message: failureInfo.message,
+    });
   }
 }
 
@@ -598,6 +702,7 @@ export type GenerateLiveInsightInput = {
   minute: number | null;
   score: { home: number | null; away: number | null };
   liveStats: import("@/types/ai").LiveAiContext["liveStats"];
+  latestMatchEvents?: import("@/types/ai").LiveAiContext["latestMatchEvents"];
   /** When set, free-tier live quotas are enforced for this generation. */
   userId?: string | null;
 };
@@ -628,6 +733,7 @@ export async function generateLiveInsight(
     minute: input.minute,
     score: input.score,
     liveStats: input.liveStats,
+    latestMatchEvents: input.latestMatchEvents,
   });
 
   const existing = await readLiveInsightFromStore(

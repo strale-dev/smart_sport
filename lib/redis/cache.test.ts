@@ -12,15 +12,34 @@ import {
 } from "@/lib/redis/cache";
 import { resetMemoryLocksForTests } from "@/lib/redis/lock";
 
+const getRedisMock = vi.hoisted(() => vi.fn<() => unknown>(() => null));
+
+vi.mock("@/lib/redis/client", () => ({
+  getRedis: () => getRedisMock(),
+  resetRedisClientForTests: () => undefined,
+  pingRedis: async () => false,
+}));
+
+function brokenRedisClient() {
+  return {
+    get: vi.fn().mockRejectedValue(new TypeError("fetch failed")),
+    set: vi.fn().mockResolvedValue("OK"),
+    del: vi.fn().mockResolvedValue(1),
+    expire: vi.fn().mockResolvedValue(1),
+  };
+}
+
 describe("cached", () => {
   beforeEach(() => {
     resetCacheForTests();
     resetMemoryLocksForTests();
+    getRedisMock.mockReturnValue(null);
   });
 
   afterEach(() => {
     resetCacheForTests();
     resetMemoryLocksForTests();
+    getRedisMock.mockReturnValue(null);
     vi.restoreAllMocks();
   });
 
@@ -234,6 +253,41 @@ describe("cached", () => {
         fn,
       })
     ).rejects.toBeInstanceOf(ApiFootballQuotaError);
+  });
+
+  it("treats Redis read failures as a cache miss and still invokes fn", async () => {
+    getRedisMock.mockReturnValue(brokenRedisClient());
+    const fn = vi.fn().mockResolvedValue({ id: "from-fn" });
+
+    const result = await cached({
+      key: "provider:test:redis-read-fail",
+      freshTtlSeconds: 60,
+      staleTtlSeconds: 3600,
+      fn,
+    });
+
+    expect(result.value).toEqual({ id: "from-fn" });
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not swallow ApiFootball errors when Redis read fails", async () => {
+    getRedisMock.mockReturnValue(brokenRedisClient());
+    const fn = vi.fn().mockRejectedValue(
+      new ApiFootballError("API-Football provider returned errors", {
+        path: "/fixtures",
+      })
+    );
+
+    await expect(
+      cached({
+        key: "provider:test:redis-read-fail-provider",
+        freshTtlSeconds: 30,
+        staleTtlSeconds: 3600,
+        fn,
+      })
+    ).rejects.toBeInstanceOf(ApiFootballError);
+
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 
   it("supports dynamic fresh ttl based on cached value", async () => {

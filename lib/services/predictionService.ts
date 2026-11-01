@@ -11,12 +11,13 @@ import {
   insertLivePrediction,
   insertPrematchPrediction,
   mapLivePredictionRowToResult,
-  mapPredictionRowToResult,
+  mapPrematchPredictionRowForFixture,
   readLatestLivePrediction,
   readLatestPrematchPrediction,
   readOfficialPrematchPrediction,
   resolveFixtureUuidByExternalId,
 } from "@/lib/predictions/db";
+import { validatePrematchModelOutput } from "@/lib/predictions/prematch-validation";
 import { PREMATCH_FRESHNESS_MS } from "@/lib/models/version";
 import type {
   LivePredictionResult,
@@ -32,7 +33,6 @@ import {
   PREMATCH_SCHEDULED_LEAD_MS,
 } from "@/lib/ai/prematch-availability";
 import { computePrematchFeatureFingerprint } from "@/lib/models/prematch-feature-fingerprint";
-import { isGenericBaselineWinProbabilities } from "@/lib/models/prematch-model-signal";
 import type { PrematchFeatureVector } from "@/types/prediction";
 
 const PREMATCH_STATUSES = new Set(["NS", "TBD"]);
@@ -54,9 +54,7 @@ async function readPrematchRowForFixture(fixture: {
       fixture.id,
       fixture.kickoff_at
     );
-    if (official) {
-      return official;
-    }
+    return official;
   }
 
   return readLatestPrematchPrediction(fixture.id);
@@ -103,7 +101,7 @@ function sleep(ms: number): Promise<void> {
 async function computeAndPersistPrematch(
   fixtureExternalId: number,
   fixtureUuid: string
-): Promise<PrematchPredictionResult> {
+): Promise<PrematchPredictionResult | null> {
   const fixtureMeta = await resolveFixtureUuidByExternalId(fixtureExternalId);
   if (fixtureMeta && isKickoffReached(fixtureMeta.kickoff_at)) {
     const frozen = await readOfficialPrematchPrediction(
@@ -112,12 +110,15 @@ async function computeAndPersistPrematch(
     );
     if (frozen) {
       const modelVersion = await getActiveModelVersion();
-      return mapPredictionRowToResult(
+      const mapped = await mapPrematchPredictionRowForFixture(
         frozen,
         fixtureExternalId,
         modelVersion.version,
         true
       );
+      if (mapped) {
+        return mapped;
+      }
     }
     throw new Error(
       `No official prematch prediction for fixture ${fixtureExternalId} after kickoff`
@@ -129,9 +130,7 @@ async function computeAndPersistPrematch(
   const readiness =
     await evaluateFixtureReadinessForProvider(fixtureExternalId);
   if (!readiness || !isFixtureReadyForPrediction(readiness)) {
-    throw new Error(
-      `Fixture ${fixtureExternalId} not ready for prematch prediction`
-    );
+    return null;
   }
 
   const modelVersion = await getActiveModelVersion();
@@ -140,12 +139,30 @@ async function computeAndPersistPrematch(
   });
 
   if (!features) {
-    throw new Error(
-      `Unable to build features for fixture ${fixtureExternalId}`
-    );
+    return null;
   }
 
   const output = scorePrematchFromFeatures(features, modelVersion.coefficients);
+  const validated = validatePrematchModelOutput({
+    features,
+    identity: {
+      fixtureExternalId: features.fixtureExternalId,
+      homeTeamProviderId: features.homeTeamProviderId,
+      awayTeamProviderId: features.awayTeamProviderId,
+      leagueProviderId: features.leagueProviderId,
+    },
+    homeWinProb: output.winProbabilities.home,
+    drawProb: output.winProbabilities.draw,
+    awayWinProb: output.winProbabilities.away,
+    expectedGoalsHome: output.expectedGoalsHome,
+    expectedGoalsAway: output.expectedGoalsAway,
+  });
+  if (!validated.ok) {
+    throw new Error(
+      `Invalid prematch model output for fixture ${fixtureExternalId}: ${validated.reason}`
+    );
+  }
+
   const row = await insertPrematchPrediction({
     fixtureUuid,
     modelVersionId: modelVersion.id,
@@ -167,12 +184,17 @@ async function computeAndPersistPrematch(
     inputSnapshot: features,
   });
 
-  const result = mapPredictionRowToResult(
+  const result = await mapPrematchPredictionRowForFixture(
     row,
     fixtureExternalId,
     modelVersion.version,
     false
   );
+  if (!result) {
+    throw new Error(
+      `Stored prematch prediction failed validation for fixture ${fixtureExternalId}`
+    );
+  }
 
   try {
     const { evaluateAndPersistFixtureReadiness } =
@@ -207,15 +229,19 @@ async function readFreshPrematch(
     return null;
   }
 
-  const mapped = mapPredictionRowToResult(
+  const mapped = await mapPrematchPredictionRowForFixture(
     latest,
     fixtureExternalId,
     modelVersion ?? "1.0.0",
     true
   );
 
+  if (!mapped) {
+    return null;
+  }
+
   if (
-    isGenericBaselineWinProbabilities(mapped.winProbabilities) &&
+    mapped.modelTier === "GENERIC_BASELINE" &&
     hasMinimumModelSignal(snapshot)
   ) {
     return null;
@@ -262,7 +288,7 @@ export async function getOrComputePrematch(
   ) {
     const row = await readPrematchRowForFixture(fixture);
     if (row) {
-      return mapPredictionRowToResult(
+      return mapPrematchPredictionRowForFixture(
         row,
         fixtureExternalId,
         modelVersion.version,
@@ -294,7 +320,11 @@ export async function getOrComputePrematch(
           return freshInsideLock;
         }
 
-        return computeAndPersistPrematch(fixtureExternalId, fixture.id);
+        const computed = await computeAndPersistPrematch(
+          fixtureExternalId,
+          fixture.id
+        );
+        return computed;
       }
     );
   } catch (error) {
@@ -330,7 +360,7 @@ export async function getLatestPrematch(
     return null;
   }
 
-  return mapPredictionRowToResult(
+  return mapPrematchPredictionRowForFixture(
     row,
     fixtureExternalId,
     modelVersion.version,
@@ -356,7 +386,7 @@ export async function getOfficialPrematch(
     return null;
   }
 
-  return mapPredictionRowToResult(
+  return mapPrematchPredictionRowForFixture(
     row,
     fixtureExternalId,
     modelVersion.version,
@@ -419,6 +449,9 @@ export async function updateLiveProbability(input: {
           input.snapshot,
           anchorInsideLock
         );
+        if (!features) {
+          return null;
+        }
         const output = scoreLiveFromFeatures(features);
 
         const row = await insertLivePrediction({
@@ -443,12 +476,30 @@ export async function updateLiveProbability(input: {
           inputSnapshot: features,
         });
 
-        return mapLivePredictionRowToResult(
+        const mapped = mapLivePredictionRowToResult(
           row,
           input.fixtureExternalId,
           modelVersion.version,
           false
         );
+
+        console.info(
+          JSON.stringify({
+            scope: "predictionService/live",
+            message: "live_probability_computed",
+            fixtureExternalId: input.fixtureExternalId,
+            scoreHome: features.scoreHome,
+            scoreAway: features.scoreAway,
+            minute: features.minute,
+            status: input.snapshot.status,
+            winProbabilities: output.winProbabilities,
+            liveSnapshotId: mapped.liveSnapshotId,
+            predictionId: mapped.predictionId,
+            createdAt: mapped.createdAt,
+          })
+        );
+
+        return mapped;
       }
     );
   } catch (error) {
