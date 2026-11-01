@@ -330,6 +330,28 @@ export async function readPrematchInsight(
     return readHistoricalPrematchInsight(fixture.id, fixtureExternalId);
   }
 
+  const latestRow = await readLatestPrematchInsight(fixture.id);
+  if (latestRow) {
+    const prediction = await getLatestPrematch(fixtureExternalId);
+    if (!prediction) {
+      return {
+        status: "OK",
+        insight: mapAiInsightRowToStored(latestRow, fixtureExternalId, true),
+        prediction: null,
+        cached: true,
+        insightMode: "prematch",
+      };
+    }
+
+    return {
+      status: "OK",
+      insight: mapAiInsightRowToStored(latestRow, fixtureExternalId, true),
+      prediction,
+      cached: true,
+      insightMode: "prematch",
+    };
+  }
+
   const prediction = await getOrComputePrematch(fixtureExternalId);
   if (!prediction) {
     return { status: "MISS", fixtureExternalId };
@@ -346,18 +368,6 @@ export async function readPrematchInsight(
   );
 
   if (!stored) {
-    const latestRow = await readLatestPrematchInsight(fixture.id);
-    if (latestRow) {
-      return {
-        status: "OK",
-        insight: mapAiInsightRowToStored(latestRow, fixtureExternalId, true),
-        prediction,
-        cached: true,
-        insightMode: "prematch",
-        contextStale: true,
-      };
-    }
-
     return { status: "MISS", fixtureExternalId, prediction };
   }
 
@@ -469,12 +479,28 @@ export async function generatePrematchInsight(
     };
   }
 
+  const prediction = await getOrComputePrematch(fixtureExternalId);
+  if (!prediction) {
+    return { status: "MISS", fixtureExternalId };
+  }
+
   if (insightMode === "prematch") {
     const { evaluateFixtureReadinessForProvider, isAiGenerationAllowed } =
       await import("@/lib/fixtures/readiness");
     const readiness =
       await evaluateFixtureReadinessForProvider(fixtureExternalId);
     if (!readiness || !isAiGenerationAllowed(readiness)) {
+      const stored = await readLatestPrematchInsight(fixture.id);
+      if (stored) {
+        return {
+          status: "OK",
+          insight: mapAiInsightRowToStored(stored, fixtureExternalId, true),
+          prediction,
+          cached: true,
+          insightMode: "prematch",
+        };
+      }
+
       reportPrematchInsightOutcome("unavailable", fixtureExternalId, {
         reason: "READINESS_NOT_MET",
         trigger: options.trigger,
@@ -488,11 +514,6 @@ export async function generatePrematchInsight(
         reasonCode: "READINESS_NOT_MET",
       };
     }
-  }
-
-  const prediction = await getOrComputePrematch(fixtureExternalId);
-  if (!prediction) {
-    return { status: "MISS", fixtureExternalId };
   }
 
   const snapshot = prediction.inputSnapshot;

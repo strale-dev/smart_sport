@@ -1,7 +1,6 @@
 import { FormCard } from "@/components/match/FormCard";
 import { H2HCard } from "@/components/match/H2HCard";
 import { MatchTeamsFixturesList } from "@/components/match/MatchTeamsFixturesList";
-import { hydrateMatchOverviewFromProvider } from "@/lib/ingestion/ensure-match-overview";
 import { mergeTeamFixtures } from "@/lib/match/merge-team-fixtures";
 import { computeH2H, computeRecentForm } from "@/lib/services/analyticsService";
 import { getFixturesForTeam } from "@/lib/services/footballService";
@@ -16,8 +15,6 @@ export async function MatchMatchesPanel({
   fixture,
   premiumAnalytics,
 }: MatchMatchesPanelProps) {
-  await hydrateMatchOverviewFromProvider(fixture);
-
   const [
     homeForm5,
     awayForm5,

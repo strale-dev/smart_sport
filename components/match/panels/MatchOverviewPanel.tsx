@@ -15,9 +15,11 @@ import {
   readFixtureSidelinedFromDb,
   readStandingsFromDb,
 } from "@/lib/ingestion/db-read";
-import { hydrateMatchOverviewFromProvider } from "@/lib/ingestion/ensure-match-overview";
 import { resolveMatchFixtureContext } from "@/lib/match/fixture-context";
-import { getUnavailableOverviewCards } from "@/lib/match/overview-block-status";
+import {
+  EMPTY_HYDRATE_REPORT,
+  getUnavailableOverviewCards,
+} from "@/lib/match/overview-block-status";
 import { pickPlayerOfTheMatch } from "@/lib/match/pick-player-of-the-match";
 import { computeMatchMomentum } from "@/lib/momentum/computeMatchMomentum";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -92,8 +94,7 @@ export async function MatchOverviewPanel({
   const fixtureId = fixture.externalId;
   const renderMode = getMatchOverviewRenderMode(fixture.status);
 
-  const hydrateReport = await hydrateMatchOverviewFromProvider(fixture);
-  const unavailableCards = getUnavailableOverviewCards(hydrateReport);
+  const unavailableCards = getUnavailableOverviewCards(EMPTY_HYDRATE_REPORT);
 
   const needsPreExtras = renderMode === "pre";
   const matchCtx = resolveMatchFixtureContext({

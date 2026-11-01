@@ -17,6 +17,7 @@ import { MatchOverviewPanel } from "@/components/match/panels/MatchOverviewPanel
 import { MatchStandingsPanel } from "@/components/match/panels/MatchStandingsPanel";
 import { MatchTabPanelFallback } from "@/components/match/panels/MatchTabPanelFallback";
 import { parseFixtureId } from "@/lib/fixtures/ids";
+import { parseMatchTab, type MatchTab } from "@/lib/fixtures/match-url";
 import { resolveMatchFixtureContext } from "@/lib/match/fixture-context";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import {
@@ -31,7 +32,19 @@ import { getCurrentUser } from "@/lib/supabase/user";
 
 type MatchPageProps = {
   params: Promise<{ fixtureId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 };
+
+function resolveActiveMatchTab(
+  tabParam: string | undefined,
+  supportsStandings: boolean
+): MatchTab {
+  const tab = parseMatchTab(tabParam);
+  if (!supportsStandings && tab === "standings") {
+    return "overview";
+  }
+  return tab;
+}
 
 export async function generateMetadata({
   params,
@@ -54,8 +67,14 @@ export async function generateMetadata({
   };
 }
 
-export default async function MatchPage({ params }: MatchPageProps) {
-  const { fixtureId } = await params;
+export default async function MatchPage({
+  params,
+  searchParams,
+}: MatchPageProps) {
+  const [{ fixtureId }, { tab: tabParam }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const id = parseFixtureId(fixtureId);
 
   if (id == null) {
@@ -78,6 +97,11 @@ export default async function MatchPage({ params }: MatchPageProps) {
     awayTeam: fixture.awayTeam,
   });
   const isGuest = !user;
+  const activeTab = resolveActiveMatchTab(
+    tabParam,
+    matchContext.supportsStandings
+  );
+  const inactivePanel = <MatchTabPanelFallback />;
 
   const [premiumAnalytics, initialFavorited, initialLiveSnapshot] =
     await Promise.all([
@@ -136,40 +160,60 @@ export default async function MatchPage({ params }: MatchPageProps) {
           awayTeam={fixture.awayTeam}
           showStandingsTab={matchContext.supportsStandings}
           overview={
-            <Suspense fallback={<MatchTabPanelFallback />}>
-              <MatchOverviewPanel
-                fixture={fixture}
-                liveSnapshot={initialLiveSnapshot}
-                returnTo={returnTo}
-                premiumAnalytics={premiumAnalytics}
-              />
-            </Suspense>
+            activeTab === "overview" ? (
+              <Suspense fallback={<MatchTabPanelFallback />}>
+                <MatchOverviewPanel
+                  fixture={fixture}
+                  liveSnapshot={initialLiveSnapshot}
+                  returnTo={returnTo}
+                  premiumAnalytics={premiumAnalytics}
+                />
+              </Suspense>
+            ) : (
+              inactivePanel
+            )
           }
           lineups={
-            <Suspense fallback={<MatchTabPanelFallback />}>
-              <MatchLineupsPanel fixture={fixture} />
-            </Suspense>
+            activeTab === "lineups" ? (
+              <Suspense fallback={<MatchTabPanelFallback />}>
+                <MatchLineupsPanel fixture={fixture} />
+              </Suspense>
+            ) : (
+              inactivePanel
+            )
           }
           statistics={
-            <Suspense fallback={<MatchTabPanelFallback />}>
-              <MatchStatisticsPanel
-                fixture={fixture}
-                premiumAnalytics={premiumAnalytics}
-              />
-            </Suspense>
+            activeTab === "statistics" ? (
+              <Suspense fallback={<MatchTabPanelFallback />}>
+                <MatchStatisticsPanel
+                  fixture={fixture}
+                  premiumAnalytics={premiumAnalytics}
+                />
+              </Suspense>
+            ) : (
+              inactivePanel
+            )
           }
           standings={
-            <Suspense fallback={<MatchTabPanelFallback />}>
-              <MatchStandingsPanel fixture={fixture} />
-            </Suspense>
+            activeTab === "standings" ? (
+              <Suspense fallback={<MatchTabPanelFallback />}>
+                <MatchStandingsPanel fixture={fixture} />
+              </Suspense>
+            ) : (
+              inactivePanel
+            )
           }
           matches={
-            <Suspense fallback={<MatchTabPanelFallback />}>
-              <MatchMatchesPanel
-                fixture={fixture}
-                premiumAnalytics={premiumAnalytics}
-              />
-            </Suspense>
+            activeTab === "matches" ? (
+              <Suspense fallback={<MatchTabPanelFallback />}>
+                <MatchMatchesPanel
+                  fixture={fixture}
+                  premiumAnalytics={premiumAnalytics}
+                />
+              </Suspense>
+            ) : (
+              inactivePanel
+            )
           }
         />
       </AIInsightProvider>

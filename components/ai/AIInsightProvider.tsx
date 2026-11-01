@@ -560,39 +560,6 @@ export function AIInsightProvider({
   ]);
 
   useEffect(() => {
-    if (!prematchQueryEnabled) {
-      return;
-    }
-
-    const data = prematchInsightQuery.data;
-    if (
-      !data ||
-      data.status !== "OK" ||
-      !data.contextStale ||
-      !canEnsurePrematch ||
-      !displayExperience.shouldAutoGenerateNarrative
-    ) {
-      return;
-    }
-
-    lastLockedEnsureKeyRef.current = null;
-    lastPostOutcomeRef.current = null;
-    const timer = window.setTimeout(() => {
-      void ensurePrematchInsight(data.prediction ?? undefined);
-    }, 0);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [
-    canEnsurePrematch,
-    displayExperience.shouldAutoGenerateNarrative,
-    ensurePrematchInsight,
-    prematchInsightQuery.data,
-    prematchQueryEnabled,
-  ]);
-
-  useEffect(() => {
     if (!isLivePhase || isGuest) {
       return;
     }
