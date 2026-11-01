@@ -11,6 +11,7 @@ import { useDebouncedQueryInvalidator } from "@/lib/live/debounced-invalidate";
 import { LIVE_FALLBACK_REFETCH_MS } from "@/lib/live/constants";
 import { subscribeLiveFeedBroadcast } from "@/lib/live/subscribe-broadcast";
 import { startLiveWatchSession } from "@/lib/live/watch-client";
+import { CACHE_TTL } from "@/lib/redis/keys";
 import type { FixturesData } from "@/lib/services/fixturesService";
 
 type UseFixturesQueryOptions = {
@@ -31,7 +32,16 @@ export function useFixturesQuery({
     queryKey: fixturesKeys.list(params, timeZone),
     queryFn: () => fetchFixturesData(params),
     initialData,
-    refetchInterval: documentVisible ? LIVE_FALLBACK_REFETCH_MS : false,
+    staleTime: CACHE_TTL.fixturesDateFresh * 1000,
+    refetchOnMount: false,
+    refetchInterval: (currentQuery) => {
+      if (!documentVisible) {
+        return false;
+      }
+
+      const liveCount = currentQuery.state.data?.liveLeagueIds.length ?? 0;
+      return liveCount > 0 ? LIVE_FALLBACK_REFETCH_MS : false;
+    },
     refetchIntervalInBackground: false,
   });
 

@@ -185,6 +185,67 @@ describe("readFixturesInRangeFromDb", () => {
   });
 });
 
+describe("readFixtureLeaguePresenceInRangeFromDb", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    getIngestionConfig.mockReturnValue({
+      leagueProviderIds: [39, 140],
+    });
+  });
+
+  it("returns live and active league ids from slim league_id/status rows", async () => {
+    const leaguesChain = {
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({
+        data: [
+          { id: "league-pl", provider_id: 39 },
+          { id: "league-laliga", provider_id: 140 },
+        ],
+        error: null,
+      }),
+    };
+    const range = vi.fn().mockResolvedValue({
+      data: [
+        { league_id: "league-pl", status: "NS" },
+        { league_id: "league-laliga", status: "1H" },
+        { league_id: "league-pl", status: "FT" },
+      ],
+      error: null,
+    });
+    const fixturesChain = {
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockReturnValue({ range }),
+    };
+    const from = vi.fn((table: string) => {
+      if (table === "leagues") {
+        return leaguesChain;
+      }
+      if (table === "fixtures") {
+        return fixturesChain;
+      }
+      throw new Error(`Unexpected table ${table}`);
+    });
+
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    vi.mocked(createAdminClient).mockReturnValue({ from } as never);
+
+    const { readFixtureLeaguePresenceInRangeFromDb } =
+      await import("@/lib/ingestion/db-read");
+    const presence = await readFixtureLeaguePresenceInRangeFromDb(
+      "2026-09-01T00:00:00.000Z",
+      "2026-09-15T00:00:00.000Z"
+    );
+
+    expect(fixturesChain.select).toHaveBeenCalledWith("league_id, status");
+    expect(presence.activeLeagueIds).toEqual(expect.arrayContaining([39, 140]));
+    expect(presence.liveLeagueIds).toEqual([140]);
+    expect(presence.activeLeagueIds).toHaveLength(2);
+  });
+});
+
 describe("readFixtureByProviderIdFromDb", () => {
   beforeEach(() => {
     vi.resetModules();
