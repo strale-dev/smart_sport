@@ -1,5 +1,4 @@
 import { LineupsCard } from "@/components/match/LineupsCard";
-import { hydrateMatchOverviewFromProvider } from "@/lib/ingestion/ensure-match-overview";
 import {
   getFixtureEvents,
   getFixtureLineups,
@@ -13,12 +12,10 @@ type MatchLineupsPanelProps = {
 };
 
 export async function MatchLineupsPanel({ fixture }: MatchLineupsPanelProps) {
-  await hydrateMatchOverviewFromProvider(fixture);
-
   const [lineupsResult, performancesResult, eventsResult, sidelinedResult] =
     await Promise.all([
-      getFixtureLineups(fixture.externalId, { forceProvider: true }),
-      getFixturePlayers(fixture.externalId, { forceProvider: true }),
+      getFixtureLineups(fixture.externalId),
+      getFixturePlayers(fixture.externalId),
       getFixtureEvents(fixture.externalId),
       getFixtureSidelined(fixture.externalId),
     ]);

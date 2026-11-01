@@ -9,6 +9,7 @@ import {
   collectLiveLeagueIds,
   collectUpcomingFixturesFromDayGroups,
   findNowAnchorFixtureId,
+  sortLeagueProviderIds,
   type FixturesDayGroup,
 } from "@/lib/fixtures/grouping";
 import { isLiveFixtureStatus } from "@/lib/fixtures/live-status";
@@ -22,6 +23,7 @@ import {
   parseFixturesParams,
   type FixturesSearchParams,
 } from "@/lib/fixtures/url";
+import { readFixtureLeaguePresenceInRangeFromDb } from "@/lib/ingestion/db-read";
 import { resolvePresentationFixtures } from "@/lib/live/live-presentation";
 import type { CacheMeta } from "@/lib/redis/cache";
 import { getMatchesInRange } from "@/lib/services/footballService";
@@ -206,19 +208,15 @@ export async function getFixturesData(
   );
   const leagueFilterActive = params.league != null;
 
-  const [result, discoveryResult, runs] = await Promise.all([
+  const [result, leaguePresence, runs] = await Promise.all([
     getMatchesInRange(fromUtc, toUtcExclusive, params.league),
     leagueFilterActive
-      ? getMatchesInRange(fromUtc, toUtcExclusive)
+      ? readFixtureLeaguePresenceInRangeFromDb(fromUtc, toUtcExclusive)
       : Promise.resolve(null),
     loadFixtureSyncRuns(),
   ]);
   const nowMs = now.getTime();
   const listFixtures = resolvePresentationFixtures(result.data, nowMs);
-  const discoveryFixtures =
-    leagueFilterActive && discoveryResult != null
-      ? resolvePresentationFixtures(discoveryResult.data, nowMs)
-      : listFixtures;
   const filtered = filterFixturesBySearchParams(listFixtures, params);
 
   const { upcomingDayGroups, pastDayGroups } = buildUpcomingAndPastDayGroups(
@@ -231,20 +229,26 @@ export async function getFixturesData(
 
   const upcomingFixtures =
     collectUpcomingFixturesFromDayGroups(upcomingDayGroups);
+  const liveLeagueIds = leaguePresence
+    ? leaguePresence.liveLeagueIds
+    : collectLiveLeagueIds(listFixtures);
+  const activeLeagueIds = leaguePresence
+    ? sortLeagueProviderIds(leaguePresence.activeLeagueIds)
+    : collectActiveLeagueIds(listFixtures);
   const anchorInput = {
     now,
     todayDateKey,
-    hasLiveFixture: discoveryFixtures.some((fixture) =>
-      isLiveFixtureStatus(fixture.status)
-    ),
+    hasLiveFixture:
+      liveLeagueIds.length > 0 ||
+      listFixtures.some((fixture) => isLiveFixtureStatus(fixture.status)),
     windowFromDate: fromDateKey,
     windowToDateExclusive: toDateKeyExclusive,
     runs,
-    fixtureLastProviderSyncAt: discoveryFixtures.map(
+    fixtureLastProviderSyncAt: listFixtures.map(
       (fixture) => fixture.liveClock?.lastProviderSyncAt
     ),
     envelopeCachedAt: result.meta.cachedAt ?? null,
-    persistedFixtureCount: discoveryFixtures.length,
+    persistedFixtureCount: listFixtures.length,
     metaStale: result.meta.stale,
   };
   let anchor = resolveProviderSyncedAt({
@@ -257,7 +261,7 @@ export async function getFixturesData(
     anchor.providerSyncSource === "cache_envelope"
   ) {
     const leagueLastSyncAt = await loadLeagueLastSyncAt(
-      leagueIdsForSyncFallback(discoveryFixtures, params.league)
+      leagueIdsForSyncFallback(listFixtures, params.league)
     );
 
     if (leagueLastSyncAt.length > 0) {
@@ -272,8 +276,8 @@ export async function getFixturesData(
     upcomingDayGroups,
     pastDayGroups,
     dayGroups: upcomingDayGroups,
-    liveLeagueIds: collectLiveLeagueIds(discoveryFixtures),
-    activeLeagueIds: collectActiveLeagueIds(discoveryFixtures),
+    liveLeagueIds,
+    activeLeagueIds,
     nowAnchorFixtureId: findNowAnchorFixtureId(upcomingFixtures),
     todayDateKey,
     filters: { league: params.league },

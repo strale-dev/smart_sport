@@ -141,26 +141,26 @@ describe("readPrematchInsight", () => {
     vi.clearAllMocks();
   });
 
-  it("returns OK with contextStale when exact hash misses but a latest insight exists (RC-6)", async () => {
+  it("returns stored prematch insight without recomputing prediction or context (RC-6)", async () => {
     mockResolveFixtureUuidByExternalId.mockResolvedValue({
       id: "fixture-uuid",
       status: "NS",
       kickoff_at: "2026-09-10T18:00:00.000Z",
     });
-    mockGetOrComputePrematch.mockResolvedValue(prematchPrediction);
-    mockBuildPrematchContext.mockResolvedValue({ contextHash: "hash-new" });
-    mockReadPrematchInsightFromStore.mockResolvedValue(null);
     mockReadLatestPrematchInsight.mockResolvedValue({ id: "insight-old" });
+    mockGetLatestPrematch.mockResolvedValue(prematchPrediction);
 
     const result = await readPrematchInsight(123);
 
     expect(result).toMatchObject({
       status: "OK",
       insightMode: "prematch",
-      contextStale: true,
       cached: true,
     });
     expect(mockReadLatestPrematchInsight).toHaveBeenCalledWith("fixture-uuid");
+    expect(mockGetOrComputePrematch).not.toHaveBeenCalled();
+    expect(mockBuildPrematchContext).not.toHaveBeenCalled();
+    expect(mockReadPrematchInsightFromStore).not.toHaveBeenCalled();
   });
 
   it("returns OK with prediction null when historical insight exists without prediction (RC-7)", async () => {

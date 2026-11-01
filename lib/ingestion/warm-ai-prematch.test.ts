@@ -4,6 +4,7 @@ import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
 import {
   evaluateNullWarmReadinessRows,
   isAiGenerationAllowedFromRow,
+  selectWarmCandidateProviderIds,
   warmWindowBoundsForScope,
 } from "@/lib/ingestion/warm-ai-prematch";
 
@@ -56,6 +57,88 @@ describe("evaluateNullWarmReadinessRows", () => {
       providerId: 1558652,
     });
     expect(isAiGenerationAllowedFromRow(rows[0])).toBe(true);
+  });
+});
+
+describe("selectWarmCandidateProviderIds", () => {
+  it("keeps NS fixtures that are prediction-ready even when generation is not yet allowed", () => {
+    const ids = selectWarmCandidateProviderIds(
+      [
+        {
+          provider_id: 1557453,
+          kickoff_at: "2026-11-01T16:30:00.000Z",
+          fixture_readiness: {
+            gates: { aiGenerationAllowed: false, predictionReady: true },
+          } as never,
+        },
+        {
+          provider_id: 1550183,
+          kickoff_at: "2026-11-01T14:00:00.000Z",
+          fixture_readiness: {
+            gates: { aiGenerationAllowed: false, predictionReady: true },
+          } as never,
+        },
+      ],
+      40
+    );
+
+    expect(ids).toEqual([1550183, 1557453]);
+  });
+
+  it("prefers already-allowed fixtures, then earlier kickoff", () => {
+    const ids = selectWarmCandidateProviderIds(
+      [
+        {
+          provider_id: 2,
+          kickoff_at: "2026-11-01T12:00:00.000Z",
+          fixture_readiness: {
+            gates: { aiGenerationAllowed: false, predictionReady: true },
+          } as never,
+        },
+        {
+          provider_id: 1,
+          kickoff_at: "2026-11-01T18:00:00.000Z",
+          fixture_readiness: {
+            gates: { aiGenerationAllowed: true, predictionReady: true },
+          } as never,
+        },
+      ],
+      2
+    );
+
+    expect(ids[0]).toBe(1);
+    expect(ids[1]).toBe(2);
+  });
+
+  it("skips fixtures that already have a current prematch insight", () => {
+    const ids = selectWarmCandidateProviderIds(
+      [
+        {
+          provider_id: 10,
+          kickoff_at: "2026-11-01T12:00:00.000Z",
+          fixture_readiness: {
+            gates: { aiGenerationAllowed: false, predictionReady: true },
+            artifacts: {
+              aiPrematch: {
+                insightId: "insight-1",
+                matchesCurrentInputs: true,
+                stale: false,
+              },
+            },
+          } as never,
+        },
+        {
+          provider_id: 11,
+          kickoff_at: "2026-11-01T13:00:00.000Z",
+          fixture_readiness: {
+            gates: { aiGenerationAllowed: false, predictionReady: true },
+          } as never,
+        },
+      ],
+      40
+    );
+
+    expect(ids).toEqual([11]);
   });
 });
 

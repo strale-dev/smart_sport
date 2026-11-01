@@ -113,15 +113,15 @@ export function collectLiveLeagueIds(fixtures: Fixture[]): number[] {
   return Array.from(ids);
 }
 
-export function collectActiveLeagueIds(fixtures: Fixture[]): number[] {
-  const ids = new Set<number>();
-
-  for (const fixture of fixtures) {
-    ids.add(fixture.league.externalId);
-  }
-
-  return Array.from(ids).sort(
+export function sortLeagueProviderIds(ids: Iterable<number>): number[] {
+  return Array.from(new Set(ids)).sort(
     (left, right) => leagueSortIndex(left) - leagueSortIndex(right)
+  );
+}
+
+export function collectActiveLeagueIds(fixtures: Fixture[]): number[] {
+  return sortLeagueProviderIds(
+    fixtures.map((fixture) => fixture.league.externalId)
   );
 }
 

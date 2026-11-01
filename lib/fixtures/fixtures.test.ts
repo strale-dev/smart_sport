@@ -10,7 +10,10 @@ import {
 } from "@/lib/fixtures/grouping";
 import { providerFixturesRangeKey } from "@/lib/redis/keys";
 import { buildFixturesHref, parseFixturesParams } from "@/lib/fixtures/url";
-import { FIXTURES_WINDOW_DAYS } from "@/lib/fixtures/constants";
+import {
+  FIXTURES_PAST_DAYS,
+  FIXTURES_WINDOW_DAYS,
+} from "@/lib/fixtures/constants";
 import { addUtcDays, buildFixturesWindow } from "@/lib/fixtures/window";
 import type { Fixture } from "@/types/domain";
 
@@ -79,6 +82,13 @@ describe("buildFixturesHref", () => {
 
   it("builds href with league query", () => {
     expect(buildFixturesHref({}, { league: 39 })).toBe("/fixtures?league=39");
+  });
+});
+
+describe("fixtures list window", () => {
+  it("matches the PRD/UI 7+7 window", () => {
+    expect(FIXTURES_PAST_DAYS).toBe(7);
+    expect(FIXTURES_WINDOW_DAYS).toBe(7);
   });
 });
 

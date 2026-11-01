@@ -195,6 +195,52 @@ describe("generatePrematchInsight failures", () => {
     mockEvaluateFixtureReadinessForProvider.mockResolvedValue(readinessOk);
   });
 
+  it("computes a prediction before checking aiGenerationAllowed", async () => {
+    const callOrder: string[] = [];
+    mockGetOrComputePrematch.mockImplementation(async () => {
+      callOrder.push("compute");
+      return prematchPrediction;
+    });
+    mockEvaluateFixtureReadinessForProvider.mockImplementation(async () => {
+      callOrder.push("readiness");
+      return {
+        ...readinessOk,
+        gates: { ...readinessOk.gates, aiGenerationAllowed: false },
+      };
+    });
+
+    const result = await generatePrematchInsight(123, {
+      trigger: "cron",
+    });
+
+    expect(callOrder[0]).toBe("compute");
+    expect(callOrder).toContain("readiness");
+    expect(result.status).toBe("UNAVAILABLE");
+    if (result.status === "UNAVAILABLE") {
+      expect(result.reason).toBe("READINESS_NOT_MET");
+    }
+  });
+
+  it("returns the stored insight when generation is no longer allowed", async () => {
+    mockEvaluateFixtureReadinessForProvider.mockResolvedValue({
+      ...readinessOk,
+      gates: { ...readinessOk.gates, aiGenerationAllowed: false },
+    });
+    mockReadLatestPrematchInsight.mockResolvedValue({
+      id: "insight-ready",
+      context_hash: "hash-ready",
+    });
+
+    const result = await generatePrematchInsight(123, { trigger: "cron" });
+
+    expect(mockGetOrComputePrematch).toHaveBeenCalled();
+    expect(result.status).toBe("OK");
+    if (result.status === "OK") {
+      expect(result.cached).toBe(true);
+      expect(result.insight.id).toBe("insight-ready");
+    }
+  });
+
   it("returns UNAVAILABLE when AI context is not ready", async () => {
     mockEvaluateFixtureReadinessForProvider.mockResolvedValue({
       ...readinessOk,

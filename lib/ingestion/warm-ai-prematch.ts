@@ -92,6 +92,17 @@ export async function evaluateNullWarmReadinessRows(
   return { rows: updated, evaluated };
 }
 
+function isPredictionReadyFromRow(row: WarmFixtureRow): boolean {
+  return row.fixture_readiness?.gates?.predictionReady === true;
+}
+
+function hasCurrentPrematchInsight(row: WarmFixtureRow): boolean {
+  const insight = row.fixture_readiness?.artifacts?.aiPrematch;
+  return Boolean(
+    insight?.insightId && insight.matchesCurrentInputs && !insight.stale
+  );
+}
+
 function sortWarmCandidates(rows: WarmFixtureRow[]): WarmFixtureRow[] {
   return [...rows].sort((left, right) => {
     const leftEligible = isAiGenerationAllowedFromRow(left) ? 1 : 0;
@@ -99,10 +110,30 @@ function sortWarmCandidates(rows: WarmFixtureRow[]): WarmFixtureRow[] {
     if (leftEligible !== rightEligible) {
       return rightEligible - leftEligible;
     }
+
+    const leftReady = isPredictionReadyFromRow(left) ? 1 : 0;
+    const rightReady = isPredictionReadyFromRow(right) ? 1 : 0;
+    if (leftReady !== rightReady) {
+      return rightReady - leftReady;
+    }
+
     return (
       new Date(left.kickoff_at).getTime() - new Date(right.kickoff_at).getTime()
     );
   });
+}
+
+export function selectWarmCandidateProviderIds(
+  rows: WarmFixtureRow[],
+  limit: number
+): number[] {
+  return sortWarmCandidates(rows)
+    .filter(
+      (row) =>
+        isAiGenerationAllowedFromRow(row) || !hasCurrentPrematchInsight(row)
+    )
+    .slice(0, limit)
+    .map((row) => row.provider_id);
 }
 
 async function loadBackfillFixturesWithoutInsight(
@@ -191,11 +222,7 @@ async function loadFixturesInScope(
       readinessBudget
     );
 
-  const sorted = sortWarmCandidates(withReadiness);
-  const providerIds = sorted
-    .filter(isAiGenerationAllowedFromRow)
-    .slice(0, limit)
-    .map((row) => row.provider_id);
+  const providerIds = selectWarmCandidateProviderIds(withReadiness, limit);
 
   return { providerIds, readinessEvaluated: evaluated };
 }
