@@ -2300,6 +2300,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fixture_league_presence_in_range: {
+        Args: {
+          kickoff_from: string
+          kickoff_to_exclusive: string
+          league_provider_ids?: number[]
+        }
+        Returns: Json
+      }
       merge_ai_usage_from_redis: {
         Args: {
           p_deep_analyses: number

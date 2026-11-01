@@ -9,8 +9,10 @@ import {
   resolveFixturePhase,
   type FixturePhase,
 } from "@/lib/ai/status-map";
-import { readLineupsFromDb } from "@/lib/ingestion/db-read";
-import { getFixturePlayers } from "@/lib/services/footballService";
+import {
+  readFixturePlayerPerformancesFromDb,
+  readLineupsFromDb,
+} from "@/lib/ingestion/db-read";
 import type { Fixture } from "@/types/domain";
 
 export type PlayersToWatchSource = "predicted" | "actual";
@@ -68,58 +70,79 @@ async function readRecentFormForPlayers(
     { avgRating: number | null; goals: number; assists: number }
   >();
 
-  await Promise.all(
-    playerProviderIds.map(async (providerId) => {
-      const playerUuid = providerToUuid.get(providerId);
-      if (!playerUuid) {
-        return;
-      }
+  const playerUuids = playerProviderIds.flatMap((providerId) => {
+    const playerUuid = providerToUuid.get(providerId);
+    return playerUuid ? [playerUuid] : [];
+  });
 
-      const { data, error } = await client
-        .from("player_match_performances")
-        .select(
-          `
-          rating,
-          goals,
-          assists,
-          fixture:fixtures!inner (status)
-        `
-        )
-        .eq("player_id", playerUuid)
-        .in("fixture.status", [...FINISHED_STATUSES])
-        .order("created_at", { ascending: false })
-        .limit(5);
+  if (playerUuids.length === 0) {
+    return summaries;
+  }
 
-      if (error) {
-        throw new Error(
-          `Failed to read recent form for player ${providerId}: ${error.message}`
-        );
-      }
+  const { data, error } = await client
+    .from("player_match_performances")
+    .select(
+      `
+      rating,
+      goals,
+      assists,
+      player_id,
+      created_at,
+      fixture:fixtures!inner (status)
+    `
+    )
+    .in("player_id", playerUuids)
+    .in("fixture.status", [...FINISHED_STATUSES])
+    .order("created_at", { ascending: false });
 
-      const rows = (data ?? []) as RecentFormRow[];
-      if (rows.length === 0) {
-        summaries.set(providerId, { avgRating: null, goals: 0, assists: 0 });
-        return;
-      }
+  if (error) {
+    throw new Error(`Failed to read recent form for players: ${error.message}`);
+  }
 
-      const ratings = rows
-        .map((row) => (row.rating != null ? Number(row.rating) : null))
-        .filter((value): value is number => value != null);
-      const goals = rows.reduce((sum, row) => sum + (row.goals ?? 0), 0);
-      const assists = rows.reduce((sum, row) => sum + (row.assists ?? 0), 0);
-      const avgRating =
-        ratings.length > 0
-          ? Number(
-              (
-                ratings.reduce((sum, rating) => sum + rating, 0) /
-                ratings.length
-              ).toFixed(2)
-            )
-          : null;
+  const rowsByPlayerUuid = new Map<string, RecentFormRow[]>();
+  for (const row of data ?? []) {
+    const playerUuid = (row as { player_id?: string }).player_id;
+    if (!playerUuid) {
+      continue;
+    }
 
-      summaries.set(providerId, { avgRating, goals, assists });
-    })
-  );
+    const bucket = rowsByPlayerUuid.get(playerUuid) ?? [];
+    if (bucket.length >= 5) {
+      continue;
+    }
+
+    bucket.push(row as RecentFormRow);
+    rowsByPlayerUuid.set(playerUuid, bucket);
+  }
+
+  for (const providerId of playerProviderIds) {
+    const playerUuid = providerToUuid.get(providerId);
+    if (!playerUuid) {
+      continue;
+    }
+
+    const rows = rowsByPlayerUuid.get(playerUuid) ?? [];
+    if (rows.length === 0) {
+      summaries.set(providerId, { avgRating: null, goals: 0, assists: 0 });
+      continue;
+    }
+
+    const ratings = rows
+      .map((row) => (row.rating != null ? Number(row.rating) : null))
+      .filter((value): value is number => value != null);
+    const goals = rows.reduce((sum, row) => sum + (row.goals ?? 0), 0);
+    const assists = rows.reduce((sum, row) => sum + (row.assists ?? 0), 0);
+    const avgRating =
+      ratings.length > 0
+        ? Number(
+            (
+              ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
+            ).toFixed(2)
+          )
+        : null;
+
+    summaries.set(providerId, { avgRating, goals, assists });
+  }
 
   return summaries;
 }
@@ -229,8 +252,10 @@ async function getPredictedPlayersToWatch(
 async function getActualPlayersToWatch(
   fixture: Fixture
 ): Promise<PlayerToWatch[]> {
-  const { data: performances } = await getFixturePlayers(fixture.externalId);
-  if (!performances || performances.length === 0) {
+  const performances = await readFixturePlayerPerformancesFromDb(
+    fixture.externalId
+  );
+  if (performances.length === 0) {
     return [];
   }
 

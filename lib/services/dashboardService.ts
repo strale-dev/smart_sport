@@ -37,7 +37,7 @@ import {
 } from "@/lib/ingestion/db-read";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
 import {
-  getMatchesInRange,
+  getMatchesForDate,
   listLiveFixtures,
 } from "@/lib/services/footballService";
 import type { Fixture } from "@/types/domain";
@@ -61,6 +61,33 @@ export type DashboardData = {
 
 function addLifecycleDays(dateKey: string, days: number): string {
   return addDaysToDateKey(dateKey, days);
+}
+
+function lifecycleDateKeysInRange(
+  fromDateKey: string,
+  toDateKeyExclusive: string
+): string[] {
+  const keys: string[] = [];
+  let current = fromDateKey;
+
+  while (current < toDateKeyExclusive) {
+    keys.push(current);
+    current = addDaysToDateKey(current, 1);
+  }
+
+  return keys;
+}
+
+async function loadDashboardRangeFixtures(
+  fromDateKey: string,
+  toDateKeyExclusive: string
+): Promise<Fixture[]> {
+  const dateKeys = lifecycleDateKeysInRange(fromDateKey, toDateKeyExclusive);
+  const results = await Promise.all(
+    dateKeys.map((dateKey) => getMatchesForDate(dateKey))
+  );
+
+  return dedupeFixtures(results.flatMap((result) => result.data));
 }
 
 function fixtureLifecycleDateKey(fixture: Fixture): string {
@@ -155,9 +182,9 @@ export async function getDashboardData(
       })
     : Promise.resolve(createEmptyDashboardFollowPoolSets());
 
-  const [rangeResult, liveResult, aiInsights, followPoolIds] =
+  const [rangeFixtures, liveResult, aiInsights, followPoolIds] =
     await Promise.all([
-      getMatchesInRange(rangeFrom, rangeToExclusive),
+      loadDashboardRangeFixtures(rangeFrom, rangeToExclusive),
       listLiveFixtures(),
       readRecentPredictionChanges(5).catch(
         () => [] as PredictionChangeSummary[]
@@ -165,7 +192,6 @@ export async function getDashboardData(
       followPoolPromise,
     ]);
 
-  const rangeFixtures = dedupeFixtures(rangeResult.data);
   const todayFixtures = fixturesOnLifecycleDate(rangeFixtures, today);
   const yesterdayFixtures = fixturesOnLifecycleDate(rangeFixtures, yesterday);
   const tomorrowFixtures = fixturesOnLifecycleDate(rangeFixtures, tomorrow);
