@@ -3,6 +3,10 @@ import { isOptionalProviderFailure } from "@/lib/api-football/safe-call";
 import { getRedis } from "@/lib/redis/client";
 import { cacheLockKey } from "@/lib/redis/keys";
 import { LockNotAcquiredError, withLock } from "@/lib/redis/lock";
+import {
+  disableRuntimeRedis,
+  withRedisOperationTimeout,
+} from "@/lib/redis/runtime-fallback";
 
 export type CacheEnvelope<T> = {
   value: T;
@@ -105,23 +109,26 @@ function toCachedResult<T>(value: T, meta: CacheMeta): CachedResult<T> {
 async function readEnvelope<T>(key: string): Promise<CacheEnvelope<T> | null> {
   const redis = getRedis();
   if (redis) {
-    let raw: string | CacheEnvelope<T> | null;
+    let raw: string | CacheEnvelope<T> | null | undefined;
     try {
-      raw = await redis.get<string>(key);
+      raw = await withRedisOperationTimeout(redis.get<string>(key));
     } catch {
+      disableRuntimeRedis();
       console.warn("[cache] Redis read failed; treating as cache miss.");
+      raw = undefined;
+    }
+
+    if (raw != null) {
+      if (typeof raw === "string") {
+        return JSON.parse(raw) as CacheEnvelope<T>;
+      }
+
+      return raw as CacheEnvelope<T>;
+    }
+
+    if (getRedis()) {
       return null;
     }
-
-    if (!raw) {
-      return null;
-    }
-
-    if (typeof raw === "string") {
-      return JSON.parse(raw) as CacheEnvelope<T>;
-    }
-
-    return raw as CacheEnvelope<T>;
   }
 
   warnMemoryFallbackOnce();
@@ -144,14 +151,16 @@ async function writeEnvelope<T>(
   const redis = getRedis();
   if (redis) {
     try {
-      await redis.set(key, JSON.stringify(envelope), { ex: staleTtlSeconds });
+      await withRedisOperationTimeout(
+        redis.set(key, JSON.stringify(envelope), { ex: staleTtlSeconds })
+      );
+      return true;
     } catch {
+      disableRuntimeRedis();
       console.warn(
         "[cache] Redis write failed; continuing without cache persistence."
       );
-      return false;
     }
-    return true;
   }
 
   warnMemoryFallbackOnce();

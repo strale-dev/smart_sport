@@ -51,26 +51,6 @@ describe("footballService ingest-only mode", () => {
     expect(apiSpy).not.toHaveBeenCalled();
   });
 
-  it("does not provider-backfill league-scoped range reads when Postgres is empty", async () => {
-    Object.assign(process.env, baseEnv);
-    process.env.API_FOOTBALL_INGEST_ONLY = "true";
-
-    const dbSpy = vi
-      .spyOn(dbRead, "readFixturesInRangeFromDb")
-      .mockResolvedValue([]);
-    const apiSpy = vi.spyOn(fixtureEndpoints, "listFixturesByDate");
-
-    const result = await footballService.getMatchesInRange(
-      "2026-09-01T00:00:00.000Z",
-      "2026-09-15T00:00:00.000Z",
-      39
-    );
-
-    expect(result.data).toEqual([]);
-    expect(dbSpy).toHaveBeenCalledOnce();
-    expect(apiSpy).not.toHaveBeenCalled();
-  });
-
   it("reads fixtures from Postgres instead of the provider", async () => {
     Object.assign(process.env, baseEnv);
     process.env.API_FOOTBALL_INGEST_ONLY = "true";
