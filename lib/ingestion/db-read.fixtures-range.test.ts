@@ -194,43 +194,17 @@ describe("readFixtureLeaguePresenceInRangeFromDb", () => {
     });
   });
 
-  it("returns live and active league ids from slim league_id/status rows", async () => {
-    const leaguesChain = {
-      select: vi.fn().mockReturnThis(),
-      in: vi.fn().mockResolvedValue({
-        data: [
-          { id: "league-pl", provider_id: 39 },
-          { id: "league-laliga", provider_id: 140 },
-        ],
-        error: null,
-      }),
-    };
-    const range = vi.fn().mockResolvedValue({
-      data: [
-        { league_id: "league-pl", status: "NS" },
-        { league_id: "league-laliga", status: "1H" },
-        { league_id: "league-pl", status: "FT" },
-      ],
+  it("returns live and active league ids from the presence aggregate RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: {
+        active_league_provider_ids: [39, 140],
+        live_league_provider_ids: [140],
+      },
       error: null,
-    });
-    const fixturesChain = {
-      select: vi.fn().mockReturnThis(),
-      in: vi.fn().mockReturnThis(),
-      gte: vi.fn().mockReturnThis(),
-      lt: vi.fn().mockReturnValue({ range }),
-    };
-    const from = vi.fn((table: string) => {
-      if (table === "leagues") {
-        return leaguesChain;
-      }
-      if (table === "fixtures") {
-        return fixturesChain;
-      }
-      throw new Error(`Unexpected table ${table}`);
     });
 
     const { createAdminClient } = await import("@/lib/supabase/admin");
-    vi.mocked(createAdminClient).mockReturnValue({ from } as never);
+    vi.mocked(createAdminClient).mockReturnValue({ rpc } as never);
 
     const { readFixtureLeaguePresenceInRangeFromDb } =
       await import("@/lib/ingestion/db-read");
@@ -239,7 +213,11 @@ describe("readFixtureLeaguePresenceInRangeFromDb", () => {
       "2026-09-15T00:00:00.000Z"
     );
 
-    expect(fixturesChain.select).toHaveBeenCalledWith("league_id, status");
+    expect(rpc).toHaveBeenCalledWith("fixture_league_presence_in_range", {
+      kickoff_from: "2026-09-01T00:00:00.000Z",
+      kickoff_to_exclusive: "2026-09-15T00:00:00.000Z",
+      league_provider_ids: [39, 140],
+    });
     expect(presence.activeLeagueIds).toEqual(expect.arrayContaining([39, 140]));
     expect(presence.liveLeagueIds).toEqual([140]);
     expect(presence.activeLeagueIds).toHaveLength(2);

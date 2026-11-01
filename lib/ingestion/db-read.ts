@@ -1,5 +1,4 @@
 import { getEnabledProviderIds } from "@/lib/competitions/index";
-import { isLiveFixtureStatus } from "@/lib/fixtures/live-status";
 import { getIngestionConfig } from "@/lib/ingestion/config";
 import { isAuthoritativeLivePresentation } from "@/lib/live/live-presentation";
 import { buildPlayerContributionBadges } from "@/lib/players/badges";
@@ -412,10 +411,21 @@ export type FixtureLeaguePresence = {
   liveLeagueIds: number[];
 };
 
-type LeaguePresenceRow = {
-  league_id: string;
-  status: string;
+type FixtureLeaguePresenceRpcRow = {
+  active_league_provider_ids: number[] | null;
+  live_league_provider_ids: number[] | null;
 };
+
+function parseLeagueProviderIdList(value: unknown): number[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(
+    (entry): entry is number =>
+      typeof entry === "number" && Number.isFinite(entry)
+  );
+}
 
 export async function readFixtureLeaguePresenceInRangeFromDb(
   fromDate: string,
@@ -423,68 +433,31 @@ export async function readFixtureLeaguePresenceInRangeFromDb(
 ): Promise<FixtureLeaguePresence> {
   const client = createAdminClient();
   const config = getIngestionConfig();
-  const { data: leagues, error: leaguesError } = await client
-    .from("leagues")
-    .select("id, provider_id")
-    .in("provider_id", [...config.leagueProviderIds]);
+  const leagueProviderIds = [...config.leagueProviderIds];
 
-  if (leaguesError) {
-    throw new Error(
-      `Failed to resolve ingestion leagues: ${leaguesError.message}`
-    );
-  }
-
-  const leagueRows = leagues ?? [];
-  const leagueIds = leagueRows.map((league) => league.id);
-  const providerByLeagueId = new Map(
-    leagueRows.map((league) => [league.id, league.provider_id])
-  );
-
-  if (!leagueIds.length) {
+  if (!leagueProviderIds.length) {
     return { activeLeagueIds: [], liveLeagueIds: [] };
   }
 
-  const active = new Set<number>();
-  const live = new Set<number>();
-  let offset = 0;
+  const { data, error } = await client.rpc("fixture_league_presence_in_range", {
+    kickoff_from: normalizeRangeBound(fromDate),
+    kickoff_to_exclusive: normalizeRangeBound(toDateExclusive),
+    league_provider_ids: leagueProviderIds,
+  });
 
-  while (true) {
-    const { data, error } = await client
-      .from("fixtures")
-      .select("league_id, status")
-      .in("league_id", leagueIds)
-      .gte("kickoff_at", normalizeRangeBound(fromDate))
-      .lt("kickoff_at", normalizeRangeBound(toDateExclusive))
-      .range(offset, offset + FIXTURE_RANGE_PAGE_SIZE - 1);
-
-    if (error) {
-      throw new Error(
-        `Failed to read fixture league presence for range ${fromDate}..${toDateExclusive}: ${error.message}`
-      );
-    }
-
-    const page = (data ?? []) as LeaguePresenceRow[];
-    for (const row of page) {
-      const providerId = providerByLeagueId.get(row.league_id);
-      if (providerId == null) {
-        continue;
-      }
-      active.add(providerId);
-      if (isLiveFixtureStatus(row.status)) {
-        live.add(providerId);
-      }
-    }
-
-    if (page.length < FIXTURE_RANGE_PAGE_SIZE) {
-      break;
-    }
-
-    offset += FIXTURE_RANGE_PAGE_SIZE;
+  if (error) {
+    throw new Error(
+      `Failed to read fixture league presence for range ${fromDate}..${toDateExclusive}: ${error.message}`
+    );
   }
 
+  const payload = (data ?? {}) as unknown as FixtureLeaguePresenceRpcRow;
+
   return {
-    activeLeagueIds: [...active],
-    liveLeagueIds: [...live],
+    activeLeagueIds: parseLeagueProviderIdList(
+      payload.active_league_provider_ids
+    ),
+    liveLeagueIds: parseLeagueProviderIdList(payload.live_league_provider_ids),
   };
 }
 

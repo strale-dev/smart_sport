@@ -23,9 +23,13 @@ import {
   parseFixturesParams,
   type FixturesSearchParams,
 } from "@/lib/fixtures/url";
-import { readFixtureLeaguePresenceInRangeFromDb } from "@/lib/ingestion/db-read";
+import {
+  readFixtureLeaguePresenceInRangeFromDb,
+  type FixtureLeaguePresence,
+} from "@/lib/ingestion/db-read";
 import { resolvePresentationFixtures } from "@/lib/live/live-presentation";
-import type { CacheMeta } from "@/lib/redis/cache";
+import { cached, type CacheMeta } from "@/lib/redis/cache";
+import { CACHE_TTL } from "@/lib/redis/keys";
 import { getMatchesInRange } from "@/lib/services/footballService";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Fixture } from "@/types/domain";
@@ -167,6 +171,20 @@ function leagueIdsForSyncFallback(
   return [...ids];
 }
 
+async function loadFixtureLeaguePresence(
+  fromUtc: string,
+  toUtcExclusive: string
+): Promise<FixtureLeaguePresence> {
+  const result = await cached({
+    key: `fixtures:league-presence:${fromUtc}:${toUtcExclusive}`,
+    freshTtlSeconds: CACHE_TTL.fixturesDateFresh,
+    staleTtlSeconds: CACHE_TTL.fixturesDateStale,
+    fn: () => readFixtureLeaguePresenceInRangeFromDb(fromUtc, toUtcExclusive),
+  });
+
+  return result.value;
+}
+
 async function loadLeagueLastSyncAt(leagueIds: number[]): Promise<string[]> {
   if (leagueIds.length === 0) {
     return [];
@@ -211,7 +229,7 @@ export async function getFixturesData(
   const [result, leaguePresence, runs] = await Promise.all([
     getMatchesInRange(fromUtc, toUtcExclusive, params.league),
     leagueFilterActive
-      ? readFixtureLeaguePresenceInRangeFromDb(fromUtc, toUtcExclusive)
+      ? loadFixtureLeaguePresence(fromUtc, toUtcExclusive)
       : Promise.resolve(null),
     loadFixtureSyncRuns(),
   ]);
