@@ -11,6 +11,10 @@ import {
   writeCacheEnvelopeForTests,
 } from "@/lib/redis/cache";
 import { resetMemoryLocksForTests } from "@/lib/redis/lock";
+import {
+  isRuntimeRedisDisabled,
+  resetRuntimeRedisForTests,
+} from "@/lib/redis/runtime-fallback";
 
 const getRedisMock = vi.hoisted(() => vi.fn<() => unknown>(() => null));
 
@@ -33,12 +37,14 @@ describe("cached", () => {
   beforeEach(() => {
     resetCacheForTests();
     resetMemoryLocksForTests();
+    resetRuntimeRedisForTests();
     getRedisMock.mockReturnValue(null);
   });
 
   afterEach(() => {
     resetCacheForTests();
     resetMemoryLocksForTests();
+    resetRuntimeRedisForTests();
     getRedisMock.mockReturnValue(null);
     vi.restoreAllMocks();
   });
@@ -319,5 +325,21 @@ describe("cached", () => {
       "provider:test:dynamic"
     );
     expect(envelope?.value.status).toBe("LIVE");
+  });
+
+  it("disables Redis for the runtime after a failed read and uses memory", async () => {
+    getRedisMock.mockReturnValue(brokenRedisClient());
+
+    const fn = vi.fn().mockResolvedValue({ id: 99 });
+    const result = await cached({
+      key: "provider:test:redis-fail-open",
+      freshTtlSeconds: 60,
+      staleTtlSeconds: 3600,
+      fn,
+    });
+
+    expect(result.value).toEqual({ id: 99 });
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(isRuntimeRedisDisabled()).toBe(true);
   });
 });

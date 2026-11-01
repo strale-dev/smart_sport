@@ -2,6 +2,10 @@ import { Redis } from "@upstash/redis";
 
 import { normalizeEnvValue } from "@/lib/env/normalize-env-value";
 import { hasRedisConfig } from "@/lib/env";
+import {
+  isRuntimeRedisDisabled,
+  resetRuntimeRedisForTests,
+} from "@/lib/redis/runtime-fallback";
 
 let cachedRedis: Redis | null | undefined;
 
@@ -13,6 +17,10 @@ function readRedisEnv(
 }
 
 export function getRedis(): Redis | null {
+  if (isRuntimeRedisDisabled()) {
+    return null;
+  }
+
   if (!hasRedisConfig(process.env)) {
     cachedRedis = null;
     return null;
@@ -46,4 +54,5 @@ export async function pingRedis(): Promise<boolean> {
 
 export function resetRedisClientForTests(): void {
   cachedRedis = undefined;
+  resetRuntimeRedisForTests();
 }

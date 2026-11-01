@@ -20,8 +20,8 @@ import { parseFixtureId } from "@/lib/fixtures/ids";
 import { parseMatchTab, type MatchTab } from "@/lib/fixtures/match-url";
 import { resolveMatchFixtureContext } from "@/lib/match/fixture-context";
 import { isLiveFixtureStatus } from "@/lib/redis/keys";
+import { loadMatchFixture } from "@/lib/match/load-match-fixture";
 import {
-  getFixtureById,
   getFixtureEvents,
   getFixtureStatistics,
 } from "@/lib/services/footballService";
@@ -56,7 +56,7 @@ export async function generateMetadata({
     return { title: "Match" };
   }
 
-  const { data: fixture } = await getFixtureById(id);
+  const { data: fixture } = await loadMatchFixture(id);
 
   if (!fixture) {
     return { title: "Match" };
@@ -82,7 +82,7 @@ export default async function MatchPage({
   }
 
   const [{ data: fixture }, user] = await Promise.all([
-    getFixtureById(id),
+    loadMatchFixture(id),
     getCurrentUser(),
   ]);
 

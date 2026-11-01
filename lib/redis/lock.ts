@@ -1,4 +1,8 @@
 import { getRedis } from "@/lib/redis/client";
+import {
+  disableRuntimeRedis,
+  withRedisOperationTimeout,
+} from "@/lib/redis/runtime-fallback";
 
 export class LockNotAcquiredError extends Error {
   readonly lockKey: string;
@@ -49,12 +53,15 @@ export async function acquireLock(
   const redis = getRedis();
   if (redis) {
     try {
-      const result = await redis.set(key, "1", {
-        nx: true,
-        ex: ttlSeconds,
-      });
+      const result = await withRedisOperationTimeout(
+        redis.set(key, "1", {
+          nx: true,
+          ex: ttlSeconds,
+        })
+      );
       return result === "OK";
     } catch {
+      disableRuntimeRedis();
       console.warn(
         "[lock] Redis lock acquire failed; using in-memory lock fallback."
       );
@@ -70,8 +77,9 @@ export async function releaseLock(key: string): Promise<void> {
   const redis = getRedis();
   if (redis) {
     try {
-      await redis.del(key);
+      await withRedisOperationTimeout(redis.del(key));
     } catch {
+      disableRuntimeRedis();
       console.warn("[lock] Redis lock release failed; in-memory lock cleared.");
     }
   }
@@ -81,9 +89,10 @@ export async function isLockHeld(key: string): Promise<boolean> {
   const redis = getRedis();
   if (redis) {
     try {
-      const value = await redis.get(key);
+      const value = await withRedisOperationTimeout(redis.get(key));
       return value != null;
     } catch {
+      disableRuntimeRedis();
       console.warn(
         "[lock] Redis lock check failed; using in-memory lock state."
       );
@@ -100,9 +109,12 @@ export async function renewLock(
   const redis = getRedis();
   if (redis) {
     try {
-      const result = await redis.expire(key, ttlSeconds);
+      const result = await withRedisOperationTimeout(
+        redis.expire(key, ttlSeconds)
+      );
       return result === 1;
     } catch {
+      disableRuntimeRedis();
       console.warn(
         "[lock] Redis lock renew failed; using in-memory lock fallback."
       );
