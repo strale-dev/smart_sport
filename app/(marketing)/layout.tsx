@@ -7,6 +7,8 @@ import { BRAND, landingCopy } from "@/lib/marketing/copy";
 import { env } from "@/lib/env.server";
 import { getAuthUserViewForSession } from "@/lib/supabase/user";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
   title: {

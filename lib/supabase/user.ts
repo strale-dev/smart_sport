@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 
 import { readProfileForUser } from "@/lib/services/userService";
 import { createClient } from "@/lib/supabase/server";
+import { isDynamicServerUsageError } from "@/lib/supabase/dynamic-server-error";
 
 export type AuthUserView = {
   id: string;
@@ -66,7 +67,9 @@ export async function getCurrentUser(): Promise<User | null> {
 
     return user;
   } catch (error) {
-    console.warn("[auth] getCurrentUser failed:", error);
+    if (!isDynamicServerUsageError(error)) {
+      console.warn("[auth] getCurrentUser failed:", error);
+    }
     return null;
   }
 }

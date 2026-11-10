@@ -6,6 +6,9 @@ import { resolveViewerTimezone } from "@/lib/datetime/viewer-timezone.server";
 import { getSoundPreferences } from "@/lib/preferences/sound.server";
 import { getAuthUserViewForSession } from "@/lib/supabase/user";
 
+/** Session shell uses cookies — must not statically bake guest UI at build time. */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: {
     template: `%s — ${BRAND.name}`,
