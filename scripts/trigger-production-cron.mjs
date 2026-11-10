@@ -2,6 +2,44 @@
  * Called from .github/workflows/ingestion-schedule.yml to hit Production cron routes.
  * Requires env: CRON_SECRET (repo secret). Optional: PRODUCTION_SITE_URL (repo variable).
  */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+function loadDotEnvLocalIfNeeded() {
+  if (process.env.CRON_SECRET?.trim()) {
+    return;
+  }
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const envPath = path.join(root, ".env.local");
+  if (!fs.existsSync(envPath)) {
+    return;
+  }
+  for (const line of fs.readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) {
+      continue;
+    }
+    const key = trimmed.slice(0, eq).trim();
+    if (process.env[key] === undefined) {
+      let value = trimmed.slice(eq + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      process.env[key] = value;
+    }
+  }
+}
+
+loadDotEnvLocalIfNeeded();
+
 const cronPath = process.argv[2];
 
 const DEFAULT_SITE_URL = "https://scorence.app";

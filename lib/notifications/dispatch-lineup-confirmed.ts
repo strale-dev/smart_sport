@@ -8,10 +8,7 @@ import {
 } from "@/lib/notifications/copy";
 import { buildNotificationDedupeKey } from "@/lib/notifications/dedupe";
 import { loadNotificationFixtureContext } from "@/lib/notifications/fixture-context";
-import {
-  enqueueManyNotifications,
-  type EnqueueManyItem,
-} from "@/lib/services/notificationService";
+import type { EnqueueManyItem } from "@/lib/services/notificationService";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function dispatchLineupConfirmedNotifications(
@@ -83,6 +80,8 @@ export async function dispatchLineupConfirmedNotifications(
   }
 
   if (items.length > 0) {
+    const { enqueueManyNotifications } =
+      await import("@/lib/services/notificationService");
     await enqueueManyNotifications(items);
   }
 }

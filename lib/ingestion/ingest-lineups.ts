@@ -22,7 +22,6 @@ import {
   getFixtureIngestContext,
   upsertLineups,
 } from "@/lib/ingestion/match-details-upsert";
-import { dispatchLineupConfirmedNotifications } from "@/lib/notifications/dispatch-lineup-confirmed";
 import { writeCachedValue } from "@/lib/redis/cache";
 import { CACHE_TTL, providerFixtureLineupsKey } from "@/lib/redis/keys";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -126,6 +125,8 @@ export async function ingestLineupsFromProvider(
         (entry) => entry.isConfirmed
       );
       if (hasConfirmedLineup) {
+        const { dispatchLineupConfirmedNotifications } =
+          await import("@/lib/notifications/dispatch-lineup-confirmed");
         await dispatchLineupConfirmedNotifications(fixtureProviderId);
       }
 
