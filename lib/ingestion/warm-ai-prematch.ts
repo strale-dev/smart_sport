@@ -15,8 +15,16 @@ export type WarmAiPrematchScope = "daily" | "imminent" | "backfill";
 const RUN_BUDGET_MS = 52_000;
 const DAILY_MAX_FIXTURES = 40;
 const IMMINENT_MAX_FIXTURES = 25;
-const BACKFILL_MAX_FIXTURES = 30;
+const DEFAULT_BACKFILL_MAX_FIXTURES = 50;
 const BACKFILL_LOOKBACK_MS = 7 * 86_400_000;
+
+function getBackfillMaxFixtures(): number {
+  const raw = process.env.WARM_AI_BACKFILL_MAX_FIXTURES;
+  const parsed = raw ? Number.parseInt(raw, 10) : DEFAULT_BACKFILL_MAX_FIXTURES;
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_BACKFILL_MAX_FIXTURES;
+}
 
 const BACKFILL_STATUSES: FixtureStatus[] = [
   ...LIVE_STATUSES,
@@ -190,7 +198,7 @@ async function loadFixturesInScope(
 ): Promise<{ providerIds: number[]; readinessEvaluated: number }> {
   if (scope === "backfill") {
     const providerIds = await loadBackfillFixturesWithoutInsight(
-      BACKFILL_MAX_FIXTURES
+      getBackfillMaxFixtures()
     );
     return { providerIds, readinessEvaluated: 0 };
   }

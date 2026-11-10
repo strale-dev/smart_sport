@@ -12,7 +12,7 @@ Canonical runbook for **Vercel Production** environment variables and the **API-
 | ------------------------------- | -------------------------------------------------- | ---------------------------------------------------- |
 | **Production** (`scorence.app`) | Yes — schedules in [`vercel.json`](../vercel.json) | Set the full matrix below; Pro cutover applies here. |
 
-**Vercel Hobby (current):** `vercel.json` must use **at most one run per cron job per day** or Production deploys fail at build time. Sub-daily **fixture ingest** runs from split workflows (`ingestion-schedule-5min.yml`, `ingestion-schedule-15min.yml`, `ingestion-schedule-6h.yml`, `ingestion-schedule-daily.yml`, plus `ingestion-cadence-watchdog.yml`). **AI warm** runs from `ingestion-ai-warm-15min.yml` and `ingestion-ai-warm-6h.yml`. Manual dispatch remains on [`ingestion-schedule.yml`](../.github/workflows/ingestion-schedule.yml) / [`ingestion-ai-warm.yml`](../.github/workflows/ingestion-ai-warm.yml) so ingestion workflow success is not coupled to warm `fallback` rates. Both use [`scripts/pick-ingestion-gha-jobs.mjs`](../scripts/pick-ingestion-gha-jobs.mjs). Configure **GitHub → Settings → Secrets and variables → Actions**: repository secret **`CRON_SECRET`** (must match Vercel Production `CRON_SECRET` exactly), optional repository variable **`PRODUCTION_SITE_URL`** (defaults to `https://scorence.app` if unset). After upgrading to **Vercel Pro**, move schedules to `VERCEL_CRON_PRO_TARGETS` in [`lib/ingestion/vercel-cron-contract.ts`](../lib/ingestion/vercel-cron-contract.ts) and update `vercel.json`; CI runs `npm run validate:vercel-cron` on Hobby-safe schedules until then.
+**Vercel Hobby (current):** `vercel.json` must use **at most one run per cron job per day** or Production deploys fail at build time. Sub-daily **fixture ingest** runs from split workflows (`ingestion-schedule-5min.yml`, `ingestion-schedule-15min.yml`, `ingestion-schedule-6h.yml`, `ingestion-schedule-daily.yml`, plus `ingestion-cadence-watchdog.yml`). The **6h** workflow also triggers `sync-match-details` (same cadence as standings) so finished-match events/stats fill faster than the once-daily Vercel cron alone. **AI warm** runs from `ingestion-ai-warm-15min.yml` and `ingestion-ai-warm-6h.yml`. Manual dispatch remains on [`ingestion-schedule.yml`](../.github/workflows/ingestion-schedule.yml) (`match-details` option) / [`ingestion-ai-warm.yml`](../.github/workflows/ingestion-ai-warm.yml) so ingestion workflow success is not coupled to warm `fallback` rates. Both use [`scripts/pick-ingestion-gha-jobs.mjs`](../scripts/pick-ingestion-gha-jobs.mjs). Configure **GitHub → Settings → Secrets and variables → Actions**: repository secret **`CRON_SECRET`** (must match Vercel Production `CRON_SECRET` exactly), optional repository variable **`PRODUCTION_SITE_URL`** (defaults to `https://scorence.app` if unset). After upgrading to **Vercel Pro**, move schedules to `VERCEL_CRON_PRO_TARGETS` in [`lib/ingestion/vercel-cron-contract.ts`](../lib/ingestion/vercel-cron-contract.ts) and update `vercel.json`; CI runs `npm run validate:vercel-cron` on Hobby-safe schedules until then.
 | **Preview** (PR deployments) | No | Do not mirror Pro `API_FOOTBALL_KEY` or `NEXT_PUBLIC_APP_ENV=production` unless you intentionally burn quota. Prefer dev Supabase + no provider key. |
 | **Local** (`.env.local`) | Manual scripts only | Free key, `API_FOOTBALL_INGEST_ONLY=true`, `NEXT_PUBLIC_APP_ENV=development`. |
 
@@ -109,15 +109,17 @@ Not in [`.env.example`](../.env.example) yet; add to Vercel when LemonSqueezy we
 
 Only ingestion-related deltas (rest of the matrix stays as above).
 
-| Setting                             | Before Pro (safe Production)                                          | After Pro cutover                                   |
-| ----------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------- |
-| `API_FOOTBALL_KEY`                  | Free (or Pro not yet enabled)                                         | **Pro** subscription key                            |
-| `API_FOOTBALL_DAILY_LIMIT`          | `100` (or unset → 100)                                                | **`7500`**                                          |
-| `API_FOOTBALL_INGEST_ONLY`          | **`true`** recommended (Postgres-only UI, minimal on-demand)          | **`false`** (explicit)                              |
-| `API_FOOTBALL_LINEUPS_SYNC_ENABLED` | **`false`** (kill-switch)                                             | unset or **`true`**                                 |
-| Standings cron                      | Was daily `30 4 * * *` pre-ING-3 code                                 | **`0 */6 * * *`** (every 6h UTC) in `vercel.json`   |
-| Lineups cron                        | `*/15 * * * *` (already **ING-2**); body skipped while kill-switch on | Body runs when `lineupsSyncEnabled` is true         |
-| `LIVE_POLLING_ENABLED`              | unset / `false` until Phase 5                                         | **`true`** when launching live engine (Pro + Redis) |
+| Setting                             | Before Pro (safe Production)                                          | After Pro cutover                                        |
+| ----------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------- |
+| `API_FOOTBALL_KEY`                  | Free (or Pro not yet enabled)                                         | **Pro** subscription key                                 |
+| `API_FOOTBALL_DAILY_LIMIT`          | `100` (or unset → 100)                                                | **`7500`**                                               |
+| `API_FOOTBALL_INGEST_ONLY`          | **`true`** recommended (Postgres-only UI, minimal on-demand)          | **`false`** (explicit)                                   |
+| `API_FOOTBALL_LINEUPS_SYNC_ENABLED` | **`false`** (kill-switch)                                             | unset or **`true`**                                      |
+| Standings cron                      | Was daily `30 4 * * *` pre-ING-3 code                                 | **`0 */6 * * *`** (every 6h UTC) in `vercel.json`        |
+| `MATCH_DETAILS_SYNC_BATCH`          | unset → **10**/Vercel daily cron                                      | **`40`** during FT backfill, then **10–20** steady state |
+| `WARM_AI_BACKFILL_MAX_FIXTURES`     | unset → **50** (6h `warm-ai-prematch?scope=backfill` via GHA)         | Raise only if API/OpenAI quota allows                    |
+| Lineups cron                        | `*/15 * * * *` (already **ING-2**); body skipped while kill-switch on | Body runs when `lineupsSyncEnabled` is true              |
+| `LIVE_POLLING_ENABLED`              | unset / `false` until Phase 5                                         | **`true`** when launching live engine (Pro + Redis)      |
 
 Fixture sync window automatically becomes **today ± 7 days** when `NEXT_PUBLIC_APP_ENV=production` (vs ±1 in development).
 

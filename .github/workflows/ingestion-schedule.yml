@@ -18,6 +18,7 @@ on:
           - lineups
           - standings
           - live
+          - match-details
           - both
 
 jobs:

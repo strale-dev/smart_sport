@@ -33,6 +33,11 @@ const INGESTION_ROWS = [
     schedule: "0 */6 * * *",
   },
   {
+    id: "sync-match-details",
+    path: "/api/cron/sync-match-details",
+    schedule: "0 */6 * * *",
+  },
+  {
     id: "sync-fixtures-future",
     path: "/api/cron/sync-fixtures-future",
     schedule: "0 3 * * *",
@@ -63,6 +68,11 @@ const LIVE_IDS = new Set([
   "reap-stale-locks",
 ]);
 
+/** workflow_dispatch `target` aliases → cron row ids */
+const TARGET_ALIASES = {
+  "match-details": "sync-match-details",
+};
+
 const jobSet = process.env.JOB_SET;
 const rows = jobSet === "warm" ? WARM_ROWS : INGESTION_ROWS;
 
@@ -77,7 +87,8 @@ const picked = rows.filter((row) => {
   if (target === "both") {
     return true;
   }
-  if (target === row.id) {
+  const resolvedTarget = TARGET_ALIASES[target] ?? target;
+  if (resolvedTarget === row.id) {
     return true;
   }
   if (target === "live" && jobSet === "ingestion") {
