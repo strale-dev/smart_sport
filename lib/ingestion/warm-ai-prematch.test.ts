@@ -4,8 +4,11 @@ import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
 import {
   evaluateNullWarmReadinessRows,
   isAiGenerationAllowedFromRow,
+  selectNarrativeWarmProviderIds,
+  selectPredictionWarmProviderIds,
   selectWarmCandidateProviderIds,
   warmWindowBoundsForScope,
+  type WarmWorkItem,
 } from "@/lib/ingestion/warm-ai-prematch";
 
 const { evaluateAndPersistFixtureReadiness } = vi.hoisted(() => ({
@@ -31,9 +34,9 @@ describe("warmWindowBoundsForScope", () => {
     expect(to).toBe("2026-03-21T13:30:00.000Z");
   });
 
-  it("backfill scope covers the previous 7 days through now", () => {
+  it("backfill scope covers the previous 14 days through now", () => {
     const { from, to } = warmWindowBoundsForScope("backfill", now);
-    expect(from).toBe("2026-03-14T12:00:00.000Z");
+    expect(from).toBe("2026-03-07T12:00:00.000Z");
     expect(to).toBe("2026-03-21T12:00:00.000Z");
   });
 });
@@ -139,6 +142,67 @@ describe("selectWarmCandidateProviderIds", () => {
     );
 
     expect(ids).toEqual([11]);
+  });
+});
+
+describe("warm work selection", () => {
+  const items: WarmWorkItem[] = [
+    {
+      providerId: 1,
+      kickoffAt: "2026-11-11T18:00:00.000Z",
+      band: "daily",
+      hasPrediction: true,
+      specific: true,
+      hasInsight: false,
+    },
+    {
+      providerId: 2,
+      kickoffAt: "2026-11-11T12:30:00.000Z",
+      band: "imminent",
+      hasPrediction: false,
+      specific: false,
+      hasInsight: false,
+    },
+    {
+      providerId: 3,
+      kickoffAt: "2026-11-11T12:00:00.000Z",
+      band: "imminent",
+      hasPrediction: true,
+      specific: false,
+      hasInsight: false,
+    },
+    {
+      providerId: 4,
+      kickoffAt: "2026-11-10T20:00:00.000Z",
+      band: "backfill",
+      hasPrediction: true,
+      specific: true,
+      hasInsight: false,
+    },
+    {
+      providerId: 5,
+      kickoffAt: "2026-11-11T13:00:00.000Z",
+      band: "imminent",
+      hasPrediction: true,
+      specific: true,
+      hasInsight: true,
+    },
+    {
+      providerId: 6,
+      kickoffAt: "2026-11-11T14:00:00.000Z",
+      band: "imminent",
+      hasPrediction: true,
+      specific: true,
+      hasInsight: false,
+    },
+  ];
+
+  it("writes predictions for upcoming fixtures that do not have one yet", () => {
+    expect(selectPredictionWarmProviderIds(items, 10)).toEqual([2]);
+  });
+
+  it("sends only specific fixtures without an insight to the LLM, imminent first", () => {
+    expect(selectNarrativeWarmProviderIds(items, 10)).toEqual([6, 1, 4]);
   });
 });
 

@@ -2,21 +2,31 @@ import * as Sentry from "@sentry/nextjs";
 
 import { FINISHED_STATUSES, LIVE_STATUSES } from "@/lib/ai/status-map";
 import type { FixtureStatus } from "@/types/domain";
+import { canGeneratePrematchNarrative } from "@/lib/ai/prematch-availability";
+import { resolvePrematchModelTier } from "@/lib/predictions/prematch-validation";
 import { generatePrematchInsight } from "@/lib/services/aiService";
+import { getOrComputePrematch } from "@/lib/services/predictionService";
+import type {
+  PrematchFeatureVector,
+  WinProbabilities,
+} from "@/types/prediction";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveCronOutcome } from "@/lib/ingestion/cron-outcome";
 import { logIngestionEvent } from "@/lib/ingestion/ingestion-observability";
 import { evaluateAndPersistFixtureReadiness } from "@/lib/fixtures/readiness/persist";
 import type { FixtureReadinessSnapshot } from "@/lib/fixtures/readiness";
 
-export type WarmAiPrematchScope = "daily" | "imminent" | "backfill";
+export type WarmAiPrematchScope = "daily" | "imminent" | "backfill" | "drain";
 
 /** Leave headroom under route maxDuration (60s) and GHA trigger timeout (58s). */
 const RUN_BUDGET_MS = 52_000;
 const DAILY_MAX_FIXTURES = 40;
 const IMMINENT_MAX_FIXTURES = 25;
 const DEFAULT_BACKFILL_MAX_FIXTURES = 50;
-const BACKFILL_LOOKBACK_MS = 7 * 86_400_000;
+const BACKFILL_LOOKBACK_MS = 14 * 86_400_000;
+/** Leave enough of the 52s budget for at least one LLM call. */
+const PREDICTION_WARM_RESERVE_MS = 28_000;
+const PREDICTION_WARM_MAX = 12;
 
 function getBackfillMaxFixtures(): number {
   const raw = process.env.WARM_AI_BACKFILL_MAX_FIXTURES;
@@ -49,6 +59,13 @@ export function warmWindowBoundsForScope(
     return {
       from: new Date(now - BACKFILL_LOOKBACK_MS).toISOString(),
       to: new Date(now).toISOString(),
+    };
+  }
+
+  if (scope === "drain") {
+    return {
+      from: new Date(now).toISOString(),
+      to: new Date(now + 36 * 3_600_000).toISOString(),
     };
   }
 
@@ -144,95 +161,301 @@ export function selectWarmCandidateProviderIds(
     .map((row) => row.provider_id);
 }
 
-async function loadBackfillFixturesWithoutInsight(
-  limit: number
-): Promise<number[]> {
-  const client = createAdminClient();
-  const { from, to } = warmWindowBoundsForScope("backfill");
+export type WarmWorkBand = "imminent" | "daily" | "backfill";
 
-  const { data: fixtures, error } = await client
-    .from("fixtures")
-    .select("id, provider_id, kickoff_at")
-    .in("status", BACKFILL_STATUSES)
-    .gte("kickoff_at", from)
-    .lte("kickoff_at", to)
-    .order("kickoff_at", { ascending: false })
-    .limit(limit * 4);
+export type WarmWorkItem = {
+  providerId: number;
+  kickoffAt: string;
+  band: WarmWorkBand;
+  hasPrediction: boolean;
+  specific: boolean;
+  hasInsight: boolean;
+};
 
-  if (error) {
-    throw new Error(`Failed to load backfill fixtures: ${error.message}`);
+function compareWarmWork(left: WarmWorkItem, right: WarmWorkItem): number {
+  const rank: Record<WarmWorkBand, number> = {
+    imminent: 0,
+    daily: 1,
+    backfill: 2,
+  };
+  if (rank[left.band] !== rank[right.band]) {
+    return rank[left.band] - rank[right.band];
   }
 
-  const rows = fixtures ?? [];
-  if (rows.length === 0) {
+  const leftKick = new Date(left.kickoffAt).getTime();
+  const rightKick = new Date(right.kickoffAt).getTime();
+  if (left.band === "backfill") {
+    return rightKick - leftKick;
+  }
+  return leftKick - rightKick;
+}
+
+export function selectPredictionWarmProviderIds(
+  items: WarmWorkItem[],
+  limit: number
+): number[] {
+  return items
+    .filter((item) => item.band !== "backfill" && !item.hasPrediction)
+    .sort(compareWarmWork)
+    .slice(0, limit)
+    .map((item) => item.providerId);
+}
+
+export function selectNarrativeWarmProviderIds(
+  items: WarmWorkItem[],
+  limit: number
+): number[] {
+  return items
+    .filter((item) => item.hasPrediction && item.specific && !item.hasInsight)
+    .sort(compareWarmWork)
+    .slice(0, limit)
+    .map((item) => item.providerId);
+}
+
+type FixtureWindowRow = {
+  id: string;
+  provider_id: number;
+  kickoff_at: string;
+};
+
+type StoredPredictionRow = {
+  fixture_id: string;
+  created_at: string;
+  home_win_prob: number | string;
+  draw_prob: number | string;
+  away_win_prob: number | string;
+  input_snapshot: unknown;
+};
+
+function includesUpcoming(scope: WarmAiPrematchScope): boolean {
+  return scope === "daily" || scope === "imminent" || scope === "drain";
+}
+
+function includesBackfill(scope: WarmAiPrematchScope): boolean {
+  return scope === "backfill" || scope === "drain";
+}
+
+function isSpecificStoredPrediction(row: StoredPredictionRow): boolean {
+  if (!row.input_snapshot || typeof row.input_snapshot !== "object") {
+    return false;
+  }
+
+  const winProbabilities: WinProbabilities = {
+    home: Number(row.home_win_prob),
+    draw: Number(row.draw_prob),
+    away: Number(row.away_win_prob),
+  };
+  if (
+    !Number.isFinite(winProbabilities.home) ||
+    !Number.isFinite(winProbabilities.draw) ||
+    !Number.isFinite(winProbabilities.away)
+  ) {
+    return false;
+  }
+
+  return canGeneratePrematchNarrative(
+    row.input_snapshot as PrematchFeatureVector,
+    {
+      winProbabilities,
+      modelTier: resolvePrematchModelTier(
+        row.input_snapshot as PrematchFeatureVector,
+        winProbabilities
+      ),
+    }
+  );
+}
+
+function pickStoredPrediction(
+  rows: StoredPredictionRow[],
+  kickoffAt: string,
+  officialOnly: boolean
+): StoredPredictionRow | null {
+  const kickoffMs = new Date(kickoffAt).getTime();
+  const eligible = officialOnly
+    ? rows.filter((row) => new Date(row.created_at).getTime() < kickoffMs)
+    : rows;
+  if (eligible.length === 0) {
+    return null;
+  }
+
+  return [...eligible].sort(
+    (left, right) =>
+      new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+  )[0];
+}
+
+async function fetchFixtureWindow(input: {
+  statuses: FixtureStatus[];
+  from: string;
+  to: string;
+  ascending: boolean;
+  limit: number;
+}): Promise<FixtureWindowRow[]> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("fixtures")
+    .select("id, provider_id, kickoff_at")
+    .in("status", input.statuses)
+    .gte("kickoff_at", input.from)
+    .lte("kickoff_at", input.to)
+    .order("kickoff_at", { ascending: input.ascending })
+    .limit(input.limit);
+
+  if (error) {
+    throw new Error(`Failed to load warm fixtures: ${error.message}`);
+  }
+
+  return (data ?? []) as FixtureWindowRow[];
+}
+
+async function loadRowsForFixtures<T>(
+  fixtureIds: string[],
+  loadChunk: (chunk: string[]) => Promise<T[]>
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let index = 0; index < fixtureIds.length; index += 80) {
+    rows.push(...(await loadChunk(fixtureIds.slice(index, index + 80))));
+  }
+  return rows;
+}
+
+async function annotateWarmFixtures(
+  fixtures: FixtureWindowRow[],
+  bandFor: (kickoffAt: string) => WarmWorkBand,
+  officialOnly: boolean
+): Promise<WarmWorkItem[]> {
+  if (fixtures.length === 0) {
     return [];
   }
 
-  const fixtureUuids = rows.map((row) => row.id);
-  const { data: insightRows, error: insightError } = await client
-    .from("ai_insights")
-    .select("fixture_id")
-    .eq("type", "PREMATCH")
-    .in("fixture_id", fixtureUuids);
+  const client = createAdminClient();
+  const fixtureIds = fixtures.map((row) => row.id);
+  const [predictionRows, insightRows] = await Promise.all([
+    loadRowsForFixtures(fixtureIds, async (chunk) => {
+      const { data, error } = await client
+        .from("predictions")
+        .select(
+          "fixture_id, created_at, home_win_prob, draw_prob, away_win_prob, input_snapshot"
+        )
+        .eq("type", "PREMATCH")
+        .in("fixture_id", chunk);
+      if (error) {
+        throw new Error(`Failed to load warm predictions: ${error.message}`);
+      }
+      return (data ?? []) as StoredPredictionRow[];
+    }),
+    loadRowsForFixtures(fixtureIds, async (chunk) => {
+      const { data, error } = await client
+        .from("ai_insights")
+        .select("fixture_id")
+        .eq("type", "PREMATCH")
+        .in("fixture_id", chunk);
+      if (error) {
+        throw new Error(`Failed to load warm insights: ${error.message}`);
+      }
+      return (data ?? []) as { fixture_id: string | null }[];
+    }),
+  ]);
 
-  if (insightError) {
-    throw new Error(
-      `Failed to load backfill insight coverage: ${insightError.message}`
-    );
+  const predictionsByFixture = new Map<string, StoredPredictionRow[]>();
+  for (const row of predictionRows) {
+    const existing = predictionsByFixture.get(row.fixture_id) ?? [];
+    existing.push(row);
+    predictionsByFixture.set(row.fixture_id, existing);
   }
 
   const withInsight = new Set(
-    (insightRows ?? [])
+    insightRows
       .map((row) => row.fixture_id)
       .filter((id): id is string => id != null)
   );
 
-  return rows
-    .filter((row) => !withInsight.has(row.id))
-    .slice(0, limit)
-    .map((row) => row.provider_id);
+  return fixtures.map((fixture) => {
+    const prediction = pickStoredPrediction(
+      predictionsByFixture.get(fixture.id) ?? [],
+      fixture.kickoff_at,
+      officialOnly
+    );
+    return {
+      providerId: fixture.provider_id,
+      kickoffAt: fixture.kickoff_at,
+      band: bandFor(fixture.kickoff_at),
+      hasPrediction: prediction != null,
+      specific: prediction != null && isSpecificStoredPrediction(prediction),
+      hasInsight: withInsight.has(fixture.id),
+    };
+  });
 }
 
-async function loadFixturesInScope(
-  scope: WarmAiPrematchScope
-): Promise<{ providerIds: number[]; readinessEvaluated: number }> {
-  if (scope === "backfill") {
-    const providerIds = await loadBackfillFixturesWithoutInsight(
-      getBackfillMaxFixtures()
+async function loadWarmWorkItems(
+  scope: WarmAiPrematchScope,
+  now = Date.now()
+): Promise<WarmWorkItem[]> {
+  const items: WarmWorkItem[] = [];
+
+  if (includesUpcoming(scope)) {
+    const horizonMs = scope === "imminent" ? 90 * 60_000 : 36 * 3_600_000;
+    const fetchLimit =
+      scope === "imminent" ? IMMINENT_MAX_FIXTURES * 4 : DAILY_MAX_FIXTURES * 2;
+    const fixtures = await fetchFixtureWindow({
+      statuses: ["NS", "TBD"],
+      from: new Date(now).toISOString(),
+      to: new Date(now + horizonMs).toISOString(),
+      ascending: true,
+      limit: fetchLimit,
+    });
+    const imminentCutoff = now + 90 * 60_000;
+    items.push(
+      ...(await annotateWarmFixtures(
+        fixtures,
+        (kickoffAt) =>
+          new Date(kickoffAt).getTime() <= imminentCutoff
+            ? "imminent"
+            : "daily",
+        false
+      ))
     );
-    return { providerIds, readinessEvaluated: 0 };
   }
 
-  const client = createAdminClient();
-  const { from, to } = warmWindowBoundsForScope(scope);
-  const limit =
-    scope === "imminent" ? IMMINENT_MAX_FIXTURES : DAILY_MAX_FIXTURES;
-
-  const { data, error } = await client
-    .from("fixtures")
-    .select("provider_id, kickoff_at, fixture_readiness")
-    .in("status", ["NS", "TBD"])
-    .gte("kickoff_at", from)
-    .lte("kickoff_at", to)
-    .order("kickoff_at", { ascending: true })
-    .limit(limit * 4);
-
-  if (error) {
-    throw new Error(
-      `Failed to load warm-up fixtures (${scope}): ${error.message}`
+  if (includesBackfill(scope)) {
+    const { from, to } = warmWindowBoundsForScope("backfill", now);
+    const fixtures = await fetchFixtureWindow({
+      statuses: BACKFILL_STATUSES,
+      from,
+      to,
+      ascending: false,
+      limit: getBackfillMaxFixtures() * 4,
+    });
+    items.push(
+      ...(await annotateWarmFixtures(fixtures, () => "backfill", true))
     );
   }
 
-  const readinessBudget = Math.min(limit, 10);
-  const { rows: withReadiness, evaluated } =
-    await evaluateNullWarmReadinessRows(
-      (data ?? []) as WarmFixtureRow[],
-      readinessBudget
-    );
+  return items;
+}
 
-  const providerIds = selectWarmCandidateProviderIds(withReadiness, limit);
+async function warmMissingPredictions(
+  providerIds: number[],
+  startedAt: number
+): Promise<number> {
+  let written = 0;
 
-  return { providerIds, readinessEvaluated: evaluated };
+  for (const fixtureId of providerIds) {
+    if (Date.now() - startedAt >= RUN_BUDGET_MS - PREDICTION_WARM_RESERVE_MS) {
+      break;
+    }
+
+    try {
+      const prediction = await getOrComputePrematch(fixtureId);
+      if (prediction && !prediction.fromCache) {
+        written += 1;
+      }
+    } catch (error) {
+      console.error(`[warm-ai-prematch] prediction ${fixtureId}`, error);
+    }
+  }
+
+  return written;
 }
 
 export async function warmAiPrematchInsights(
@@ -252,10 +475,24 @@ export async function warmAiPrematchInsights(
     fallback: number;
     unavailable: number;
     errors: number;
+    predictionsWritten: number;
   };
 }> {
-  const { providerIds: fixtureIds, readinessEvaluated } =
-    await loadFixturesInScope(scope);
+  const startedAt = Date.now();
+  const initialWork = await loadWarmWorkItems(scope);
+  const predictionsWritten =
+    scope === "backfill"
+      ? 0
+      : await warmMissingPredictions(
+          selectPredictionWarmProviderIds(initialWork, PREDICTION_WARM_MAX),
+          startedAt
+        );
+  const work =
+    predictionsWritten > 0 ? await loadWarmWorkItems(scope) : initialWork;
+  const fixtureIds = selectNarrativeWarmProviderIds(
+    work,
+    getBackfillMaxFixtures()
+  );
 
   let generated = 0;
   let cached = 0;
@@ -263,7 +500,6 @@ export async function warmAiPrematchInsights(
   let unavailable = 0;
   let errors = 0;
   let processed = 0;
-  const startedAt = Date.now();
   let stoppedEarly = false;
 
   for (const fixtureId of fixtureIds) {
@@ -327,7 +563,7 @@ export async function warmAiPrematchInsights(
   const stats = {
     scope,
     candidates: fixtureIds.length,
-    readinessEvaluated,
+    readinessEvaluated: 0,
     processed,
     stoppedEarly,
     generated,
@@ -335,6 +571,7 @@ export async function warmAiPrematchInsights(
     fallback,
     unavailable,
     errors,
+    predictionsWritten,
   };
 
   Sentry.addBreadcrumb({

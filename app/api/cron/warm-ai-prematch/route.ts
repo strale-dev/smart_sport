@@ -17,6 +17,9 @@ function parseWarmScope(request: NextRequest): WarmAiPrematchScope {
   if (raw === "backfill") {
     return "backfill";
   }
+  if (raw === "drain") {
+    return "drain";
+  }
   return "daily";
 }
 

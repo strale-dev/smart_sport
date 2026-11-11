@@ -6,7 +6,15 @@ import {
 function parseScope(argv: string[]): WarmAiPrematchScope {
   const arg = argv.find((item) => item.startsWith("--scope="));
   const raw = arg?.slice("--scope=".length) ?? "daily";
-  return raw === "imminent" ? "imminent" : "daily";
+  if (
+    raw === "imminent" ||
+    raw === "backfill" ||
+    raw === "drain" ||
+    raw === "daily"
+  ) {
+    return raw;
+  }
+  return "daily";
 }
 
 async function main() {

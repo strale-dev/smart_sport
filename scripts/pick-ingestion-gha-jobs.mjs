@@ -47,7 +47,7 @@ const INGESTION_ROWS = [
 const WARM_ROWS = [
   {
     id: "warm-ai-prematch",
-    path: "/api/cron/warm-ai-prematch?scope=imminent",
+    path: "/api/cron/warm-ai-prematch?scope=drain",
     schedule: "*/15 * * * *",
   },
   {

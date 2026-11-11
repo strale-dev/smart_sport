@@ -1,4 +1,8 @@
-import { hasMinimumModelSignal } from "@/lib/ai/prematch-availability";
+import {
+  canGeneratePrematchNarrative,
+  hasMinimumModelSignal,
+} from "@/lib/ai/prematch-availability";
+import { resolvePrematchModelTier } from "@/lib/predictions/prematch-validation";
 import {
   evaluateTeamHistoryDataState,
   type TeamHistoryDataState,
@@ -10,7 +14,10 @@ import {
   isLiveFixtureStatus,
   isPrematchFixtureStatus,
 } from "@/lib/fixtures/live-status";
-import type { PrematchFeatureVector } from "@/types/prediction";
+import type {
+  PrematchFeatureVector,
+  WinProbabilities,
+} from "@/types/prediction";
 
 import {
   LINEUP_PUBLISH_LEAD_MS,
@@ -51,6 +58,7 @@ export type FixtureEvaluationInput = {
     id: string;
     createdAt: string;
     inputSnapshot: PrematchFeatureVector;
+    winProbabilities: WinProbabilities;
   } | null;
   prematchInsight: {
     id: string;
@@ -74,6 +82,20 @@ function item(
 
 function historyStateForCount(count: number): TeamHistoryDataState {
   return evaluateTeamHistoryDataState(count);
+}
+
+function narrativeModelReady(input: FixtureEvaluationInput): boolean {
+  if (!input.features || !input.prediction) {
+    return false;
+  }
+
+  return canGeneratePrematchNarrative(input.features, {
+    winProbabilities: input.prediction.winProbabilities,
+    modelTier: resolvePrematchModelTier(
+      input.features,
+      input.prediction.winProbabilities
+    ),
+  });
 }
 
 function isPredictionOfficial(
@@ -220,11 +242,8 @@ export function buildReadinessItems(
     );
   } else if (!input.features || !hasMinimumModelSignal(input.features)) {
     items.push(item("ai_context", "insufficient", "features_or_signal"));
-  } else if (
-    homeHist === "DATA_INSUFFICIENT" ||
-    awayHist === "DATA_INSUFFICIENT"
-  ) {
-    items.push(item("ai_context", "insufficient", "history_depth"));
+  } else if (!narrativeModelReady(input)) {
+    items.push(item("ai_context", "insufficient", "model_not_specific"));
   } else {
     items.push(item("ai_context", "not_yet_available"));
   }
@@ -309,10 +328,7 @@ export function computeReadinessGates(
     featuresOk && inComputeWindow && !isKickoffReached(input.kickoffAt, nowMs);
 
   const aiContextReady =
-    featuresOk &&
-    homeHist !== "DATA_INSUFFICIENT" &&
-    awayHist !== "DATA_INSUFFICIENT" &&
-    !input.contextHashComputeFailed;
+    narrativeModelReady(input) && !input.contextHashComputeFailed;
 
   const insightMatches =
     input.prematchInsight != null &&
@@ -324,9 +340,7 @@ export function computeReadinessGates(
 
   const aiGenerationAllowed =
     prematch &&
-    featuresOk &&
     inComputeWindow &&
-    predictionFresh &&
     aiContextReady &&
     inLlmWindow &&
     !input.contextHashComputeFailed &&

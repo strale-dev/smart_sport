@@ -158,6 +158,38 @@ describe("prematch availability", () => {
     expect(experience.shouldAutoGenerateNarrative).toBe(false);
   });
 
+  it("backfills a finished match when the frozen model is fixture-specific", () => {
+    const prediction = basePrediction({
+      modelTier: "FIXTURE_SPECIFIC",
+      inputSnapshot: baseFeatures({ form5HomePpg: 1.8, form5AwayPpg: 1.1 }),
+      winProbabilities: { home: 0.62, draw: 0.22, away: 0.16 },
+    });
+
+    const experience = resolvePrematchDisplayExperience({
+      kickoffAt: new Date(Date.now() - 3_600_000).toISOString(),
+      fixturePhase: "FINISHED",
+      hookState: "generating",
+      hasInsight: false,
+      prediction,
+    });
+
+    expect(experience.shouldAutoGenerateNarrative).toBe(true);
+    expect(experience.showModelPrediction).toBe(true);
+  });
+
+  it("does not backfill a finished match on the generic baseline", () => {
+    const experience = resolvePrematchDisplayExperience({
+      kickoffAt: new Date(Date.now() - 3_600_000).toISOString(),
+      fixturePhase: "FINISHED",
+      hookState: "generating",
+      hasInsight: false,
+      prediction: basePrediction(),
+    });
+
+    expect(experience.shouldAutoGenerateNarrative).toBe(false);
+    expect(experience.showNarrative).toBe(false);
+  });
+
   it("detects minimum model signal from form", () => {
     expect(hasMinimumModelSignal(baseFeatures())).toBe(false);
     expect(

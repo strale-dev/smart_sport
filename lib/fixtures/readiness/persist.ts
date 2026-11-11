@@ -167,6 +167,11 @@ async function buildEvaluationInput(input: {
           id: predictionRow.id,
           createdAt: predictionRow.created_at,
           inputSnapshot: predictionRow.input_snapshot as PrematchFeatureVector,
+          winProbabilities: {
+            home: Number(predictionRow.home_win_prob),
+            draw: Number(predictionRow.draw_prob),
+            away: Number(predictionRow.away_win_prob),
+          },
         }
       : null,
     prematchInsight: insightRow

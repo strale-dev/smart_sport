@@ -6,7 +6,7 @@ import {
 } from "@/lib/ai/narrative-fixture-specificity";
 
 describe("assertFixtureSpecificNarrative", () => {
-  it("allows generic baseline tier without team tokens", () => {
+  it("rejects generic baseline copy that does not contrast both teams", () => {
     expect(() =>
       assertFixtureSpecificNarrative({
         summary: "Evenly matched sides.",
@@ -15,14 +15,16 @@ describe("assertFixtureSpecificNarrative", () => {
         awayTeamName: "Chelsea",
         modelTier: "GENERIC_BASELINE",
       })
-    ).not.toThrow();
+    ).toThrow(NarrativeNotFixtureSpecificError);
   });
 
-  it("rejects fixture-specific tier without team references", () => {
+  it("rejects a summary that names only one team", () => {
     expect(() =>
       assertFixtureSpecificNarrative({
-        summary: "Evenly matched sides.",
-        commentary: "Both teams enter with similar form.",
+        summary: "Arsenal hold a narrow edge at 62%.",
+        commentary: "Arsenal's recent home record supports the model lean.",
+        homeTeamAnalysis: "Arsenal scored 8 goals in 5 matches.",
+        awayTeamAnalysis: "The visitors conceded 6.",
         homeTeamName: "Arsenal",
         awayTeamName: "Chelsea",
         modelTier: "FIXTURE_SPECIFIC",
@@ -30,11 +32,14 @@ describe("assertFixtureSpecificNarrative", () => {
     ).toThrow(NarrativeNotFixtureSpecificError);
   });
 
-  it("accepts when home team name appears in commentary", () => {
+  it("accepts a summary that contrasts both teams with two numbers", () => {
     expect(() =>
       assertFixtureSpecificNarrative({
-        summary: "Arsenal hold a narrow edge.",
-        commentary: "Arsenal's recent home record supports the model lean.",
+        summary:
+          "Arsenal (1.8 ppg) are favored over Chelsea (1.1 ppg) in this match.",
+        commentary: "Arsenal against Chelsea.",
+        homeTeamAnalysis: "Arsenal scored 8 in their last 5.",
+        awayTeamAnalysis: "Chelsea conceded 6 in their last 5.",
         homeTeamName: "Arsenal",
         awayTeamName: "Chelsea",
         modelTier: "FIXTURE_SPECIFIC",

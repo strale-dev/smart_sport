@@ -310,7 +310,8 @@ export function resolveMatchAiUiState(
 
 function reasonToUnavailableCopy(
   code: AiInsightReasonCode,
-  fixturePhase: FixturePhase
+  fixturePhase: FixturePhase,
+  hasSpecificPrediction = false
 ): {
   title: string;
   description: string;
@@ -351,9 +352,13 @@ function reasonToUnavailableCopy(
         title: "No stored analysis",
         description:
           fixturePhase === "FINISHED"
-            ? "This match finished without a saved AI narrative. We do not generate a new write-up after full time."
+            ? hasSpecificPrediction
+              ? "A fixture-specific pre-match prediction is saved. The shared analysis is written once for this match."
+              : "This match finished without a saved AI narrative because no fixture-specific pre-match prediction was frozen before kickoff."
             : fixturePhase === "LIVE"
-              ? "No pre-match AI narrative was stored before kickoff. Live commentary cannot start from a saved baseline."
+              ? hasSpecificPrediction
+                ? "A fixture-specific pre-match prediction is saved. The shared analysis is written once for this match."
+                : "No fixture-specific pre-match prediction was frozen before kickoff, so there is no baseline for a write-up."
               : "We do not have a saved AI narrative for this fixture. Model probabilities may still appear when ready.",
       };
     case "GENERATION_NOT_ALLOWED":
@@ -431,6 +436,7 @@ function resolveUnavailableCopy(input: {
   fixturePhase: FixturePhase;
   reasonCode?: AiInsightReasonCode | null;
   liveUnavailableReason?: LivePredictionUnavailableReason | null;
+  hasSpecificPrediction?: boolean;
 }): {
   title: string;
   description: string;
@@ -440,11 +446,19 @@ function resolveUnavailableCopy(input: {
   }
 
   if (input.reasonCode) {
-    return reasonToUnavailableCopy(input.reasonCode, input.fixturePhase);
+    return reasonToUnavailableCopy(
+      input.reasonCode,
+      input.fixturePhase,
+      input.hasSpecificPrediction
+    );
   }
 
   if (input.fixturePhase === "LIVE" || input.fixturePhase === "FINISHED") {
-    return reasonToUnavailableCopy("NO_STORED_INSIGHT", input.fixturePhase);
+    return reasonToUnavailableCopy(
+      "NO_STORED_INSIGHT",
+      input.fixturePhase,
+      input.hasSpecificPrediction
+    );
   }
 
   if (input.fixturePhase === "NEITHER") {
@@ -466,6 +480,7 @@ export function describeMatchAiUiState(input: {
   reasonCode?: AiInsightReasonCode | null;
   liveUnavailableReason?: LivePredictionUnavailableReason | null;
   hasPrediction?: boolean;
+  hasSpecificPrediction?: boolean;
   hasLiveWinProbabilities?: boolean;
   generationFailureMessage?: string | null;
   contextStale?: boolean;
@@ -477,6 +492,7 @@ export function describeMatchAiUiState(input: {
     reasonCode,
     liveUnavailableReason,
     hasPrediction,
+    hasSpecificPrediction,
     generationFailureMessage,
     contextStale,
     networkErrorMessage,
@@ -524,6 +540,7 @@ export function describeMatchAiUiState(input: {
         fixturePhase,
         reasonCode,
         liveUnavailableReason,
+        hasSpecificPrediction,
       });
       return {
         ...unavailable,
@@ -551,6 +568,7 @@ export function describeMatchAiUiState(input: {
         fixturePhase,
         reasonCode,
         liveUnavailableReason,
+        hasSpecificPrediction,
       });
       return {
         ...noData,

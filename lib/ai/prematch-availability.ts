@@ -65,13 +65,39 @@ export function resolvePrematchDisplayExperience(input: {
       };
     }
 
+    const historicalModelIsSpecific =
+      input.prediction != null &&
+      input.prediction.inputSnapshot != null &&
+      isFixtureSpecificPrematchModel(
+        input.prediction.inputSnapshot,
+        input.prediction
+      );
+    const canBackfillNarrative =
+      historicalModelIsSpecific &&
+      !input.hasInsight &&
+      (input.hookState === "miss" ||
+        input.hookState === "generating" ||
+        input.hookState === "fallback");
+
+    if (canBackfillNarrative) {
+      return {
+        tier: "narrative_generating",
+        headline: "Pre-match AI commentary",
+        description:
+          "Building the shared analysis from the fixture-specific pre-match model.",
+        showModelPrediction: true,
+        showNarrative: false,
+        shouldAutoGenerateNarrative: true,
+      };
+    }
+
     return {
       tier: input.prediction ? "model_only" : "none",
       headline: input.prediction
         ? "Pre-match AI commentary"
         : "Analysis not available",
       description: input.prediction
-        ? "Live phase — full pre-match commentary appears here when it was generated before kickoff."
+        ? "No fixture-specific pre-match model was frozen before kickoff, so there is no match analysis to write."
         : "No pre-match analysis was stored for this fixture.",
       showModelPrediction: Boolean(input.prediction),
       showNarrative: false,
@@ -200,21 +226,13 @@ export function isFixtureSpecificPrematchModel(
 }
 
 /**
- * Shared pre-match LLM narrative: requires minimum model signal.
- * Generic baseline probabilities alone do not block when signal exists (Phase 2 RCA).
+ * Shared pre-match LLM narrative: minimum signal and a fixture-specific model.
+ * Home-advantage baseline probabilities do not get a write-up.
  */
 export function canGeneratePrematchNarrative(
   features: PrematchFeatureVector,
   prediction: Pick<PrematchPredictionResult, "winProbabilities" | "modelTier">
 ): boolean {
-  if (!hasMinimumModelSignal(features)) {
-    return false;
-  }
-
-  if (isGenericBaselineWinProbabilities(prediction.winProbabilities)) {
-    return true;
-  }
-
   return isFixtureSpecificPrematchModel(features, prediction);
 }
 

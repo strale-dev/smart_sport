@@ -19,25 +19,45 @@ function tokenMatches(text: string, teamName: string): boolean {
   return firstWord != null && firstWord.length >= 4 && text.includes(firstWord);
 }
 
+function numericTokenCount(text: string): number {
+  return text.match(/\d+(?:[.,]\d+)?/g)?.length ?? 0;
+}
+
 /**
- * Reject generic commentary that does not reference either team when the model is fixture-specific.
+ * Reject commentary that does not contrast this fixture's two sides.
+ * Generic baseline output is rejected the same way.
  */
 export function assertFixtureSpecificNarrative(input: {
   summary: string;
   commentary: string;
+  homeTeamAnalysis?: string;
+  awayTeamAnalysis?: string;
   homeTeamName: string;
   awayTeamName: string;
   modelTier: string;
 }): void {
-  if (input.modelTier === "GENERIC_BASELINE") {
-    return;
-  }
+  void input.modelTier;
 
-  const text = `${input.summary}\n${input.commentary}`.toLowerCase();
-  const matchesHome = tokenMatches(text, input.homeTeamName);
-  const matchesAway = tokenMatches(text, input.awayTeamName);
+  const summary = input.summary.toLowerCase();
+  const homeSection = (
+    input.homeTeamAnalysis ?? input.commentary
+  ).toLowerCase();
+  const awaySection = (
+    input.awayTeamAnalysis ?? input.commentary
+  ).toLowerCase();
 
-  if (!matchesHome && !matchesAway) {
+  const summaryNamesBoth =
+    tokenMatches(summary, input.homeTeamName) &&
+    tokenMatches(summary, input.awayTeamName);
+  const sectionsNameTeams =
+    tokenMatches(homeSection, input.homeTeamName) &&
+    tokenMatches(awaySection, input.awayTeamName);
+
+  if (
+    !summaryNamesBoth ||
+    !sectionsNameTeams ||
+    numericTokenCount(input.summary) < 2
+  ) {
     throw new NarrativeNotFixtureSpecificError();
   }
 }

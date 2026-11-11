@@ -25,6 +25,7 @@ import {
   type PrematchInsightViewModel,
 } from "@/lib/ai/prematch-insight-state";
 import {
+  isFixtureSpecificPrematchModel,
   resolvePrematchDisplayExperience,
   type PrematchDisplayExperience,
 } from "@/lib/ai/prematch-availability";
@@ -399,6 +400,13 @@ export function AIInsightProvider({
         reasonCode: inferredReasonCode,
         liveUnavailableReason: liveDelta?.unavailableReason ?? null,
         hasPrediction: viewModel.prediction != null,
+        hasSpecificPrediction:
+          viewModel.prediction?.type === "PREMATCH" &&
+          viewModel.prediction.inputSnapshot != null &&
+          isFixtureSpecificPrematchModel(
+            viewModel.prediction.inputSnapshot,
+            viewModel.prediction
+          ),
         hasLiveWinProbabilities: viewModel.liveWinProbabilities != null,
         generationFailureMessage: viewModel.generationFailureMessage,
         contextStale: viewModel.contextStale,
@@ -537,8 +545,7 @@ export function AIInsightProvider({
       !data ||
       data.status !== "MISS" ||
       !canEnsurePrematch ||
-      !displayExperience.shouldAutoGenerateNarrative ||
-      !aiGenerationAllowed
+      !displayExperience.shouldAutoGenerateNarrative
     ) {
       return;
     }
@@ -551,7 +558,6 @@ export function AIInsightProvider({
       window.clearTimeout(timer);
     };
   }, [
-    aiGenerationAllowed,
     canEnsurePrematch,
     displayExperience.shouldAutoGenerateNarrative,
     ensurePrematchInsight,

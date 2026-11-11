@@ -192,6 +192,7 @@ describe("generatePrematchInsight failures", () => {
       },
     });
     mockReadPrematchInsightFromStore.mockResolvedValue(null);
+    mockReadLatestPrematchInsight.mockResolvedValue(null);
     mockEvaluateFixtureReadinessForProvider.mockResolvedValue(readinessOk);
   });
 

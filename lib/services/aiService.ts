@@ -485,10 +485,39 @@ export async function generatePrematchInsight(
   }
 
   if (insightMode === "prematch") {
-    const { evaluateFixtureReadinessForProvider, isAiGenerationAllowed } =
-      await import("@/lib/fixtures/readiness");
+    const {
+      evaluateFixtureReadinessForProvider,
+      isAiContextReady,
+      isAiGenerationAllowed,
+    } = await import("@/lib/fixtures/readiness");
     const readiness =
       await evaluateFixtureReadinessForProvider(fixtureExternalId);
+    if (readiness && !isAiContextReady(readiness)) {
+      const stored = await readLatestPrematchInsight(fixture.id);
+      if (stored) {
+        return {
+          status: "OK",
+          insight: mapAiInsightRowToStored(stored, fixtureExternalId, true),
+          prediction,
+          cached: true,
+          insightMode: "prematch",
+        };
+      }
+
+      reportPrematchInsightOutcome("unavailable", fixtureExternalId, {
+        reason: "AI_CONTEXT_NOT_READY",
+        trigger: options.trigger,
+        fixtureStatus: fixture.status,
+      });
+      return {
+        status: "UNAVAILABLE",
+        fixtureExternalId,
+        reason: "AI_CONTEXT_NOT_READY",
+        canonicalState: "NOT_READY",
+        reasonCode: "AI_CONTEXT_NOT_READY",
+      };
+    }
+
     if (!readiness || !isAiGenerationAllowed(readiness)) {
       const stored = await readLatestPrematchInsight(fixture.id);
       if (stored) {
@@ -519,17 +548,17 @@ export async function generatePrematchInsight(
   const snapshot = prediction.inputSnapshot;
   if (!snapshot || !canGeneratePrematchNarrative(snapshot, prediction)) {
     reportPrematchInsightOutcome("unavailable", fixtureExternalId, {
-      reason: "GENERATION_NOT_ALLOWED",
+      reason: "AI_CONTEXT_NOT_READY",
       trigger: options.trigger,
       fixtureStatus: fixture.status,
-      detail: snapshot ? "insufficient_model_signal" : "missing_input_snapshot",
+      detail: snapshot ? "model_not_specific" : "missing_input_snapshot",
     });
     return {
       status: "UNAVAILABLE",
       fixtureExternalId,
-      reason: "GENERATION_NOT_ALLOWED",
-      canonicalState: "UNAVAILABLE",
-      reasonCode: "GENERATION_NOT_ALLOWED",
+      reason: "AI_CONTEXT_NOT_READY",
+      canonicalState: "NOT_READY",
+      reasonCode: "AI_CONTEXT_NOT_READY",
     };
   }
 
@@ -606,6 +635,8 @@ export async function generatePrematchInsight(
         assertFixtureSpecificNarrative({
           summary: narrative.summary,
           commentary: narrative.commentary,
+          homeTeamAnalysis: narrative.analysis.homeTeamAnalysis,
+          awayTeamAnalysis: narrative.analysis.awayTeamAnalysis,
           homeTeamName: context.homeTeam.name,
           awayTeamName: context.awayTeam.name,
           modelTier: prediction.modelTier,

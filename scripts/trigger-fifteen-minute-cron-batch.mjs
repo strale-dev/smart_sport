@@ -13,7 +13,7 @@ const PATHS = [
   "/api/cron/sync-lineups",
   "/api/cron/sync-live-center",
   "/api/cron/sync-fixtures-today",
-  "/api/cron/warm-ai-prematch?scope=imminent",
+  "/api/cron/warm-ai-prematch?scope=drain",
 ];
 
 function runTrigger(cronPath) {

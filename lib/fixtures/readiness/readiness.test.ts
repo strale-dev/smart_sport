@@ -18,6 +18,9 @@ import {
 } from "./gates";
 import { PREMATCH_FRESHNESS_MS, PREMATCH_SCHEDULED_LEAD_MS } from "./constants";
 
+const specificProbabilities = { home: 0.62, draw: 0.22, away: 0.16 };
+const baselineProbabilities = { home: 0.5718, draw: 0.2544, away: 0.1738 };
+
 const baseFeatures: PrematchFeatureVector = {
   fixtureExternalId: 1,
   homeTeamProviderId: 1,
@@ -169,6 +172,7 @@ describe("evaluateFixtureReadiness", () => {
           id: "p1",
           createdAt,
           inputSnapshot: baseFeatures,
+          winProbabilities: specificProbabilities,
         },
       })
     );
@@ -187,6 +191,7 @@ describe("evaluateFixtureReadiness", () => {
           id: "p1",
           createdAt: "2026-09-26T09:00:00.000Z",
           inputSnapshot: baseFeatures,
+          winProbabilities: specificProbabilities,
         },
       })
     );
@@ -210,6 +215,7 @@ describe("evaluateFixtureReadiness", () => {
           id: "p1",
           createdAt: "2026-09-26T09:00:00.000Z",
           inputSnapshot: baseFeatures,
+          winProbabilities: specificProbabilities,
         },
       })
     );
@@ -276,7 +282,50 @@ describe("evaluateFixtureReadiness", () => {
     expect(snap.phase).toBe("HISTORICAL");
   });
 
-  it("AI generation allowed only with fresh prediction in LLM window", () => {
+  it("AI generation allowed for a specific model inside the LLM window", () => {
+    const snap = evaluateFixtureReadiness(
+      baseInput({
+        kickoffAt: "2026-09-26T12:00:00.000Z",
+        nowMs: Date.parse("2026-09-26T10:00:00.000Z"),
+        homeHistoryCount: 2,
+        awayHistoryCount: 2,
+        prediction: {
+          id: "p1",
+          createdAt: "2026-09-26T09:55:00.000Z",
+          inputSnapshot: baseFeatures,
+          winProbabilities: specificProbabilities,
+        },
+        currentContextHash: "current-hash",
+      })
+    );
+    expect(isAiGenerationAllowed(snap)).toBe(true);
+    expect(isPredictionFresh(snap)).toBe(true);
+    expect(snap.gates.historicalDataSufficient).toBe(false);
+  });
+
+  it("allows AI generation when the specific prediction is stale", () => {
+    const createdAt = new Date(
+      Date.parse("2026-09-26T10:00:00.000Z") - PREMATCH_FRESHNESS_MS - 1000
+    ).toISOString();
+    const snap = evaluateFixtureReadiness(
+      baseInput({
+        kickoffAt: "2026-09-26T12:00:00.000Z",
+        nowMs: Date.parse("2026-09-26T10:00:00.000Z"),
+        prediction: {
+          id: "p1",
+          createdAt,
+          inputSnapshot: baseFeatures,
+          winProbabilities: specificProbabilities,
+        },
+        currentContextHash: "current-hash",
+      })
+    );
+    expect(isPredictionFresh(snap)).toBe(false);
+    expect(snap.gates.aiContextReady).toBe(true);
+    expect(isAiGenerationAllowed(snap)).toBe(true);
+  });
+
+  it("blocks AI generation for generic baseline probabilities", () => {
     const snap = evaluateFixtureReadiness(
       baseInput({
         kickoffAt: "2026-09-26T12:00:00.000Z",
@@ -285,12 +334,13 @@ describe("evaluateFixtureReadiness", () => {
           id: "p1",
           createdAt: "2026-09-26T09:55:00.000Z",
           inputSnapshot: baseFeatures,
+          winProbabilities: baselineProbabilities,
         },
         currentContextHash: "current-hash",
       })
     );
-    expect(isAiGenerationAllowed(snap)).toBe(true);
-    expect(isPredictionFresh(snap)).toBe(true);
+    expect(snap.gates.aiContextReady).toBe(false);
+    expect(isAiGenerationAllowed(snap)).toBe(false);
   });
 
   it("prediction not ready without minimum features", () => {

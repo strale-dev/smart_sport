@@ -62,13 +62,13 @@ describe("canGeneratePrematchNarrative", () => {
     ).toBe(false);
   });
 
-  it("allows narrative when signal exists but probabilities are generic baseline", () => {
+  it("blocks narrative when probabilities are the generic baseline", () => {
     expect(
       canGeneratePrematchNarrative(baseFeatures, {
         winProbabilities: GENERIC_BASELINE_WIN_PROBABILITIES,
         modelTier: "GENERIC_BASELINE",
       })
-    ).toBe(true);
+    ).toBe(false);
     expect(
       isFixtureSpecificPrematchModel(baseFeatures, {
         winProbabilities: GENERIC_BASELINE_WIN_PROBABILITIES,
