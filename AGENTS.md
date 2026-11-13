@@ -13,6 +13,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Uvek koristi `npm.cmd` umesto `npm` kada izvršavaš terminal komande (npr. `npm.cmd install`, `npm.cmd run dev`, `npm.cmd run build`).
 - Isto važi i za `npx` ako se pojavi isti problem — koristi `npx.cmd`.
 
+## Cloud Agent environment
+
+On Linux, including Cloud Agents, use `npm` and `npx`. `npm.cmd` and `npx.cmd` are for Windows only.
+
+Node.js 22 is already installed and satisfies Next.js (`>=20.9.0`). GitHub Actions CI uses Node.js 24.
+
+If `.env.local` is missing, copy `.env.example` to `.env.local`. Those placeholders are enough for `npm run check:ci`, `npm run build`, and `npm run dev`. The dev server listens on port 3000. Live Supabase, Redis, API-Football, and OpenAI calls need real credentials in `.env.local` or the process environment.
+
 # Project source of truth
 
 Before implementing features, check the relevant project docs:
